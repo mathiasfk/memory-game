@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"sync/atomic"
+	"time"
 
+	"memory-game-server/ai"
 	"memory-game-server/config"
 	"memory-game-server/game"
 	"memory-game-server/ws"
@@ -35,39 +37,69 @@ func (m *Matchmaker) Enqueue(c *ws.Client) {
 	m.queue <- c
 }
 
-// Run is the matchmaker's main loop. It blocks reading pairs of
-// clients from the queue and creates games for them.
+// Run is the matchmaker's main loop. It waits for a first player, then either
+// a second player within AIPairTimeoutSec or starts a game vs the AI.
 // Should be run as a goroutine.
 func (m *Matchmaker) Run() {
 	for {
-		// Wait for the first player
 		client1 := <-m.queue
-		// Wait for the second player
-		client2 := <-m.queue
 
-		// Create a new game
-		gameID := fmt.Sprintf("game-%d", atomic.AddUint64(&gameCounter, 1))
+		timeout := time.Duration(m.config.AIPairTimeoutSec) * time.Second
+		if timeout < 0 {
+			timeout = 0
+		}
 
-		p0 := game.NewPlayer(client1.Name, client1.Send)
-		p1 := game.NewPlayer(client2.Name, client2.Send)
-
-		g := game.NewGame(gameID, m.config, p0, p1, m.powerUps)
-
-		// Assign game references to clients
-		client1.Game = g
-		client1.PlayerID = 0
-		client2.Game = g
-		client2.PlayerID = 1
-
-		log.Printf("Match created: %s — %s vs %s", gameID, client1.Name, client2.Name)
-
-		// Send MatchFound to both players
-		m.sendMatchFound(client1, client2.Name, g)
-		m.sendMatchFound(client2, client1.Name, g)
-
-		// Start the game goroutine (it broadcasts initial state automatically)
-		go g.Run()
+		var client2 *ws.Client
+		select {
+		case client2 = <-m.queue:
+			// Two human players — create normal game
+			m.createGame(client1, client2)
+		case <-time.After(timeout):
+			// Timeout — create game vs AI
+			m.createGameVsAI(client1)
+		}
 	}
+}
+
+func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
+	gameID := fmt.Sprintf("game-%d", atomic.AddUint64(&gameCounter, 1))
+
+	p0 := game.NewPlayer(client1.Name, client1.Send)
+	p1 := game.NewPlayer(client2.Name, client2.Send)
+
+	g := game.NewGame(gameID, m.config, p0, p1, m.powerUps)
+
+	client1.Game = g
+	client1.PlayerID = 0
+	client2.Game = g
+	client2.PlayerID = 1
+
+	log.Printf("Match created: %s — %s vs %s", gameID, client1.Name, client2.Name)
+
+	m.sendMatchFound(client1, client2.Name, g)
+	m.sendMatchFound(client2, client1.Name, g)
+
+	go g.Run()
+}
+
+func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
+	gameID := fmt.Sprintf("game-%d", atomic.AddUint64(&gameCounter, 1))
+
+	aiSend := make(chan []byte, 256)
+	p0 := game.NewPlayer(client1.Name, client1.Send)
+	p1 := game.NewPlayer(m.config.AIName, aiSend)
+
+	g := game.NewGame(gameID, m.config, p0, p1, m.powerUps)
+
+	client1.Game = g
+	client1.PlayerID = 0
+
+	log.Printf("Match created: %s — %s vs %s (AI)", gameID, client1.Name, m.config.AIName)
+
+	m.sendMatchFound(client1, m.config.AIName, g)
+
+	go g.Run()
+	go ai.Run(aiSend, g, 1, m.config)
 }
 
 func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *game.Game) {

@@ -32,6 +32,21 @@ func TestDefaults(t *testing.T) {
 	if cfg.MaxLatencyMS != 500 {
 		t.Errorf("expected MaxLatencyMS=500, got %d", cfg.MaxLatencyMS)
 	}
+	if cfg.AIPairTimeoutSec != 60 {
+		t.Errorf("expected AIPairTimeoutSec=60, got %d", cfg.AIPairTimeoutSec)
+	}
+	if cfg.AIName != "Mnemosyne" {
+		t.Errorf("expected AIName=Mnemosyne, got %q", cfg.AIName)
+	}
+	if cfg.AIDelayMinMS != 800 {
+		t.Errorf("expected AIDelayMinMS=800, got %d", cfg.AIDelayMinMS)
+	}
+	if cfg.AIDelayMaxMS != 2500 {
+		t.Errorf("expected AIDelayMaxMS=2500, got %d", cfg.AIDelayMaxMS)
+	}
+	if cfg.AIUseKnownPairChance != 85 {
+		t.Errorf("expected AIUseKnownPairChance=85, got %d", cfg.AIUseKnownPairChance)
+	}
 }
 
 func TestLoadWithEnvOverrides(t *testing.T) {
@@ -63,6 +78,39 @@ func TestLoadWithEnvOverrides(t *testing.T) {
 	// Non-overridden fields should remain default
 	if cfg.RevealDurationMS != 1000 {
 		t.Errorf("expected RevealDurationMS=1000 (default), got %d", cfg.RevealDurationMS)
+	}
+}
+
+func TestLoadWithAIEnvOverrides(t *testing.T) {
+	os.Setenv("AI_PAIR_TIMEOUT_SEC", "30")
+	os.Setenv("AI_NAME", "TestBot")
+	os.Setenv("AI_DELAY_MIN_MS", "500")
+	os.Setenv("AI_DELAY_MAX_MS", "3000")
+	os.Setenv("AI_USE_KNOWN_PAIR_CHANCE", "90")
+	defer func() {
+		os.Unsetenv("AI_PAIR_TIMEOUT_SEC")
+		os.Unsetenv("AI_NAME")
+		os.Unsetenv("AI_DELAY_MIN_MS")
+		os.Unsetenv("AI_DELAY_MAX_MS")
+		os.Unsetenv("AI_USE_KNOWN_PAIR_CHANCE")
+	}()
+
+	cfg := Load()
+
+	if cfg.AIPairTimeoutSec != 30 {
+		t.Errorf("expected AIPairTimeoutSec=30, got %d", cfg.AIPairTimeoutSec)
+	}
+	if cfg.AIName != "TestBot" {
+		t.Errorf("expected AIName=TestBot, got %q", cfg.AIName)
+	}
+	if cfg.AIDelayMinMS != 500 {
+		t.Errorf("expected AIDelayMinMS=500, got %d", cfg.AIDelayMinMS)
+	}
+	if cfg.AIDelayMaxMS != 3000 {
+		t.Errorf("expected AIDelayMaxMS=3000, got %d", cfg.AIDelayMaxMS)
+	}
+	if cfg.AIUseKnownPairChance != 90 {
+		t.Errorf("expected AIUseKnownPairChance=90, got %d", cfg.AIUseKnownPairChance)
 	}
 }
 

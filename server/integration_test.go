@@ -16,19 +16,9 @@ import (
 	"memory-game-server/ws"
 )
 
-// setupTestServer creates a test HTTP server with the full game server stack.
-func setupTestServer(t *testing.T) (*httptest.Server, func()) {
+// setupTestServerWithConfig creates a test HTTP server with the given config.
+func setupTestServerWithConfig(t *testing.T, cfg *config.Config) (*httptest.Server, func()) {
 	t.Helper()
-
-	cfg := &config.Config{
-		BoardRows:          2,
-		BoardCols:          2,
-		ComboBasePoints:    1,
-		RevealDurationMS:   100,
-		PowerUpShuffleCost: 3,
-		MaxNameLength:      24,
-		WSPort:             0, // not used when using httptest
-	}
 
 	registry := powerup.NewRegistry()
 	registry.Register(&powerup.ShufflePowerUp{CostValue: cfg.PowerUpShuffleCost})
@@ -49,6 +39,27 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 		server.Close()
 	}
 	return server, cleanup
+}
+
+// setupTestServer creates a test HTTP server with the full game server stack.
+func setupTestServer(t *testing.T) (*httptest.Server, func()) {
+	t.Helper()
+
+	cfg := &config.Config{
+		BoardRows:            2,
+		BoardCols:            2,
+		ComboBasePoints:      1,
+		RevealDurationMS:     100,
+		PowerUpShuffleCost:   3,
+		MaxNameLength:        24,
+		WSPort:               0, // not used when using httptest
+		AIPairTimeoutSec:    10,
+		AIName:               "Mnemosyne",
+		AIDelayMinMS:         50,
+		AIDelayMaxMS:         100,
+		AIUseKnownPairChance: 85,
+	}
+	return setupTestServerWithConfig(t, cfg)
 }
 
 // connectWS creates a WebSocket connection to the test server.
@@ -308,4 +319,102 @@ func TestIntegration_PlayAgain(t *testing.T) {
 
 	// This test mainly verifies the integration flow works end-to-end
 	// The play_again functionality requires the game to finish first
+}
+
+func TestIntegration_SinglePlayerVsAI(t *testing.T) {
+	cfg := &config.Config{
+		BoardRows:            2,
+		BoardCols:            2,
+		ComboBasePoints:      1,
+		RevealDurationMS:      100,
+		PowerUpShuffleCost:    3,
+		MaxNameLength:         24,
+		WSPort:                0,
+		AIPairTimeoutSec:     1,
+		AIName:                "Mnemosyne",
+		AIDelayMinMS:          20,
+		AIDelayMaxMS:          80,
+		AIUseKnownPairChance:  85,
+	}
+	server, cleanup := setupTestServerWithConfig(t, cfg)
+	defer cleanup()
+
+	conn := connectWS(t, server)
+	defer conn.Close()
+
+	sendMsg(t, conn, map[string]string{"type": "set_name", "name": "Alice"})
+	msg := readMsg(t, conn)
+	if msg["type"] != "waiting_for_match" {
+		t.Fatalf("expected waiting_for_match, got %v", msg["type"])
+	}
+
+	// Wait for AI pair timeout (1s) then match_found
+	mf := readMsg(t, conn)
+	if mf["type"] != "match_found" {
+		t.Fatalf("expected match_found, got %v", mf["type"])
+	}
+	if mf["opponentName"] != "Mnemosyne" {
+		t.Errorf("expected opponentName Mnemosyne, got %v", mf["opponentName"])
+	}
+
+	// Initial game_state
+	gs := readMsg(t, conn)
+	if gs["type"] != "game_state" {
+		t.Fatalf("expected game_state, got %v", gs["type"])
+	}
+	cards := gs["cards"].([]interface{})
+	if len(cards) != 4 {
+		t.Errorf("expected 4 cards, got %d", len(cards))
+	}
+
+	// Play until game_over: process current msg (send flips when our turn), then read next
+	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+	state := gs
+	for {
+		msgType, _ := state["type"].(string)
+		if msgType == "game_over" {
+			return
+		}
+		if msgType == "game_state" && state["yourTurn"] == true {
+			phase, _ := state["phase"].(string)
+			if phase == "first_flip" || phase == "second_flip" {
+				cardsList, _ := state["cards"].([]interface{})
+				var hidden []int
+				for _, c := range cardsList {
+					card := c.(map[string]interface{})
+					if card["state"] == "hidden" {
+						idx, _ := card["index"].(float64)
+						hidden = append(hidden, int(idx))
+					}
+				}
+				if len(hidden) > 0 {
+					flipped, _ := state["flippedIndices"].([]interface{})
+					if len(flipped) == 0 {
+						sendMsg(t, conn, map[string]interface{}{"type": "flip_card", "index": hidden[0]})
+					} else {
+						first, _ := flipped[0].(float64)
+						firstIdx := int(first)
+						var second int
+						for _, idx := range hidden {
+							if idx != firstIdx {
+								second = idx
+								break
+							}
+						}
+						sendMsg(t, conn, map[string]interface{}{"type": "flip_card", "index": second})
+					}
+				}
+			}
+		}
+
+		_, data, err := conn.ReadMessage()
+		if err != nil {
+			t.Fatalf("read message: %v", err)
+		}
+		var nextMsg map[string]interface{}
+		if err := json.Unmarshal(data, &nextMsg); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		state = nextMsg
+	}
 }
