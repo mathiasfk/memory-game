@@ -3,3 +3,9 @@
   gap: 0.55rem;
   width: 100%;
 }
+
+.emptyCell {
+  width: 100%;
+  aspect-ratio: 1;
+  /* mantém o espaço da célula no grid, vazio */
+}

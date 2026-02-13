@@ -27,14 +27,18 @@ export default function Board({
         gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
       }}
     >
-      {sortedCards.map((card) => (
-        <Card
-          key={card.index}
-          card={card}
-          disabled={!cardsClickable || card.state !== "hidden"}
-          onClick={onCardClick}
-        />
-      ))}
+      {sortedCards.map((card) =>
+        card.state === "matched" ? (
+          <div key={card.index} className={styles.emptyCell} aria-hidden="true" />
+        ) : (
+          <Card
+            key={card.index}
+            card={card}
+            disabled={!cardsClickable || card.state !== "hidden"}
+            onClick={onCardClick}
+          />
+        )
+      )}
     </div>
   );
 }
