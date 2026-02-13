@@ -1,0 +1,28 @@
+.panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.playerCard {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.playerCard h3 {
+  margin: 0 0 0.25rem;
+}
+
+.playerCard p {
+  margin: 0.15rem 0;
+}
+
+.name {
+  font-weight: 700;
+}
+
+.active {
+  border-color: #22c55e;
+  box-shadow: 0 0 0.55rem rgba(34, 197, 94, 0.25);
+}

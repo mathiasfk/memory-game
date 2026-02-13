@@ -1,0 +1,39 @@
+.card {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid #475569;
+  border-radius: 0.55rem;
+  color: #f8fafc;
+  background: #1f2937;
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 150ms ease, box-shadow 200ms ease;
+}
+
+.card:disabled {
+  cursor: not-allowed;
+}
+
+.card:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.faceUp {
+  background: #0b1220;
+  border-color: #38bdf8;
+}
+
+.matched {
+  background: #14532d;
+  border-color: #22c55e;
+  box-shadow: 0 0 0.7rem rgba(34, 197, 94, 0.45);
+}
+
+.inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
