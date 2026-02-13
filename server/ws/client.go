@@ -147,10 +147,7 @@ func (c *Client) handleSetName(raw json.RawMessage) {
 	// Send WaitingForMatch
 	waitMsg := WaitingForMatchMsg{Type: "waiting_for_match"}
 	data, _ := json.Marshal(waitMsg)
-	select {
-	case c.Send <- data:
-	default:
-	}
+	safeSend(c.Send, data)
 }
 
 func (c *Client) handleFlipCard(raw json.RawMessage) {
@@ -207,8 +204,16 @@ func (c *Client) handlePlayAgain() {
 	// Send WaitingForMatch
 	waitMsg := WaitingForMatchMsg{Type: "waiting_for_match"}
 	data, _ := json.Marshal(waitMsg)
+	safeSend(c.Send, data)
+}
+
+// safeSend sends data to a channel without panicking if the channel is closed.
+func safeSend(ch chan []byte, data []byte) {
+	defer func() {
+		recover()
+	}()
 	select {
-	case c.Send <- data:
+	case ch <- data:
 	default:
 	}
 }
@@ -216,10 +221,7 @@ func (c *Client) handlePlayAgain() {
 func (c *Client) sendError(message string) {
 	msg := ErrorMsg{Type: "error", Message: message}
 	data, _ := json.Marshal(msg)
-	select {
-	case c.Send <- data:
-	default:
-	}
+	safeSend(c.Send, data)
 }
 
 func intToStr(n int) string {

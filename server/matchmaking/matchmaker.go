@@ -80,8 +80,16 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 		YourTurn:     yourTurn,
 	}
 	data, _ := json.Marshal(msg)
+	safeSend(client.Send, data)
+}
+
+// safeSend sends data to a channel without panicking if the channel is closed.
+func safeSend(ch chan []byte, data []byte) {
+	defer func() {
+		recover()
+	}()
 	select {
-	case client.Send <- data:
+	case ch <- data:
 	default:
 	}
 }

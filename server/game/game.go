@@ -110,9 +110,10 @@ func (g *Game) Run() {
 	// Broadcast initial game state to both players
 	g.broadcastState()
 
-	for action := range g.Actions {
-		if g.Finished {
-			break
+	for {
+		action, ok := <-g.Actions
+		if !ok || g.Finished {
+			return
 		}
 		switch action.Type {
 		case ActionFlipCard:
@@ -124,6 +125,9 @@ func (g *Game) Run() {
 			return
 		case ActionResolveMismatch:
 			g.handleResolveMismatch(action.PlayerIdx)
+		}
+		if g.Finished {
+			return
 		}
 	}
 }
@@ -287,10 +291,18 @@ func (g *Game) handleDisconnect(playerIdx int) {
 	if opponent != nil && opponent.Send != nil {
 		msg := map[string]string{"type": "opponent_disconnected"}
 		data, _ := json.Marshal(msg)
-		select {
-		case opponent.Send <- data:
-		default:
-		}
+		safeSend(opponent.Send, data)
+	}
+}
+
+// safeSend sends data to a channel without panicking if the channel is closed.
+func safeSend(ch chan []byte, data []byte) {
+	defer func() {
+		recover() // swallow panic from send on closed channel
+	}()
+	select {
+	case ch <- data:
+	default:
 	}
 }
 
@@ -304,10 +316,7 @@ func (g *Game) sendError(playerIdx int, message string) {
 		"message": message,
 	}
 	data, _ := json.Marshal(msg)
-	select {
-	case player.Send <- data:
-	default:
-	}
+	safeSend(player.Send, data)
 }
 
 func (g *Game) broadcastState() {
@@ -319,10 +328,7 @@ func (g *Game) broadcastState() {
 			continue
 		}
 		if g.Players[i] != nil && g.Players[i].Send != nil {
-			select {
-			case g.Players[i].Send <- data:
-			default:
-			}
+			safeSend(g.Players[i].Send, data)
 		}
 	}
 }
@@ -389,10 +395,7 @@ func (g *Game) broadcastGameOver() {
 		}
 		data, _ := json.Marshal(msg)
 		if g.Players[i] != nil && g.Players[i].Send != nil {
-			select {
-			case g.Players[i].Send <- data:
-			default:
-			}
+			safeSend(g.Players[i].Send, data)
 		}
 	}
 }
