@@ -46,18 +46,15 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 	t.Helper()
 
 	cfg := &config.Config{
-		BoardRows:            2,
-		BoardCols:            2,
-		ComboBasePoints:      1,
-		RevealDurationMS:     100,
-		PowerUpShuffleCost:   3,
-		MaxNameLength:        24,
-		WSPort:               0, // not used when using httptest
-		AIPairTimeoutSec:    10,
-		AIName:               "Mnemosyne",
-		AIDelayMinMS:         50,
-		AIDelayMaxMS:         100,
-		AIUseKnownPairChance: 85,
+		BoardRows:        2,
+		BoardCols:        2,
+		ComboBasePoints:  1,
+		RevealDurationMS: 100,
+		PowerUpShuffleCost: 3,
+		MaxNameLength:    24,
+		WSPort:           0, // not used when using httptest
+		AIPairTimeoutSec: 10,
+		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseKnownPairChance: 85}},
 	}
 	return setupTestServerWithConfig(t, cfg)
 }
@@ -323,18 +320,15 @@ func TestIntegration_PlayAgain(t *testing.T) {
 
 func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 	cfg := &config.Config{
-		BoardRows:            2,
-		BoardCols:            2,
-		ComboBasePoints:      1,
-		RevealDurationMS:      100,
-		PowerUpShuffleCost:    3,
-		MaxNameLength:         24,
-		WSPort:                0,
-		AIPairTimeoutSec:     1,
-		AIName:                "Mnemosyne",
-		AIDelayMinMS:          20,
-		AIDelayMaxMS:          80,
-		AIUseKnownPairChance:  85,
+		BoardRows:        2,
+		BoardCols:        2,
+		ComboBasePoints:  1,
+		RevealDurationMS: 100,
+		PowerUpShuffleCost: 3,
+		MaxNameLength:    24,
+		WSPort:           0,
+		AIPairTimeoutSec: 1,
+		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 20, DelayMaxMS: 80, UseKnownPairChance: 85}},
 	}
 	server, cleanup := setupTestServerWithConfig(t, cfg)
 	defer cleanup()

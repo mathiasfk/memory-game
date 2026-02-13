@@ -21,13 +21,8 @@ func (m *mockPowerUpProvider) AllPowerUps() []game.PowerUpDef {
 }
 
 func TestRunExitsOnGameOver(t *testing.T) {
-	cfg := &config.Config{
-		AIPairTimeoutSec:     60,
-		AIName:               "Mnemosyne",
-		AIDelayMinMS:         10,
-		AIDelayMaxMS:         20,
-		AIUseKnownPairChance: 85,
-	}
+	cfg := &config.Config{AIPairTimeoutSec: 60}
+	params := &config.AIParams{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 20, UseKnownPairChance: 85}
 
 	aiSend := make(chan []byte, 4)
 	board := game.NewBoard(2, 2)
@@ -40,7 +35,7 @@ func TestRunExitsOnGameOver(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		Run(aiSend, g, 1, cfg)
+		Run(aiSend, g, 1, params)
 		close(done)
 	}()
 
@@ -60,10 +55,11 @@ func TestRunExitsOnGameOver(t *testing.T) {
 
 func TestRunExitsOnClosedChannel(t *testing.T) {
 	cfg := config.Defaults()
+	params := &cfg.AIProfiles[0]
 	aiSend := make(chan []byte, 4)
 	board := game.NewBoard(2, 2)
 	p0 := game.NewPlayer("Human", make(chan []byte, 4))
-	p1 := game.NewPlayer("Mnemosyne", aiSend)
+	p1 := game.NewPlayer(params.Name, aiSend)
 	g := game.NewGame("test", cfg, p0, p1, &mockPowerUpProvider{})
 	g.Board = board
 
@@ -75,7 +71,7 @@ func TestRunExitsOnClosedChannel(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		Run(aiSend, g, 1, cfg)
+		Run(aiSend, g, 1, params)
 	}()
 
 	done := make(chan struct{})

@@ -8,11 +8,11 @@ import (
 func TestDefaults(t *testing.T) {
 	cfg := Defaults()
 
-	if cfg.BoardRows != 4 {
-		t.Errorf("expected BoardRows=4, got %d", cfg.BoardRows)
+	if cfg.BoardRows != 6 {
+		t.Errorf("expected BoardRows=6, got %d", cfg.BoardRows)
 	}
-	if cfg.BoardCols != 4 {
-		t.Errorf("expected BoardCols=4, got %d", cfg.BoardCols)
+	if cfg.BoardCols != 6 {
+		t.Errorf("expected BoardCols=6, got %d", cfg.BoardCols)
 	}
 	if cfg.ComboBasePoints != 1 {
 		t.Errorf("expected ComboBasePoints=1, got %d", cfg.ComboBasePoints)
@@ -32,20 +32,29 @@ func TestDefaults(t *testing.T) {
 	if cfg.MaxLatencyMS != 500 {
 		t.Errorf("expected MaxLatencyMS=500, got %d", cfg.MaxLatencyMS)
 	}
-	if cfg.AIPairTimeoutSec != 60 {
-		t.Errorf("expected AIPairTimeoutSec=60, got %d", cfg.AIPairTimeoutSec)
+	if cfg.AIPairTimeoutSec != 30 {
+		t.Errorf("expected AIPairTimeoutSec=30, got %d", cfg.AIPairTimeoutSec)
 	}
-	if cfg.AIName != "Mnemosyne" {
-		t.Errorf("expected AIName=Mnemosyne, got %q", cfg.AIName)
+	if len(cfg.AIProfiles) != 3 {
+		t.Fatalf("expected 3 AI profiles, got %d", len(cfg.AIProfiles))
 	}
-	if cfg.AIDelayMinMS != 800 {
-		t.Errorf("expected AIDelayMinMS=800, got %d", cfg.AIDelayMinMS)
+	if cfg.AIProfiles[0].Name != "Mnemosyne" {
+		t.Errorf("expected first AI name Mnemosyne, got %q", cfg.AIProfiles[0].Name)
 	}
-	if cfg.AIDelayMaxMS != 2500 {
-		t.Errorf("expected AIDelayMaxMS=2500, got %d", cfg.AIDelayMaxMS)
+	if cfg.AIProfiles[0].DelayMinMS != 800 || cfg.AIProfiles[0].DelayMaxMS != 1500 || cfg.AIProfiles[0].UseKnownPairChance != 90 {
+		t.Errorf("expected Mnemosyne 800/1500/90, got %d/%d/%d", cfg.AIProfiles[0].DelayMinMS, cfg.AIProfiles[0].DelayMaxMS, cfg.AIProfiles[0].UseKnownPairChance)
 	}
-	if cfg.AIUseKnownPairChance != 85 {
-		t.Errorf("expected AIUseKnownPairChance=85, got %d", cfg.AIUseKnownPairChance)
+	if cfg.AIProfiles[1].Name != "Calliope" {
+		t.Errorf("expected second AI name Calliope, got %q", cfg.AIProfiles[1].Name)
+	}
+	if cfg.AIProfiles[1].DelayMinMS != 400 || cfg.AIProfiles[1].DelayMaxMS != 900 || cfg.AIProfiles[1].UseKnownPairChance != 70 {
+		t.Errorf("expected Calliope 400/900/70, got %d/%d/%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance)
+	}
+	if cfg.AIProfiles[2].Name != "Thalia" {
+		t.Errorf("expected third AI name Thalia, got %q", cfg.AIProfiles[2].Name)
+	}
+	if cfg.AIProfiles[2].DelayMinMS != 500 || cfg.AIProfiles[2].DelayMaxMS != 2000 || cfg.AIProfiles[2].UseKnownPairChance != 30 {
+		t.Errorf("expected Thalia 500/2000/30, got %d/%d/%d", cfg.AIProfiles[2].DelayMinMS, cfg.AIProfiles[2].DelayMaxMS, cfg.AIProfiles[2].UseKnownPairChance)
 	}
 }
 
@@ -100,17 +109,20 @@ func TestLoadWithAIEnvOverrides(t *testing.T) {
 	if cfg.AIPairTimeoutSec != 30 {
 		t.Errorf("expected AIPairTimeoutSec=30, got %d", cfg.AIPairTimeoutSec)
 	}
-	if cfg.AIName != "TestBot" {
-		t.Errorf("expected AIName=TestBot, got %q", cfg.AIName)
+	if len(cfg.AIProfiles) == 0 {
+		t.Fatal("expected at least one AI profile")
 	}
-	if cfg.AIDelayMinMS != 500 {
-		t.Errorf("expected AIDelayMinMS=500, got %d", cfg.AIDelayMinMS)
+	if cfg.AIProfiles[0].Name != "TestBot" {
+		t.Errorf("expected first AI name TestBot, got %q", cfg.AIProfiles[0].Name)
 	}
-	if cfg.AIDelayMaxMS != 3000 {
-		t.Errorf("expected AIDelayMaxMS=3000, got %d", cfg.AIDelayMaxMS)
+	if cfg.AIProfiles[0].DelayMinMS != 500 {
+		t.Errorf("expected first AI DelayMinMS=500, got %d", cfg.AIProfiles[0].DelayMinMS)
 	}
-	if cfg.AIUseKnownPairChance != 90 {
-		t.Errorf("expected AIUseKnownPairChance=90, got %d", cfg.AIUseKnownPairChance)
+	if cfg.AIProfiles[0].DelayMaxMS != 3000 {
+		t.Errorf("expected first AI DelayMaxMS=3000, got %d", cfg.AIProfiles[0].DelayMaxMS)
+	}
+	if cfg.AIProfiles[0].UseKnownPairChance != 90 {
+		t.Errorf("expected first AI UseKnownPairChance=90, got %d", cfg.AIProfiles[0].UseKnownPairChance)
 	}
 }
 
@@ -121,7 +133,7 @@ func TestLoadWithInvalidEnv(t *testing.T) {
 	cfg := Load()
 
 	// Should fall back to default when env value is invalid
-	if cfg.BoardRows != 4 {
-		t.Errorf("expected BoardRows=4 (default) with invalid env, got %d", cfg.BoardRows)
+	if cfg.BoardRows != 6 {
+		t.Errorf("expected BoardRows=6 (default) with invalid env, got %d", cfg.BoardRows)
 	}
 }

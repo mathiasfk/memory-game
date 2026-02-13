@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"sync/atomic"
 	"time"
 
@@ -85,21 +86,27 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 	gameID := fmt.Sprintf("game-%d", atomic.AddUint64(&gameCounter, 1))
 
+	profiles := m.config.AIProfiles
+	if len(profiles) == 0 {
+		profiles = config.Defaults().AIProfiles
+	}
+	profile := &profiles[rand.Intn(len(profiles))]
+
 	aiSend := make(chan []byte, 256)
 	p0 := game.NewPlayer(client1.Name, client1.Send)
-	p1 := game.NewPlayer(m.config.AIName, aiSend)
+	p1 := game.NewPlayer(profile.Name, aiSend)
 
 	g := game.NewGame(gameID, m.config, p0, p1, m.powerUps)
 
 	client1.Game = g
 	client1.PlayerID = 0
 
-	log.Printf("Match created: %s — %s vs %s (AI)", gameID, client1.Name, m.config.AIName)
+	log.Printf("Match created: %s — %s vs %s (AI)", gameID, client1.Name, profile.Name)
 
-	m.sendMatchFound(client1, m.config.AIName, g)
+	m.sendMatchFound(client1, profile.Name, g)
 
 	go g.Run()
-	go ai.Run(aiSend, g, 1, m.config)
+	go ai.Run(aiSend, g, 1, profile)
 }
 
 func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *game.Game) {

@@ -12,7 +12,7 @@ import (
 // Run receives game state messages from the given channel and sends actions to the game
 // when it is the AI's turn. It only uses information from the game_state payload (no
 // access to board internals). It runs until the channel is closed or a game_over is received.
-func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, cfg *config.Config) {
+func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIParams) {
 	memory := make(map[int]int) // index -> pairID (what we've seen at each position)
 
 	for data := range aiSend {
@@ -49,16 +49,16 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, cfg *config.Config) 
 			}
 
 			// Human-like delay before acting
-			delayMS := cfg.AIDelayMinMS
-			if cfg.AIDelayMaxMS > cfg.AIDelayMinMS {
-				delayMS = cfg.AIDelayMinMS + rand.Intn(cfg.AIDelayMaxMS-cfg.AIDelayMinMS)
+			delayMS := params.DelayMinMS
+			if params.DelayMaxMS > params.DelayMinMS {
+				delayMS = params.DelayMinMS + rand.Intn(params.DelayMaxMS-params.DelayMinMS)
 			}
 			time.Sleep(time.Duration(delayMS) * time.Millisecond)
 
 			// Re-read state after delay in case game ended (e.g. opponent disconnected)
 			// We don't have a way to re-read; just send. Game will ignore if not our turn.
 
-			chance := cfg.AIUseKnownPairChance
+			chance := params.UseKnownPairChance
 			if chance < 0 {
 				chance = 0
 			}

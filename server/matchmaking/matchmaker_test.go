@@ -26,18 +26,15 @@ func (m *mockPowerUpProvider) AllPowerUps() []game.PowerUpDef {
 
 func TestMatchmakerPairsPlayers(t *testing.T) {
 	cfg := &config.Config{
-		BoardRows:            2,
-		BoardCols:            2,
-		ComboBasePoints:      1,
-		RevealDurationMS:     100,
-		PowerUpShuffleCost:   3,
-		MaxNameLength:        24,
-		WSPort:               8080,
-		AIPairTimeoutSec:     60,
-		AIName:               "Mnemosyne",
-		AIDelayMinMS:         100,
-		AIDelayMaxMS:         500,
-		AIUseKnownPairChance: 85,
+		BoardRows:        2,
+		BoardCols:        2,
+		ComboBasePoints:  1,
+		RevealDurationMS: 100,
+		PowerUpShuffleCost: 3,
+		MaxNameLength:    24,
+		WSPort:           8080,
+		AIPairTimeoutSec: 60,
+		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 100, DelayMaxMS: 500, UseKnownPairChance: 85}},
 	}
 
 	pups := &mockPowerUpProvider{}
@@ -106,18 +103,15 @@ func TestMatchmakerPairsPlayers(t *testing.T) {
 
 func TestMatchmakerPairsWithAIAfterTimeout(t *testing.T) {
 	cfg := &config.Config{
-		BoardRows:            2,
-		BoardCols:            2,
-		ComboBasePoints:      1,
-		RevealDurationMS:     100,
-		PowerUpShuffleCost:   3,
-		MaxNameLength:        24,
-		WSPort:               8080,
-		AIPairTimeoutSec:     0, // very short: 0s, so AI pairs almost immediately
-		AIName:               "Mnemosyne",
-		AIDelayMinMS:         10,
-		AIDelayMaxMS:         50,
-		AIUseKnownPairChance: 85,
+		BoardRows:        2,
+		BoardCols:        2,
+		ComboBasePoints:  1,
+		RevealDurationMS: 100,
+		PowerUpShuffleCost: 3,
+		MaxNameLength:    24,
+		WSPort:           8080,
+		AIPairTimeoutSec: 0, // very short: 0s, so AI pairs almost immediately
+		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 50, UseKnownPairChance: 85}},
 	}
 
 	pups := &mockPowerUpProvider{}
