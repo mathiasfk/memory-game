@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useGameSocket } from "./hooks/useGameSocket";
 import GameOverScreen from "./screens/GameOverScreen";
 import GameScreen from "./screens/GameScreen";
@@ -12,8 +12,6 @@ type ScreenName = "lobby" | "waiting" | "game" | "gameover";
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 
 export default function App() {
-  const { connected, send, lastMessage } = useGameSocket(WS_URL);
-
   const [screen, setScreen] = useState<ScreenName>("lobby");
   const [matchInfo, setMatchInfo] = useState<MatchFoundMsg | null>(null);
   const [gameState, setGameState] = useState<GameStateMsg | null>(null);
@@ -21,28 +19,24 @@ export default function App() {
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!lastMessage) {
-      return;
-    }
-
-    switch (lastMessage.type) {
+  const handleMessage = useCallback((msg: import("./types/messages").ServerMessage) => {
+    switch (msg.type) {
       case "waiting_for_match":
         setScreen("waiting");
         setGameResult(null);
         setOpponentDisconnected(false);
         break;
       case "match_found":
-        setMatchInfo(lastMessage);
+        setMatchInfo(msg);
         setScreen("game");
         setGameResult(null);
         setOpponentDisconnected(false);
         break;
       case "game_state":
-        setGameState(lastMessage);
+        setGameState(msg);
         break;
       case "game_over":
-        setGameResult(lastMessage);
+        setGameResult(msg);
         setOpponentDisconnected(false);
         setScreen("gameover");
         break;
@@ -52,14 +46,16 @@ export default function App() {
         setScreen("gameover");
         break;
       case "error":
-        setErrorMessage(lastMessage.message);
+        setErrorMessage(msg.message);
         break;
       default: {
-        const _exhaustiveCheck: never = lastMessage;
+        const _exhaustiveCheck: never = msg;
         void _exhaustiveCheck;
       }
     }
-  }, [lastMessage]);
+  }, []);
+
+  const { connected, send } = useGameSocket(WS_URL, { onMessage: handleMessage });
 
   const handleFindMatch = (name: string): void => {
     setErrorMessage(null);

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ClientMessage, ServerMessage } from "../types/messages";
 
+interface UseGameSocketOptions {
+  /** Called for every server message so none are skipped by React batching. */
+  onMessage?: (msg: ServerMessage) => void;
+}
+
 interface UseGameSocket {
   connected: boolean;
   send: (msg: ClientMessage) => void;
@@ -28,7 +33,8 @@ function isServerMessage(value: unknown): value is ServerMessage {
   return typeof maybeType === "string" && MESSAGE_TYPES.has(maybeType as ServerMessage["type"]);
 }
 
-export function useGameSocket(url: string): UseGameSocket {
+export function useGameSocket(url: string, options: UseGameSocketOptions = {}): UseGameSocket {
+  const { onMessage: onMessageOption } = options;
   const [connected, setConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<ServerMessage | null>(null);
 
@@ -36,6 +42,8 @@ export function useGameSocket(url: string): UseGameSocket {
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const shouldReconnectRef = useRef(true);
+  const onMessageRef = useRef(onMessageOption);
+  onMessageRef.current = onMessageOption;
 
   const clearReconnectTimer = useCallback((): void => {
     if (reconnectTimerRef.current !== null) {
@@ -59,6 +67,7 @@ export function useGameSocket(url: string): UseGameSocket {
         const parsed: unknown = JSON.parse(event.data as string);
         if (isServerMessage(parsed)) {
           setLastMessage(parsed);
+          onMessageRef.current?.(parsed);
         }
       } catch (_error) {
         // Ignore invalid JSON payloads.
@@ -90,9 +99,15 @@ export function useGameSocket(url: string): UseGameSocket {
 
   useEffect(() => {
     shouldReconnectRef.current = true;
-    connect();
+    // Defer connect so React Strict Mode's double-mount runs cleanup before connect runs.
+    // First mount: schedule connect(0); cleanup clears timer and closes socket; second mount: schedule connect(0).
+    // Only the second connect runs, so we get one connection per tab instead of connect→close→connect.
+    const connectTimer = window.setTimeout(() => {
+      connect();
+    }, 0);
 
     return () => {
+      window.clearTimeout(connectTimer);
       shouldReconnectRef.current = false;
       clearReconnectTimer();
       socketRef.current?.close();
