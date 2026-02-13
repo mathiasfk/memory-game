@@ -44,15 +44,15 @@ func Defaults() *Config {
 		BoardCols:          6,
 		ComboBasePoints:    1,
 		RevealDurationMS:   1000,
-		PowerUpShuffleCost: 3,
+		PowerUpShuffleCost: 2,
 		MaxNameLength:      24,
 		WSPort:             8080,
 		MaxLatencyMS:       500,
 		AIPairTimeoutSec:   15,
 		AIProfiles: []AIParams{
-			{Name: "Mnemosyne", DelayMinMS: 900, DelayMaxMS: 2500, UseKnownPairChance: 90},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 60},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 30},
+			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 50},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 15},
 		},
 	}
 }
