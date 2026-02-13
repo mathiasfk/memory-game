@@ -39,6 +39,26 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				}
 			}
 
+			// Forget: with ForgetChance probability, remove each known card from memory
+			forgetChance := params.ForgetChance
+			if forgetChance < 0 {
+				forgetChance = 0
+			}
+			if forgetChance > 100 {
+				forgetChance = 100
+			}
+			if forgetChance > 0 && len(memory) > 0 {
+				var toForget []int
+				for idx := range memory {
+					if rand.Intn(100) < forgetChance {
+						toForget = append(toForget, idx)
+					}
+				}
+				for _, idx := range toForget {
+					delete(memory, idx)
+				}
+			}
+
 			if !state.YourTurn {
 				continue
 			}

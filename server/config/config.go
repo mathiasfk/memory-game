@@ -13,6 +13,7 @@ type AIParams struct {
 	DelayMinMS         int    `json:"delay_min_ms"`
 	DelayMaxMS         int    `json:"delay_max_ms"`
 	UseKnownPairChance int    `json:"use_known_pair_chance"` // 0-100, probability to use a memorized pair when available
+	ForgetChance       int    `json:"forget_chance"`         // 0-100, probability to forget (delete from memory) a known card each turn
 }
 
 // Config holds all configurable game parameters.
@@ -50,9 +51,9 @@ func Defaults() *Config {
 		MaxLatencyMS:       500,
 		AIPairTimeoutSec:   15,
 		AIProfiles: []AIParams{
-			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 50},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 15},
+			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 50, ForgetChance: 15},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 15, ForgetChance: 30},
 		},
 	}
 }
@@ -89,7 +90,7 @@ func Load() *Config {
 		if chance == 0 {
 			chance = 90
 		}
-		cfg.AIProfiles = []AIParams{{Name: name, DelayMinMS: delayMin, DelayMaxMS: delayMax, UseKnownPairChance: chance}}
+		cfg.AIProfiles = []AIParams{{Name: name, DelayMinMS: delayMin, DelayMaxMS: delayMax, UseKnownPairChance: chance, ForgetChance: 0}}
 	}
 
 	// Environment variable overrides
@@ -108,6 +109,7 @@ func Load() *Config {
 		overrideInt(&cfg.AIProfiles[0].DelayMinMS, "AI_DELAY_MIN_MS")
 		overrideInt(&cfg.AIProfiles[0].DelayMaxMS, "AI_DELAY_MAX_MS")
 		overrideInt(&cfg.AIProfiles[0].UseKnownPairChance, "AI_USE_KNOWN_PAIR_CHANCE")
+		overrideInt(&cfg.AIProfiles[0].ForgetChance, "AI_FORGET_CHANCE")
 	}
 
 	return cfg
