@@ -1,0 +1,35 @@
+.screen {
+  max-width: 520px;
+  margin: 6rem auto 0;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.title {
+  margin: 0 0 1rem;
+}
+
+.scores {
+  margin-bottom: 1rem;
+}
+
+.screen button {
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.screen button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.connection {
+  margin-top: 0.75rem;
+  color: #fbbf24;
+}
