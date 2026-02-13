@@ -14,7 +14,7 @@ function getCardValue(card: CardView): string {
   return String(card.pairId ?? "");
 }
 
-export default function Card({ card, disabled, onClick }: CardProps): JSX.Element {
+export default function Card({ card, disabled, onClick }: CardProps) {
   const cardClasses = [
     styles.card,
     card.state !== "hidden" ? styles.faceUp : "",

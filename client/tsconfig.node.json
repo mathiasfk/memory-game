@@ -3,6 +3,7 @@
     "composite": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "noEmit": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "types": ["node"]

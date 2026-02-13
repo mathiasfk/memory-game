@@ -12,7 +12,7 @@ export default function PowerUpShop({
   powerUps,
   enabled,
   onUsePowerUp,
-}: PowerUpShopProps): JSX.Element {
+}: PowerUpShopProps) {
   return (
     <section className={styles.shop} aria-label="Power-up shop">
       <h3>Power-Ups</h3>

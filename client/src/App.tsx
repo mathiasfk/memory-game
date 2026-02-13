@@ -11,7 +11,7 @@ type ScreenName = "lobby" | "waiting" | "game" | "gameover";
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 
-export default function App(): JSX.Element {
+export default function App() {
   const { connected, send, lastMessage } = useGameSocket(WS_URL);
 
   const [screen, setScreen] = useState<ScreenName>("lobby");

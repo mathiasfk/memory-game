@@ -26,7 +26,7 @@ export default function GameOverScreen({
   opponentDisconnected,
   latestGameState,
   onPlayAgain,
-}: GameOverScreenProps): JSX.Element {
+}: GameOverScreenProps) {
   const yourScore = result?.you.score ?? latestGameState?.you.score ?? 0;
   const opponentScore = result?.opponent.score ?? latestGameState?.opponent.score ?? 0;
   const yourName = result?.you.name ?? latestGameState?.you.name ?? "You";

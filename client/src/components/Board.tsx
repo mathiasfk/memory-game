@@ -16,7 +16,7 @@ export default function Board({
   cols,
   cardsClickable,
   onCardClick,
-}: BoardProps): JSX.Element {
+}: BoardProps) {
   const sortedCards = [...cards].sort((a, b) => a.index - b.index);
 
   return (

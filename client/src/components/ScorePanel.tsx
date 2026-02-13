@@ -15,7 +15,7 @@ function PlayerScoreCard({
   title: string;
   player: PlayerView;
   active: boolean;
-}): JSX.Element {
+}) {
   return (
     <div className={`${styles.playerCard} ${active ? styles.active : ""}`}>
       <h3>{title}</h3>
@@ -26,7 +26,7 @@ function PlayerScoreCard({
   );
 }
 
-export default function ScorePanel({ you, opponent, yourTurn }: ScorePanelProps): JSX.Element {
+export default function ScorePanel({ you, opponent, yourTurn }: ScorePanelProps) {
   return (
     <section className={styles.panel} aria-label="Score panel">
       <PlayerScoreCard title="You" player={you} active={yourTurn} />

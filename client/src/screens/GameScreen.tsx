@@ -20,7 +20,7 @@ export default function GameScreen({
   gameState,
   onFlipCard,
   onUsePowerUp,
-}: GameScreenProps): JSX.Element {
+}: GameScreenProps) {
   if (!matchInfo) {
     return (
       <section className={styles.screen}>

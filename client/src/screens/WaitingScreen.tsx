@@ -4,7 +4,7 @@ interface WaitingScreenProps {
   connected: boolean;
 }
 
-export default function WaitingScreen({ connected }: WaitingScreenProps): JSX.Element {
+export default function WaitingScreen({ connected }: WaitingScreenProps) {
   return (
     <section className={styles.screen}>
       <div className={styles.spinner} aria-hidden="true" />

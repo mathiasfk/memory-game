@@ -13,7 +13,7 @@ function getMessage(yourTurn: boolean, phase: TurnPhase): string {
   return yourTurn ? "Your turn" : "Opponent's turn";
 }
 
-export default function TurnIndicator({ yourTurn, phase }: TurnIndicatorProps): JSX.Element {
+export default function TurnIndicator({ yourTurn, phase }: TurnIndicatorProps) {
   return (
     <div className={`${styles.indicator} ${yourTurn ? styles.yours : styles.theirs}`}>
       {getMessage(yourTurn, phase)}

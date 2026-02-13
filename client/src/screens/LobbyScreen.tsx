@@ -8,7 +8,7 @@ interface LobbyScreenProps {
   onFindMatch: (name: string) => void;
 }
 
-export default function LobbyScreen({ connected, onFindMatch }: LobbyScreenProps): JSX.Element {
+export default function LobbyScreen({ connected, onFindMatch }: LobbyScreenProps) {
   const [name, setName] = useState("");
 
   const trimmedName = useMemo(() => name.trim(), [name]);

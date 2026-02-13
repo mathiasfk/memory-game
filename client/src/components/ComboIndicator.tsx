@@ -6,7 +6,7 @@ interface ComboIndicatorProps {
   label: string;
 }
 
-export default function ComboIndicator({ comboStreak, label }: ComboIndicatorProps): JSX.Element {
+export default function ComboIndicator({ comboStreak, label }: ComboIndicatorProps) {
   const previousComboRef = useRef(comboStreak);
   const [visibleCombo, setVisibleCombo] = useState<number | null>(null);
 
