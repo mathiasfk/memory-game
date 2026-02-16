@@ -47,17 +47,8 @@ type Config struct {
 	// PowerUps holds configuration for each power-up.
 	PowerUps PowerUpsConfig `json:"powerups"`
 
-	// Legacy: used when config has powerup_shuffle_cost but no powerups.shuffle.cost
-	PowerUpShuffleCost int `json:"powerup_shuffle_cost"`
-
 	// AIProfiles lists available AI opponents; one is chosen at random when pairing vs AI.
 	AIProfiles []AIParams `json:"ai_profiles"`
-
-	// Legacy single-AI fields (used when config.json has ai_name etc. but no ai_profiles)
-	AIName               string `json:"ai_name"`
-	AIDelayMinMS         int    `json:"ai_delay_min_ms"`
-	AIDelayMaxMS         int    `json:"ai_delay_max_ms"`
-	AIUseKnownPairChance int    `json:"ai_use_known_pair_chance"`
 }
 
 // Defaults returns a Config with all default values from the spec.
@@ -97,32 +88,6 @@ func Load() *Config {
 		}
 	}
 
-	// Legacy: if config had powerup_shuffle_cost but no powerups.shuffle, use it
-	if cfg.PowerUps.Shuffle.Cost == 0 && cfg.PowerUpShuffleCost != 0 {
-		cfg.PowerUps.Shuffle.Cost = cfg.PowerUpShuffleCost
-	}
-
-	// If no ai_profiles in config, build one from legacy fields
-	if len(cfg.AIProfiles) == 0 {
-		name := cfg.AIName
-		if name == "" {
-			name = "Mnemosyne"
-		}
-		delayMin := cfg.AIDelayMinMS
-		if delayMin == 0 {
-			delayMin = 800
-		}
-		delayMax := cfg.AIDelayMaxMS
-		if delayMax == 0 {
-			delayMax = 1500
-		}
-		chance := cfg.AIUseKnownPairChance
-		if chance == 0 {
-			chance = 90
-		}
-		cfg.AIProfiles = []AIParams{{Name: name, DelayMinMS: delayMin, DelayMaxMS: delayMax, UseKnownPairChance: chance, ForgetChance: 0}}
-	}
-
 	// Environment variable overrides
 	overrideInt(&cfg.BoardRows, "BOARD_ROWS")
 	overrideInt(&cfg.BoardCols, "BOARD_COLS")
@@ -135,7 +100,6 @@ func Load() *Config {
 	overrideInt(&cfg.WSPort, "WS_PORT")
 	overrideInt(&cfg.MaxLatencyMS, "MAX_LATENCY_MS")
 	overrideInt(&cfg.AIPairTimeoutSec, "AI_PAIR_TIMEOUT_SEC")
-	// Env overrides for first AI profile (backward compatibility)
 	if len(cfg.AIProfiles) > 0 {
 		overrideString(&cfg.AIProfiles[0].Name, "AI_NAME")
 		overrideInt(&cfg.AIProfiles[0].DelayMinMS, "AI_DELAY_MIN_MS")
