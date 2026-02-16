@@ -38,9 +38,9 @@ func testConfig() *config.Config {
 		BoardCols:          4,
 		ComboBasePoints:    1,
 		RevealDurationMS:   100, // Short for testing
-		PowerUpShuffleCost: 3,
 		MaxNameLength:      24,
 		WSPort:             8080,
+		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
 	}
 }
 
@@ -570,6 +570,72 @@ func TestUsePowerUp_WrongPhase(t *testing.T) {
 	}
 }
 
+func TestUsePowerUp_SecondChance(t *testing.T) {
+	cfg := testConfig()
+	g, send0, send1, pups := createTestGame(cfg)
+
+	pups.powerUps["second_chance"] = PowerUpDef{
+		ID:          "second_chance",
+		Name:        "Second chance",
+		Description: "+1 point per mismatch. Lasts 5 rounds.",
+		Cost:        2,
+		Apply:       func(board *Board, active *Player, opponent *Player) error { return nil },
+	}
+
+	go g.Run()
+	defer func() {
+		select {
+		case g.Actions <- Action{Type: ActionDisconnect, PlayerIdx: 0}:
+		default:
+		}
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	drainChannel(send0)
+	drainChannel(send1)
+
+	currentPlayer := g.CurrentTurn
+	player := g.Players[currentPlayer]
+	player.Score = 5
+
+	// Use Second Chance
+	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "second_chance"}
+	time.Sleep(50 * time.Millisecond)
+
+	if player.Score != 3 {
+		t.Errorf("expected Score=3 after using second_chance (5-2), got %d", player.Score)
+	}
+	if player.SecondChanceActiveUntilRound != 5 {
+		t.Errorf("expected SecondChanceActiveUntilRound=5, got %d", player.SecondChanceActiveUntilRound)
+	}
+
+	// Cause a mismatch: flip two cards with different PairID
+	idx0 := 0
+	idx1 := -1
+	for i := 1; i < len(g.Board.Cards); i++ {
+		if g.Board.Cards[i].PairID != g.Board.Cards[idx0].PairID {
+			idx1 = i
+			break
+		}
+	}
+	if idx1 < 0 {
+		t.Fatal("board has only one pair (test setup issue)")
+	}
+
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: idx0}
+	time.Sleep(30 * time.Millisecond)
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: idx1}
+	// Wait for resolve (RevealDurationMS=100 in testConfig)
+	time.Sleep(150 * time.Millisecond)
+
+	if player.Score != 4 {
+		t.Errorf("expected Score=4 after mismatch with Second Chance (3+1), got %d", player.Score)
+	}
+	if g.Round != 1 {
+		t.Errorf("expected Round=1 after one mismatch, got %d", g.Round)
+	}
+}
+
 func TestDisconnect(t *testing.T) {
 	cfg := testConfig()
 	g, send0, send1, _ := createTestGame(cfg)
@@ -714,9 +780,9 @@ func TestFullGame(t *testing.T) {
 		BoardCols:          2,
 		ComboBasePoints:    1,
 		RevealDurationMS:   50,
-		PowerUpShuffleCost: 3,
 		MaxNameLength:      24,
 		WSPort:             8080,
+		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
 	}
 
 	send0 := make(chan []byte, 100)

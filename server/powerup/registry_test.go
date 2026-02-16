@@ -1,6 +1,7 @@
 package powerup
 
 import (
+	"strings"
 	"testing"
 
 	"memory-game-server/game"
@@ -106,4 +107,37 @@ func TestShufflePowerUpMetadata(t *testing.T) {
 	if s.Cost() != 5 {
 		t.Errorf("expected Cost=5, got %d", s.Cost())
 	}
+}
+
+func TestSecondChancePowerUpMetadata(t *testing.T) {
+	sc := &SecondChancePowerUp{CostValue: 2, DurationRounds: 5}
+
+	if sc.ID() != "second_chance" {
+		t.Errorf("expected ID='second_chance', got %q", sc.ID())
+	}
+	if sc.Name() != "Second chance" {
+		t.Errorf("expected Name='Second chance', got %q", sc.Name())
+	}
+	if sc.Description() == "" {
+		t.Error("expected non-empty description")
+	}
+	if !strings.Contains(sc.Description(), "5 rounds") {
+		t.Errorf("expected description to mention 5 rounds, got %q", sc.Description())
+	}
+	if sc.Cost() != 2 {
+		t.Errorf("expected Cost=2, got %d", sc.Cost())
+	}
+}
+
+func TestSecondChancePowerUpApply(t *testing.T) {
+	sc := &SecondChancePowerUp{CostValue: 2, DurationRounds: 5}
+	board := game.NewBoard(2, 2)
+	p1 := &game.Player{Name: "Alice"}
+	p2 := &game.Player{Name: "Bob"}
+
+	err := sc.Apply(board, p1, p2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Apply is a no-op; activation is handled in game layer
 }

@@ -26,15 +26,15 @@ func (m *mockPowerUpProvider) AllPowerUps() []game.PowerUpDef {
 
 func TestMatchmakerPairsPlayers(t *testing.T) {
 	cfg := &config.Config{
-		BoardRows:        2,
-		BoardCols:        2,
-		ComboBasePoints:  1,
-		RevealDurationMS: 100,
-		PowerUpShuffleCost: 3,
-		MaxNameLength:    24,
-		WSPort:           8080,
-		AIPairTimeoutSec: 60,
-		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 100, DelayMaxMS: 500, UseKnownPairChance: 85}},
+		BoardRows:          2,
+		BoardCols:          2,
+		ComboBasePoints:    1,
+		RevealDurationMS:   100,
+		MaxNameLength:      24,
+		WSPort:             8080,
+		AIPairTimeoutSec:   60,
+		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 100, DelayMaxMS: 500, UseKnownPairChance: 85}},
 	}
 
 	pups := &mockPowerUpProvider{}
@@ -103,15 +103,15 @@ func TestMatchmakerPairsPlayers(t *testing.T) {
 
 func TestMatchmakerPairsWithAIAfterTimeout(t *testing.T) {
 	cfg := &config.Config{
-		BoardRows:        2,
-		BoardCols:        2,
-		ComboBasePoints:  1,
-		RevealDurationMS: 100,
-		PowerUpShuffleCost: 3,
-		MaxNameLength:    24,
-		WSPort:           8080,
-		AIPairTimeoutSec: 0, // very short: 0s, so AI pairs almost immediately
-		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 50, UseKnownPairChance: 85}},
+		BoardRows:          2,
+		BoardCols:          2,
+		ComboBasePoints:    1,
+		RevealDurationMS:   100,
+		MaxNameLength:      24,
+		WSPort:             8080,
+		AIPairTimeoutSec:   0, // very short: 0s, so AI pairs almost immediately
+		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 50, UseKnownPairChance: 85}},
 	}
 
 	pups := &mockPowerUpProvider{}

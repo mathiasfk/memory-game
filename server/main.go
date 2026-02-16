@@ -15,11 +15,12 @@ func main() {
 	cfg := config.Load()
 
 	log.Printf("Configuration: BoardRows=%d, BoardCols=%d, ComboBasePoints=%d, RevealDurationMS=%d, ShuffleCost=%d, WSPort=%d",
-		cfg.BoardRows, cfg.BoardCols, cfg.ComboBasePoints, cfg.RevealDurationMS, cfg.PowerUpShuffleCost, cfg.WSPort)
+		cfg.BoardRows, cfg.BoardCols, cfg.ComboBasePoints, cfg.RevealDurationMS, cfg.PowerUps.Shuffle.Cost, cfg.WSPort)
 
 	// Set up power-up registry
 	registry := powerup.NewRegistry()
-	registry.Register(&powerup.ShufflePowerUp{CostValue: cfg.PowerUpShuffleCost})
+	registry.Register(&powerup.ShufflePowerUp{CostValue: cfg.PowerUps.Shuffle.Cost})
+	registry.Register(&powerup.SecondChancePowerUp{CostValue: cfg.PowerUps.SecondChance.Cost, DurationRounds: cfg.PowerUps.SecondChance.DurationRounds})
 
 	// Set up matchmaker
 	mm := matchmaking.NewMatchmaker(cfg, registry)

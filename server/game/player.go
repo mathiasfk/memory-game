@@ -6,6 +6,9 @@ type Player struct {
 	Score       int
 	ComboStreak int
 	Send        chan []byte // reference to the client's send channel
+
+	// SecondChanceActiveUntilRound is the round index until which Second Chance is active (0 = inactive).
+	SecondChanceActiveUntilRound int
 }
 
 // NewPlayer creates a new Player with the given name and send channel.

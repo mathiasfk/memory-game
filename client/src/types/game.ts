@@ -10,6 +10,8 @@ export interface PlayerView {
   name: string;
   score: number;
   comboStreak: number;
+  /** Rounds the Second Chance power-up is still active (0 = inactive). */
+  secondChanceRoundsRemaining?: number;
 }
 
 export interface PowerUpView {

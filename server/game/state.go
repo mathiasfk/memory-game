@@ -13,6 +13,9 @@ type PlayerView struct {
 	Name        string `json:"name"`
 	Score       int    `json:"score"`
 	ComboStreak int    `json:"comboStreak"`
+
+	// SecondChanceRoundsRemaining is how many rounds the Second Chance power-up is still active (0 = inactive).
+	SecondChanceRoundsRemaining int `json:"secondChanceRoundsRemaining"`
 }
 
 // PowerUpView is the client-facing representation of an available power-up.
@@ -54,11 +57,16 @@ func BuildCardViews(board *Board) []CardView {
 	return views
 }
 
-// BuildPlayerView creates a PlayerView from a Player.
-func BuildPlayerView(p *Player) PlayerView {
+// BuildPlayerView creates a PlayerView from a Player. currentRound is used to compute SecondChanceRoundsRemaining.
+func BuildPlayerView(p *Player, currentRound int) PlayerView {
+	remaining := 0
+	if p.SecondChanceActiveUntilRound > 0 && currentRound <= p.SecondChanceActiveUntilRound {
+		remaining = p.SecondChanceActiveUntilRound - currentRound
+	}
 	return PlayerView{
-		Name:        p.Name,
-		Score:       p.Score,
-		ComboStreak: p.ComboStreak,
+		Name:                        p.Name,
+		Score:                       p.Score,
+		ComboStreak:                 p.ComboStreak,
+		SecondChanceRoundsRemaining: remaining,
 	}
 }

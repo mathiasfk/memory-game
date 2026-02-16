@@ -78,6 +78,9 @@ type Game struct {
 	PowerUps       PowerUpProvider
 	Finished       bool
 
+	// Round increments each time the turn passes after a mismatch (used for Second Chance duration).
+	Round int
+
 	Actions chan Action
 	Done    chan struct{}
 }
@@ -225,15 +228,23 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 }
 
 func (g *Game) handleResolveMismatch(playerIdx int) {
+	player := g.Players[playerIdx]
+
+	// Second Chance: +1 point per error while active
+	if player.SecondChanceActiveUntilRound > 0 && g.Round <= player.SecondChanceActiveUntilRound {
+		player.Score += 1
+	}
+
 	// Hide the two flipped cards
 	for _, idx := range g.FlippedIndices {
 		g.Board.Cards[idx].State = Hidden
 	}
 
 	// Reset combo for current player
-	g.Players[playerIdx].ComboStreak = 0
+	player.ComboStreak = 0
 
 	g.FlippedIndices = g.FlippedIndices[:0]
+	g.Round++
 	g.CurrentTurn = 1 - g.CurrentTurn
 	g.TurnPhase = FirstFlip
 
@@ -277,6 +288,11 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string) {
 		player.Score += pup.Cost
 		g.sendError(playerIdx, "Power-up failed: "+err.Error())
 		return
+	}
+
+	// Second Chance: activate for the next N rounds (game state, not board effect)
+	if powerUpID == "second_chance" && g.Config.PowerUps.SecondChance.DurationRounds > 0 {
+		player.SecondChanceActiveUntilRound = g.Round + g.Config.PowerUps.SecondChance.DurationRounds
 	}
 
 	// Broadcast updated state (turn does not end)
@@ -360,8 +376,8 @@ func (g *Game) buildStateForPlayer(playerIdx int) GameStateMsg {
 	return GameStateMsg{
 		Type:              "game_state",
 		Cards:             BuildCardViews(g.Board),
-		You:               BuildPlayerView(g.Players[playerIdx]),
-		Opponent:          BuildPlayerView(g.Players[opponentIdx]),
+		You:               BuildPlayerView(g.Players[playerIdx], g.Round),
+		Opponent:          BuildPlayerView(g.Players[opponentIdx], g.Round),
 		YourTurn:          playerIdx == g.CurrentTurn,
 		AvailablePowerUps: powerUpViews,
 		FlippedIndices:    flipped,

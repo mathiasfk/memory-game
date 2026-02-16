@@ -69,6 +69,7 @@ export default function GameScreen({
             powerUps={gameState.availablePowerUps}
             enabled={powerUpsEnabled}
             onUsePowerUp={onUsePowerUp}
+            secondChanceRoundsRemaining={gameState.you.secondChanceRoundsRemaining}
           />
         </aside>
       </div>

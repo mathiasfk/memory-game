@@ -6,12 +6,15 @@ interface PowerUpShopProps {
   powerUps: PowerUpView[];
   enabled: boolean;
   onUsePowerUp: (powerUpId: string) => void;
+  /** Rounds the Second Chance power-up is still active (0 or undefined = inactive). */
+  secondChanceRoundsRemaining?: number;
 }
 
 export default function PowerUpShop({
   powerUps,
   enabled,
   onUsePowerUp,
+  secondChanceRoundsRemaining = 0,
 }: PowerUpShopProps) {
   return (
     <section className={styles.shop} aria-label="Power-up shop">
@@ -22,7 +25,11 @@ export default function PowerUpShop({
         <ul className={styles.list}>
           {powerUps.map((powerUp) => {
             const display = POWER_UP_DISPLAY[powerUp.id];
-            const buttonDisabled = !enabled || !powerUp.canAfford;
+            const isSecondChanceActive = powerUp.id === "second_chance" && secondChanceRoundsRemaining > 0;
+            const buttonDisabled =
+              !enabled ||
+              !powerUp.canAfford ||
+              isSecondChanceActive;
 
             return (
               <li key={powerUp.id} className={styles.item}>
@@ -33,6 +40,13 @@ export default function PowerUpShop({
                     <p className={styles.description}>
                       {display?.description ?? powerUp.description}
                     </p>
+                    {powerUp.id === "second_chance" && (
+                      <p className={styles.status} aria-live="polite">
+                        {secondChanceRoundsRemaining > 0
+                          ? `Active (${secondChanceRoundsRemaining} rounds left)`
+                          : "Not active"}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <button

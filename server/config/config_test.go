@@ -20,8 +20,14 @@ func TestDefaults(t *testing.T) {
 	if cfg.RevealDurationMS != 1000 {
 		t.Errorf("expected RevealDurationMS=1000, got %d", cfg.RevealDurationMS)
 	}
-	if cfg.PowerUpShuffleCost != 2 {
-		t.Errorf("expected PowerUpShuffleCost=2, got %d", cfg.PowerUpShuffleCost)
+	if cfg.PowerUps.Shuffle.Cost != 2 {
+		t.Errorf("expected PowerUps.Shuffle.Cost=2, got %d", cfg.PowerUps.Shuffle.Cost)
+	}
+	if cfg.PowerUps.SecondChance.Cost != 2 {
+		t.Errorf("expected PowerUps.SecondChance.Cost=2, got %d", cfg.PowerUps.SecondChance.Cost)
+	}
+	if cfg.PowerUps.SecondChance.DurationRounds != 5 {
+		t.Errorf("expected PowerUps.SecondChance.DurationRounds=5, got %d", cfg.PowerUps.SecondChance.DurationRounds)
 	}
 	if cfg.MaxNameLength != 24 {
 		t.Errorf("expected MaxNameLength=24, got %d", cfg.MaxNameLength)
@@ -47,14 +53,14 @@ func TestDefaults(t *testing.T) {
 	if cfg.AIProfiles[1].Name != "Calliope" {
 		t.Errorf("expected second AI name Calliope, got %q", cfg.AIProfiles[1].Name)
 	}
-	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 50 || cfg.AIProfiles[1].ForgetChance != 15 {
-		t.Errorf("expected Calliope 500/1100/50 ForgetChance=15, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance)
+	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 70 || cfg.AIProfiles[1].ForgetChance != 15 {
+		t.Errorf("expected Calliope 500/1100/70 ForgetChance=15, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance)
 	}
 	if cfg.AIProfiles[2].Name != "Thalia" {
 		t.Errorf("expected third AI name Thalia, got %q", cfg.AIProfiles[2].Name)
 	}
-	if cfg.AIProfiles[2].DelayMinMS != 500 || cfg.AIProfiles[2].DelayMaxMS != 2000 || cfg.AIProfiles[2].UseKnownPairChance != 15 || cfg.AIProfiles[2].ForgetChance != 30 {
-		t.Errorf("expected Thalia 500/2000/15 ForgetChance=30, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[2].DelayMinMS, cfg.AIProfiles[2].DelayMaxMS, cfg.AIProfiles[2].UseKnownPairChance, cfg.AIProfiles[2].ForgetChance)
+	if cfg.AIProfiles[2].DelayMinMS != 500 || cfg.AIProfiles[2].DelayMaxMS != 2000 || cfg.AIProfiles[2].UseKnownPairChance != 70 || cfg.AIProfiles[2].ForgetChance != 30 {
+		t.Errorf("expected Thalia 500/2000/70 ForgetChance=30, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[2].DelayMinMS, cfg.AIProfiles[2].DelayMaxMS, cfg.AIProfiles[2].UseKnownPairChance, cfg.AIProfiles[2].ForgetChance)
 	}
 }
 
@@ -135,5 +141,23 @@ func TestLoadWithInvalidEnv(t *testing.T) {
 	// Should fall back to default when env value is invalid
 	if cfg.BoardRows != 6 {
 		t.Errorf("expected BoardRows=6 (default) with invalid env, got %d", cfg.BoardRows)
+	}
+}
+
+func TestLoadWithPowerUpEnvOverrides(t *testing.T) {
+	os.Setenv("POWERUP_SECOND_CHANCE_COST", "4")
+	os.Setenv("POWERUP_SECOND_CHANCE_DURATION_ROUNDS", "7")
+	defer func() {
+		os.Unsetenv("POWERUP_SECOND_CHANCE_COST")
+		os.Unsetenv("POWERUP_SECOND_CHANCE_DURATION_ROUNDS")
+	}()
+
+	cfg := Load()
+
+	if cfg.PowerUps.SecondChance.Cost != 4 {
+		t.Errorf("expected PowerUps.SecondChance.Cost=4 after env override, got %d", cfg.PowerUps.SecondChance.Cost)
+	}
+	if cfg.PowerUps.SecondChance.DurationRounds != 7 {
+		t.Errorf("expected PowerUps.SecondChance.DurationRounds=7 after env override, got %d", cfg.PowerUps.SecondChance.DurationRounds)
 	}
 }

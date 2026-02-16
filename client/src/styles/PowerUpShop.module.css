@@ -58,6 +58,13 @@
   color: #cbd5e1;
 }
 
+.status {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
 .buyButton {
   justify-self: end;
   border: 0;

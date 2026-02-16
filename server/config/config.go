@@ -16,17 +16,39 @@ type AIParams struct {
 	ForgetChance       int    `json:"forget_chance"`         // 0-100, probability to forget (delete from memory) a known card each turn
 }
 
+// ShufflePowerUpConfig holds configuration for the Shuffle power-up.
+type ShufflePowerUpConfig struct {
+	Cost int `json:"cost"`
+}
+
+// SecondChancePowerUpConfig holds configuration for the Second Chance power-up.
+type SecondChancePowerUpConfig struct {
+	Cost           int `json:"cost"`
+	DurationRounds int `json:"duration_rounds"`
+}
+
+// PowerUpsConfig holds per-power-up configuration sections.
+type PowerUpsConfig struct {
+	Shuffle      ShufflePowerUpConfig      `json:"shuffle"`
+	SecondChance SecondChancePowerUpConfig `json:"second_chance"`
+}
+
 // Config holds all configurable game parameters.
 type Config struct {
-	BoardRows          int `json:"board_rows"`
-	BoardCols          int `json:"board_cols"`
-	ComboBasePoints    int `json:"combo_base_points"`
-	RevealDurationMS   int `json:"reveal_duration_ms"`
+	BoardRows        int `json:"board_rows"`
+	BoardCols        int `json:"board_cols"`
+	ComboBasePoints  int `json:"combo_base_points"`
+	RevealDurationMS int `json:"reveal_duration_ms"`
+	MaxNameLength    int `json:"max_name_length"`
+	WSPort           int `json:"ws_port"`
+	MaxLatencyMS     int `json:"max_latency_ms"`
+	AIPairTimeoutSec int `json:"ai_pair_timeout_sec"`
+
+	// PowerUps holds configuration for each power-up.
+	PowerUps PowerUpsConfig `json:"powerups"`
+
+	// Legacy: used when config has powerup_shuffle_cost but no powerups.shuffle.cost
 	PowerUpShuffleCost int `json:"powerup_shuffle_cost"`
-	MaxNameLength      int `json:"max_name_length"`
-	WSPort             int `json:"ws_port"`
-	MaxLatencyMS       int `json:"max_latency_ms"`
-	AIPairTimeoutSec   int `json:"ai_pair_timeout_sec"`
 
 	// AIProfiles lists available AI opponents; one is chosen at random when pairing vs AI.
 	AIProfiles []AIParams `json:"ai_profiles"`
@@ -45,11 +67,14 @@ func Defaults() *Config {
 		BoardCols:          6,
 		ComboBasePoints:    1,
 		RevealDurationMS:   1000,
-		PowerUpShuffleCost: 2,
 		MaxNameLength:      24,
 		WSPort:             8080,
 		MaxLatencyMS:       500,
 		AIPairTimeoutSec:   15,
+		PowerUps: PowerUpsConfig{
+			Shuffle:      ShufflePowerUpConfig{Cost: 2},
+			SecondChance: SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5},
+		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
 			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 70, ForgetChance: 15},
@@ -70,6 +95,11 @@ func Load() *Config {
 		if err := json.NewDecoder(f).Decode(cfg); err != nil {
 			log.Printf("Warning: failed to parse config.json: %v", err)
 		}
+	}
+
+	// Legacy: if config had powerup_shuffle_cost but no powerups.shuffle, use it
+	if cfg.PowerUps.Shuffle.Cost == 0 && cfg.PowerUpShuffleCost != 0 {
+		cfg.PowerUps.Shuffle.Cost = cfg.PowerUpShuffleCost
 	}
 
 	// If no ai_profiles in config, build one from legacy fields
@@ -98,7 +128,9 @@ func Load() *Config {
 	overrideInt(&cfg.BoardCols, "BOARD_COLS")
 	overrideInt(&cfg.ComboBasePoints, "COMBO_BASE_POINTS")
 	overrideInt(&cfg.RevealDurationMS, "REVEAL_DURATION_MS")
-	overrideInt(&cfg.PowerUpShuffleCost, "POWERUP_SHUFFLE_COST")
+	overrideInt(&cfg.PowerUps.Shuffle.Cost, "POWERUP_SHUFFLE_COST")
+	overrideInt(&cfg.PowerUps.SecondChance.Cost, "POWERUP_SECOND_CHANCE_COST")
+	overrideInt(&cfg.PowerUps.SecondChance.DurationRounds, "POWERUP_SECOND_CHANCE_DURATION_ROUNDS")
 	overrideInt(&cfg.MaxNameLength, "MAX_NAME_LENGTH")
 	overrideInt(&cfg.WSPort, "WS_PORT")
 	overrideInt(&cfg.MaxLatencyMS, "MAX_LATENCY_MS")
