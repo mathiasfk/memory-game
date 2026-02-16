@@ -52,8 +52,8 @@ func Defaults() *Config {
 		AIPairTimeoutSec:   15,
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 50, ForgetChance: 15},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 15, ForgetChance: 30},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 70, ForgetChance: 15},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 70, ForgetChance: 30},
 		},
 	}
 }
