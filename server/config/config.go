@@ -54,22 +54,22 @@ type Config struct {
 // Defaults returns a Config with all default values from the spec.
 func Defaults() *Config {
 	return &Config{
-		BoardRows:          6,
-		BoardCols:          6,
-		ComboBasePoints:    1,
-		RevealDurationMS:   1000,
-		MaxNameLength:      24,
-		WSPort:             8080,
-		MaxLatencyMS:       500,
-		AIPairTimeoutSec:   15,
+		BoardRows:        6,
+		BoardCols:        6,
+		ComboBasePoints:  1,
+		RevealDurationMS: 1000,
+		MaxNameLength:    24,
+		WSPort:           8080,
+		MaxLatencyMS:     500,
+		AIPairTimeoutSec: 15,
 		PowerUps: PowerUpsConfig{
 			Shuffle:      ShufflePowerUpConfig{Cost: 2},
 			SecondChance: SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5},
 		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 70, ForgetChance: 15},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 70, ForgetChance: 30},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 80, ForgetChance: 15},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 75, ForgetChance: 30},
 		},
 	}
 }
