@@ -12,6 +12,7 @@ interface GameScreenProps {
   connected: boolean;
   matchInfo: MatchFoundMsg | null;
   gameState: GameStateMsg | null;
+  opponentReconnectingDeadlineMs: number | null;
   onFlipCard: (index: number) => void;
   onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
 }
@@ -20,15 +21,27 @@ function getSecondsRemaining(turnEndsAtUnixMs: number): number {
   return Math.max(0, Math.ceil((turnEndsAtUnixMs - Date.now()) / 1000));
 }
 
+function getReconnectSecondsRemaining(deadlineUnixMs: number): number {
+  return Math.max(0, Math.ceil((deadlineUnixMs - Date.now()) / 1000));
+}
+
+function formatReconnectCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function GameScreen({
   connected,
   matchInfo,
   gameState,
+  opponentReconnectingDeadlineMs,
   onFlipCard,
   onUsePowerUp,
 }: GameScreenProps) {
   const [pendingRadarTarget, setPendingRadarTarget] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [reconnectSecondsRemaining, setReconnectSecondsRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     if (gameState && (!gameState.yourTurn || gameState.phase !== "first_flip")) {
@@ -53,6 +66,21 @@ export default function GameScreen({
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [gameState?.yourTurn, gameState?.turnEndsAtUnixMs]);
+
+  // Update reconnection countdown every second when opponent is reconnecting
+  useEffect(() => {
+    if (opponentReconnectingDeadlineMs == null || opponentReconnectingDeadlineMs <= 0) {
+      setReconnectSecondsRemaining(null);
+      return;
+    }
+    const update = (): void => {
+      const sec = getReconnectSecondsRemaining(opponentReconnectingDeadlineMs);
+      setReconnectSecondsRemaining(sec);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [opponentReconnectingDeadlineMs]);
 
   if (!matchInfo) {
     return (
@@ -96,8 +124,21 @@ export default function GameScreen({
     gameState.turnCountdownShowSec != null &&
     secondsRemaining <= gameState.turnCountdownShowSec;
 
+  const showReconnectBanner =
+    opponentReconnectingDeadlineMs != null &&
+    reconnectSecondsRemaining !== null &&
+    reconnectSecondsRemaining >= 0;
+
   return (
     <section className={styles.screen}>
+      {showReconnectBanner && (
+        <div className={styles.reconnectBanner} role="alert">
+          <span>Opponent lost connection. Waiting for them to rejoin… </span>
+          <span className={styles.reconnectCountdown}>
+            ({formatReconnectCountdown(reconnectSecondsRemaining)})
+          </span>
+        </div>
+      )}
       <header className={styles.header}>
         <h2>You vs {matchInfo.opponentName}</h2>
         <div className={styles.headerRight}>

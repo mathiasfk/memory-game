@@ -213,42 +213,58 @@ func TestIntegration_FlipCardNotInGame(t *testing.T) {
 }
 
 func TestIntegration_OpponentDisconnect(t *testing.T) {
-	server, cleanup := setupTestServer(t)
+	cfg := &config.Config{
+		BoardRows:            2,
+		BoardCols:            2,
+		ComboBasePoints:      1,
+		RevealDurationMS:     100,
+		MaxNameLength:        24,
+		WSPort:               0,
+		AIPairTimeoutSec:     10,
+		ReconnectTimeoutSec:  1, // 1 second so the test finishes quickly
+		PowerUps:             config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		AIProfiles:           []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseKnownPairChance: 85}},
+	}
+	server, cleanup := setupTestServerWithConfig(t, cfg)
 	defer cleanup()
 
 	conn1 := connectWS(t, server)
 	defer conn1.Close()
 	conn2 := connectWS(t, server)
 
-	// Both join
 	sendMsg(t, conn1, map[string]string{"type": "set_name", "name": "Alice"})
 	readMsg(t, conn1) // waiting_for_match
-
 	sendMsg(t, conn2, map[string]string{"type": "set_name", "name": "Bob"})
 	readMsg(t, conn2) // waiting_for_match
-
-	// Both receive match_found
-	readMsg(t, conn1)
+	readMsg(t, conn1) // match_found
 	readMsg(t, conn2)
-
-	// Both receive initial game_state
-	readMsg(t, conn1)
+	readMsg(t, conn1) // game_state
 	readMsg(t, conn2)
 
 	// Player 2 disconnects
 	conn2.Close()
 
-	// Player 1 should receive opponent_disconnected
-	// (may need to wait a moment for the disconnect to propagate)
-	conn1.SetReadDeadline(time.Now().Add(3 * time.Second))
+	// Player 1 should receive opponent_reconnecting first
+	conn1.SetReadDeadline(time.Now().Add(2 * time.Second))
 	_, data, err := conn1.ReadMessage()
+	if err != nil {
+		t.Fatalf("failed to read reconnecting notification: %v", err)
+	}
+	var msg map[string]interface{}
+	json.Unmarshal(data, &msg)
+	if msg["type"] != "opponent_reconnecting" {
+		t.Errorf("expected opponent_reconnecting first, got %v", msg["type"])
+	}
+
+	// Then after ReconnectTimeoutSec (1s), player 1 should receive opponent_disconnected
+	conn1.SetReadDeadline(time.Now().Add(3 * time.Second))
+	_, data, err = conn1.ReadMessage()
 	if err != nil {
 		t.Fatalf("failed to read disconnect notification: %v", err)
 	}
-	var msg map[string]string
 	json.Unmarshal(data, &msg)
 	if msg["type"] != "opponent_disconnected" {
-		t.Errorf("expected opponent_disconnected, got %v", msg["type"])
+		t.Errorf("expected opponent_disconnected after timeout, got %v", msg["type"])
 	}
 }
 

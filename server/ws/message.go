@@ -51,6 +51,14 @@ type PlayAgainMsg struct {
 	Type string `json:"type"`
 }
 
+// RejoinMsg is sent by the client to rejoin a game after reconnect or page refresh.
+type RejoinMsg struct {
+	Type        string `json:"type"`
+	GameID      string `json:"gameId"`
+	RejoinToken string `json:"rejoinToken"`
+	Name        string `json:"name"`
+}
+
 // --- Server-to-Client messages ---
 
 // ErrorMsg is sent when a client action is invalid.
@@ -67,6 +75,8 @@ type WaitingForMatchMsg struct {
 // MatchFoundMsg is sent when two players are paired.
 type MatchFoundMsg struct {
 	Type         string `json:"type"`
+	GameID       string `json:"gameId"`
+	RejoinToken  string `json:"rejoinToken"`
 	OpponentName string `json:"opponentName"`
 	BoardRows    int    `json:"boardRows"`
 	BoardCols    int    `json:"boardCols"`
