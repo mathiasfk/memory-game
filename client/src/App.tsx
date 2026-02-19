@@ -67,8 +67,15 @@ export default function App() {
     send({ type: "flip_card", index });
   };
 
-  const handleUsePowerUp = (powerUpId: string): void => {
-    send({ type: "use_power_up", powerUpId });
+  const handleUsePowerUp = (powerUpId: string, cardIndex?: number): void => {
+    const msg: { type: "use_power_up"; powerUpId: string; cardIndex?: number } = {
+      type: "use_power_up",
+      powerUpId,
+    };
+    if (cardIndex !== undefined) {
+      msg.cardIndex = cardIndex;
+    }
+    send(msg);
   };
 
   const handlePlayAgain = (): void => {

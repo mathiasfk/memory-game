@@ -15,4 +15,9 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
     label: "Second chance",
     description: "+1 point per mismatch while active. Lasts 5 rounds.",
   },
+  radar: {
+    icon: "RDR",
+    label: "Radar",
+    description: "Reveals a 3x3 area around the card you choose for 1 second, then hides it again.",
+  },
 };

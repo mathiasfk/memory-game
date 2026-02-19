@@ -8,7 +8,7 @@
   font-size: clamp(1rem, 2vw, 1.5rem);
   font-weight: 700;
   cursor: pointer;
-  transition: transform 120ms ease, background-color 150ms ease, box-shadow 200ms ease;
+  transition: transform 120ms ease, background-color 150ms ease, box-shadow 200ms ease, border-color 150ms ease;
 }
 
 .card:disabled {
@@ -17,6 +17,25 @@
 
 .card:not(:disabled):hover {
   transform: translateY(-1px);
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
+}
+
+/* Radar targeting: center card (the one that will be clicked) */
+.radarCenter {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6);
+}
+
+.radarCenter:not(:disabled):hover {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
+}
+
+/* Radar targeting: affected cards (3x3 region) */
+.radarAffected {
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
 }
 
 .faceUp {

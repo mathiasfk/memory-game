@@ -104,3 +104,38 @@ func AllMatched(board *Board) bool {
 	}
 	return true
 }
+
+// RadarRegionIndices returns the board indices of the 3x3 region centered on the given card index.
+// Indices are clipped to board bounds, so corners yield 4 indices, edges 6, center 9.
+func RadarRegionIndices(board *Board, centerIndex int) []int {
+	cols := board.Cols
+	rows := board.Rows
+	if centerIndex < 0 || centerIndex >= rows*cols {
+		return nil
+	}
+	centerRow := centerIndex / cols
+	centerCol := centerIndex % cols
+	minR := centerRow - 1
+	if minR < 0 {
+		minR = 0
+	}
+	maxR := centerRow + 1
+	if maxR >= rows {
+		maxR = rows - 1
+	}
+	minC := centerCol - 1
+	if minC < 0 {
+		minC = 0
+	}
+	maxC := centerCol + 1
+	if maxC >= cols {
+		maxC = cols - 1
+	}
+	var out []int
+	for r := minR; r <= maxR; r++ {
+		for c := minC; c <= maxC; c++ {
+			out = append(out, r*cols+c)
+		}
+	}
+	return out
+}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import Board from "../components/Board";
 import ComboIndicator from "../components/ComboIndicator";
 import PowerUpShop from "../components/PowerUpShop";
@@ -11,7 +12,7 @@ interface GameScreenProps {
   matchInfo: MatchFoundMsg | null;
   gameState: GameStateMsg | null;
   onFlipCard: (index: number) => void;
-  onUsePowerUp: (powerUpId: string) => void;
+  onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
 }
 
 export default function GameScreen({
@@ -21,6 +22,14 @@ export default function GameScreen({
   onFlipCard,
   onUsePowerUp,
 }: GameScreenProps) {
+  const [pendingRadarTarget, setPendingRadarTarget] = useState(false);
+
+  useEffect(() => {
+    if (gameState && (!gameState.yourTurn || gameState.phase !== "first_flip")) {
+      setPendingRadarTarget(false);
+    }
+  }, [gameState?.yourTurn, gameState?.phase]);
+
   if (!matchInfo) {
     return (
       <section className={styles.screen}>
@@ -40,6 +49,23 @@ export default function GameScreen({
   const cardsClickable = connected && gameState.yourTurn && gameState.phase !== "resolve";
   const powerUpsEnabled = connected && gameState.yourTurn && gameState.phase === "first_flip";
 
+  const handleCardClick = (index: number): void => {
+    if (pendingRadarTarget) {
+      onUsePowerUp("radar", index);
+      setPendingRadarTarget(false);
+    } else {
+      onFlipCard(index);
+    }
+  };
+
+  const handleUsePowerUpClick = (powerUpId: string): void => {
+    if (powerUpId === "radar") {
+      setPendingRadarTarget(true);
+    } else {
+      onUsePowerUp(powerUpId);
+    }
+  };
+
   return (
     <section className={styles.screen}>
       <header className={styles.header}>
@@ -54,7 +80,8 @@ export default function GameScreen({
             rows={matchInfo.boardRows}
             cols={matchInfo.boardCols}
             cardsClickable={cardsClickable}
-            onCardClick={onFlipCard}
+            onCardClick={handleCardClick}
+            radarTargetingMode={pendingRadarTarget}
           />
         </div>
 
@@ -68,7 +95,7 @@ export default function GameScreen({
           <PowerUpShop
             powerUps={gameState.availablePowerUps}
             enabled={powerUpsEnabled}
-            onUsePowerUp={onUsePowerUp}
+            onUsePowerUp={handleUsePowerUpClick}
             secondChanceRoundsRemaining={gameState.you.secondChanceRoundsRemaining}
           />
         </aside>

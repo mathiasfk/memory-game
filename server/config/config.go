@@ -27,10 +27,17 @@ type SecondChancePowerUpConfig struct {
 	DurationRounds int `json:"duration_rounds"`
 }
 
+// RadarPowerUpConfig holds configuration for the Radar power-up.
+type RadarPowerUpConfig struct {
+	Cost             int `json:"cost"`
+	RevealDurationMS int `json:"reveal_duration_ms"`
+}
+
 // PowerUpsConfig holds per-power-up configuration sections.
 type PowerUpsConfig struct {
 	Shuffle      ShufflePowerUpConfig      `json:"shuffle"`
 	SecondChance SecondChancePowerUpConfig `json:"second_chance"`
+	Radar        RadarPowerUpConfig        `json:"radar"`
 }
 
 // Config holds all configurable game parameters.
@@ -65,6 +72,7 @@ func Defaults() *Config {
 		PowerUps: PowerUpsConfig{
 			Shuffle:      ShufflePowerUpConfig{Cost: 2},
 			SecondChance: SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5},
+			Radar:        RadarPowerUpConfig{Cost: 2, RevealDurationMS: 2000},
 		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
@@ -96,6 +104,8 @@ func Load() *Config {
 	overrideInt(&cfg.PowerUps.Shuffle.Cost, "POWERUP_SHUFFLE_COST")
 	overrideInt(&cfg.PowerUps.SecondChance.Cost, "POWERUP_SECOND_CHANCE_COST")
 	overrideInt(&cfg.PowerUps.SecondChance.DurationRounds, "POWERUP_SECOND_CHANCE_DURATION_ROUNDS")
+	overrideInt(&cfg.PowerUps.Radar.Cost, "POWERUP_RADAR_COST")
+	overrideInt(&cfg.PowerUps.Radar.RevealDurationMS, "POWERUP_RADAR_REVEAL_MS")
 	overrideInt(&cfg.MaxNameLength, "MAX_NAME_LENGTH")
 	overrideInt(&cfg.WSPort, "WS_PORT")
 	overrideInt(&cfg.MaxLatencyMS, "MAX_LATENCY_MS")

@@ -39,9 +39,11 @@ type FlipCardMsg struct {
 }
 
 // UsePowerUpMsg is sent by the client to activate a power-up.
+// CardIndex is optional; required for power-ups that target a card (e.g. Radar). Use -1 when not applicable.
 type UsePowerUpMsg struct {
 	Type      string `json:"type"`
 	PowerUpID string `json:"powerUpId"`
+	CardIndex int    `json:"cardIndex,omitempty"` // -1 when not used
 }
 
 // PlayAgainMsg is sent by the client to re-enter matchmaking.

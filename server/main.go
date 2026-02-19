@@ -21,6 +21,11 @@ func main() {
 	registry := powerup.NewRegistry()
 	registry.Register(&powerup.ShufflePowerUp{CostValue: cfg.PowerUps.Shuffle.Cost})
 	registry.Register(&powerup.SecondChancePowerUp{CostValue: cfg.PowerUps.SecondChance.Cost, DurationRounds: cfg.PowerUps.SecondChance.DurationRounds})
+	radarRevealSec := cfg.PowerUps.Radar.RevealDurationMS / 1000
+	if radarRevealSec < 1 {
+		radarRevealSec = 1
+	}
+	registry.Register(&powerup.RadarPowerUp{CostValue: cfg.PowerUps.Radar.Cost, RevealDuration: radarRevealSec})
 
 	// Set up matchmaker
 	mm := matchmaking.NewMatchmaker(cfg, registry)

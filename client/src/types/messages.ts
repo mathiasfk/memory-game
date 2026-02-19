@@ -13,6 +13,7 @@ export interface FlipCardMsg {
 export interface UsePowerUpMsg {
   type: "use_power_up";
   powerUpId: string;
+  cardIndex?: number;
 }
 
 export interface PlayAgainMsg {

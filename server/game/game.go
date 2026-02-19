@@ -39,15 +39,18 @@ const (
 	ActionFlipCard ActionType = iota
 	ActionUsePowerUp
 	ActionDisconnect
-	ActionResolveMismatch // internal: fired after reveal timer expires
+	ActionResolveMismatch    // internal: fired after reveal timer expires
+	ActionHideRadarReveal    // internal: hide cards that were temporarily revealed by Radar
 )
 
 // Action represents a player action sent into the game's action channel.
 type Action struct {
-	Type      ActionType
-	PlayerIdx int    // 0 or 1
-	Index     int    // card index (for FlipCard)
-	PowerUpID string // power-up ID (for UsePowerUp)
+	Type               ActionType
+	PlayerIdx          int    // 0 or 1
+	Index              int    // card index (for FlipCard)
+	PowerUpID          string // power-up ID (for UsePowerUp)
+	CardIndex          int    // card index for power-ups that need a target (e.g. Radar); -1 when not used
+	RadarRevealIndices []int  // indices to hide (for ActionHideRadarReveal)
 }
 
 // PowerUpProvider abstracts the power-up registry so the game package
@@ -122,12 +125,14 @@ func (g *Game) Run() {
 		case ActionFlipCard:
 			g.handleFlipCard(action.PlayerIdx, action.Index)
 		case ActionUsePowerUp:
-			g.handleUsePowerUp(action.PlayerIdx, action.PowerUpID)
+			g.handleUsePowerUp(action.PlayerIdx, action.PowerUpID, action.CardIndex)
 		case ActionDisconnect:
 			g.handleDisconnect(action.PlayerIdx)
 			return
 		case ActionResolveMismatch:
 			g.handleResolveMismatch(action.PlayerIdx)
+		case ActionHideRadarReveal:
+			g.handleHideRadarReveal(action.RadarRevealIndices)
 		}
 		if g.Finished {
 			return
@@ -251,7 +256,7 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	g.broadcastState()
 }
 
-func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string) {
+func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) {
 	// Validate it's this player's turn
 	if playerIdx != g.CurrentTurn {
 		g.sendError(playerIdx, "It is not your turn.")
@@ -278,14 +283,44 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string) {
 		return
 	}
 
+	totalCards := g.Config.BoardRows * g.Config.BoardCols
+
+	// Radar: require a valid card target (hidden card)
+	if powerUpID == "radar" {
+		if cardIndex < 0 || cardIndex >= totalCards {
+			g.sendError(playerIdx, "Radar requires a valid card target.")
+			return
+		}
+		if g.Board.Cards[cardIndex].State != Hidden {
+			g.sendError(playerIdx, "Radar target card must be hidden.")
+			return
+		}
+	}
+
 	// Deduct cost
 	player.Score -= pup.Cost
 
-	// Apply effect
+	// Radar: reveal 3x3 region and schedule hiding after duration
+	var radarRevealIndices []int
+	if powerUpID == "radar" {
+		region := RadarRegionIndices(g.Board, cardIndex)
+		for _, idx := range region {
+			c := &g.Board.Cards[idx]
+			if c.State == Hidden {
+				c.State = Revealed
+				radarRevealIndices = append(radarRevealIndices, idx)
+			}
+		}
+	}
+
+	// Apply effect (Radar has no-op Apply; logic is above)
 	opponent := g.Players[1-playerIdx]
 	if err := pup.Apply(g.Board, player, opponent); err != nil {
-		// Refund on error
+		// Refund on error and revert Radar reveals if any
 		player.Score += pup.Cost
+		for _, idx := range radarRevealIndices {
+			g.Board.Cards[idx].State = Hidden
+		}
 		g.sendError(playerIdx, "Power-up failed: "+err.Error())
 		return
 	}
@@ -296,6 +331,42 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string) {
 	}
 
 	// Broadcast updated state (turn does not end)
+	g.broadcastState()
+
+	// Radar: schedule hiding the revealed cards after duration
+	if powerUpID == "radar" && len(radarRevealIndices) > 0 {
+		durationMS := g.Config.PowerUps.Radar.RevealDurationMS
+		if durationMS <= 0 {
+			durationMS = 1000
+		}
+		indices := make([]int, len(radarRevealIndices))
+		copy(indices, radarRevealIndices)
+		go func() {
+			time.Sleep(time.Duration(durationMS) * time.Millisecond)
+			select {
+			case g.Actions <- Action{Type: ActionHideRadarReveal, RadarRevealIndices: indices}:
+			case <-g.Done:
+			}
+		}()
+	}
+}
+
+// handleHideRadarReveal hides cards that were temporarily revealed by Radar.
+// Only cards still Revealed and not in FlippedIndices are hidden.
+func (g *Game) handleHideRadarReveal(indices []int) {
+	flippedSet := make(map[int]bool)
+	for _, idx := range g.FlippedIndices {
+		flippedSet[idx] = true
+	}
+	for _, idx := range indices {
+		if idx < 0 || idx >= len(g.Board.Cards) {
+			continue
+		}
+		c := &g.Board.Cards[idx]
+		if c.State == Revealed && !flippedSet[idx] {
+			c.State = Hidden
+		}
+	}
 	g.broadcastState()
 }
 

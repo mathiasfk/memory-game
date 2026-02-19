@@ -181,10 +181,15 @@ func (c *Client) handleUsePowerUp(raw json.RawMessage) {
 		return
 	}
 
+	cardIndex := -1
+	if msg.CardIndex >= 0 {
+		cardIndex = msg.CardIndex
+	}
 	c.Game.Actions <- game.Action{
 		Type:      game.ActionUsePowerUp,
 		PlayerIdx: c.PlayerID,
 		PowerUpID: msg.PowerUpID,
+		CardIndex: cardIndex,
 	}
 }
 
