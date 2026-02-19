@@ -39,19 +39,23 @@ const (
 	ActionFlipCard ActionType = iota
 	ActionUsePowerUp
 	ActionDisconnect
-	ActionResolveMismatch    // internal: fired after reveal timer expires
-	ActionHideRadarReveal    // internal: hide cards that were temporarily revealed by Radar
-	ActionTurnTimeout        // internal: fired when turn time limit is reached
+	ActionPlayerDisconnected   // player lost connection; start reconnection window
+	ActionReconnectionTimeout // reconnection window expired; end game
+	ActionRejoinCompleted      // player rejoined; restore Send and clear disconnect state
+	ActionResolveMismatch      // internal: fired after reveal timer expires
+	ActionHideRadarReveal       // internal: hide cards that were temporarily revealed by Radar
+	ActionTurnTimeout          // internal: fired when turn time limit is reached
 )
 
 // Action represents a player action sent into the game's action channel.
 type Action struct {
 	Type               ActionType
-	PlayerIdx          int    // 0 or 1
-	Index              int    // card index (for FlipCard)
-	PowerUpID          string // power-up ID (for UsePowerUp)
-	CardIndex          int    // card index for power-ups that need a target (e.g. Radar); -1 when not used
-	RadarRevealIndices []int  // indices to hide (for ActionHideRadarReveal)
+	PlayerIdx          int       // 0 or 1
+	Index              int       // card index (for FlipCard)
+	PowerUpID          string    // power-up ID (for UsePowerUp)
+	CardIndex          int       // card index for power-ups that need a target (e.g. Radar); -1 when not used
+	RadarRevealIndices []int     // indices to hide (for ActionHideRadarReveal)
+	NewSend            chan []byte // for ActionRejoinCompleted: new send channel for the reconnected player
 }
 
 // PowerUpProvider abstracts the power-up registry so the game package
@@ -86,8 +90,16 @@ type Game struct {
 	Round int
 
 	// turnEndsAt is when the current turn ends (zero = timer disabled).
-	turnEndsAt     time.Time
-	turnTimerCancel chan struct{}
+	turnEndsAt        time.Time
+	turnTimerCancel   chan struct{}
+
+	// RejoinTokens allow a disconnected player to rejoin; set by matchmaker.
+	RejoinTokens [2]string
+
+	// DisconnectedPlayerIdx is the player who lost connection (-1 = none); game is paused until rejoin or timeout.
+	DisconnectedPlayerIdx  int
+	ReconnectionDeadline   time.Time
+	reconnectionTimerCancel chan struct{}
 
 	Actions chan Action
 	Done    chan struct{}
@@ -99,17 +111,18 @@ func NewGame(id string, cfg *config.Config, p0, p1 *Player, pups PowerUpProvider
 	firstTurn := rand.Intn(2)
 
 	return &Game{
-		ID:             id,
-		Board:          board,
-		Players:        [2]*Player{p0, p1},
-		CurrentTurn:    firstTurn,
-		TurnPhase:      FirstFlip,
-		FlippedIndices: make([]int, 0, 2),
-		Config:         cfg,
-		PowerUps:       pups,
-		Finished:       false,
-		Actions:        make(chan Action, 16),
-		Done:           make(chan struct{}),
+		ID:                    id,
+		Board:                 board,
+		Players:               [2]*Player{p0, p1},
+		CurrentTurn:           firstTurn,
+		TurnPhase:             FirstFlip,
+		FlippedIndices:        make([]int, 0, 2),
+		Config:                cfg,
+		PowerUps:              pups,
+		Finished:              false,
+		DisconnectedPlayerIdx: -1,
+		Actions:               make(chan Action, 16),
+		Done:                  make(chan struct{}),
 	}
 }
 
@@ -129,12 +142,25 @@ func (g *Game) Run() {
 		}
 		switch action.Type {
 		case ActionFlipCard:
+			if g.DisconnectedPlayerIdx >= 0 {
+				continue
+			}
 			g.handleFlipCard(action.PlayerIdx, action.Index)
 		case ActionUsePowerUp:
+			if g.DisconnectedPlayerIdx >= 0 {
+				continue
+			}
 			g.handleUsePowerUp(action.PlayerIdx, action.PowerUpID, action.CardIndex)
 		case ActionDisconnect:
 			g.handleDisconnect(action.PlayerIdx)
 			return
+		case ActionPlayerDisconnected:
+			g.handlePlayerDisconnected(action.PlayerIdx)
+		case ActionReconnectionTimeout:
+			g.handleReconnectionTimeout()
+			return
+		case ActionRejoinCompleted:
+			g.handleRejoinCompleted(action.PlayerIdx, action.NewSend)
 		case ActionResolveMismatch:
 			g.handleResolveMismatch(action.PlayerIdx)
 		case ActionHideRadarReveal:
@@ -467,6 +493,71 @@ func (g *Game) handleDisconnect(playerIdx int) {
 	}
 }
 
+func (g *Game) cancelReconnectionTimer() {
+	if g.reconnectionTimerCancel != nil {
+		close(g.reconnectionTimerCancel)
+		g.reconnectionTimerCancel = nil
+	}
+	g.DisconnectedPlayerIdx = -1
+}
+
+func (g *Game) handlePlayerDisconnected(playerIdx int) {
+	if g.DisconnectedPlayerIdx >= 0 {
+		return
+	}
+	g.cancelTurnTimer()
+	g.DisconnectedPlayerIdx = playerIdx
+	timeoutSec := g.Config.ReconnectTimeoutSec
+	if timeoutSec <= 0 {
+		timeoutSec = 120
+	}
+	g.ReconnectionDeadline = time.Now().Add(time.Duration(timeoutSec) * time.Second)
+	opponentIdx := 1 - playerIdx
+	opponent := g.Players[opponentIdx]
+	if opponent != nil && opponent.Send != nil {
+		msg := map[string]interface{}{
+			"type":                        "opponent_reconnecting",
+			"reconnectionDeadlineUnixMs": g.ReconnectionDeadline.UnixMilli(),
+		}
+		data, _ := json.Marshal(msg)
+		safeSend(opponent.Send, data)
+	}
+	g.reconnectionTimerCancel = make(chan struct{})
+	cancel := g.reconnectionTimerCancel
+	go func() {
+		select {
+		case <-time.After(time.Duration(timeoutSec) * time.Second):
+			select {
+			case g.Actions <- Action{Type: ActionReconnectionTimeout}:
+			case <-g.Done:
+			}
+		case <-cancel:
+		}
+	}()
+}
+
+func (g *Game) handleReconnectionTimeout() {
+	idx := g.DisconnectedPlayerIdx
+	g.cancelReconnectionTimer()
+	g.handleDisconnect(idx)
+}
+
+func (g *Game) handleRejoinCompleted(playerIdx int, newSend chan []byte) {
+	g.cancelReconnectionTimer()
+	if playerIdx >= 0 && playerIdx <= 1 && g.Players[playerIdx] != nil && newSend != nil {
+		g.Players[playerIdx].Send = newSend
+	}
+	opponentIdx := 1 - playerIdx
+	opponent := g.Players[opponentIdx]
+	if opponent != nil && opponent.Send != nil {
+		msg := map[string]string{"type": "opponent_reconnected"}
+		data, _ := json.Marshal(msg)
+		safeSend(opponent.Send, data)
+	}
+	g.startTurnTimer()
+	g.broadcastState()
+}
+
 // safeSend sends data to a channel without panicking if the channel is closed.
 func safeSend(ch chan []byte, data []byte) {
 	defer func() {
@@ -493,7 +584,7 @@ func (g *Game) sendError(playerIdx int, message string) {
 
 func (g *Game) broadcastState() {
 	for i := 0; i < 2; i++ {
-		state := g.buildStateForPlayer(i)
+		state := g.BuildStateForPlayer(i)
 		data, err := json.Marshal(state)
 		if err != nil {
 			log.Printf("Error marshaling game state: %v", err)
@@ -505,7 +596,8 @@ func (g *Game) broadcastState() {
 	}
 }
 
-func (g *Game) buildStateForPlayer(playerIdx int) GameStateMsg {
+// BuildStateForPlayer returns the game state view for the given player (0 or 1).
+func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 	opponentIdx := 1 - playerIdx
 
 	// Build available power-ups list

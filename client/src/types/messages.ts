@@ -20,7 +20,14 @@ export interface PlayAgainMsg {
   type: "play_again";
 }
 
-export type ClientMessage = SetNameMsg | FlipCardMsg | UsePowerUpMsg | PlayAgainMsg;
+export interface RejoinMsg {
+  type: "rejoin";
+  gameId: string;
+  rejoinToken: string;
+  name: string;
+}
+
+export type ClientMessage = SetNameMsg | RejoinMsg | FlipCardMsg | UsePowerUpMsg | PlayAgainMsg;
 
 export interface ErrorMsg {
   type: "error";
@@ -33,6 +40,8 @@ export interface WaitingForMatchMsg {
 
 export interface MatchFoundMsg {
   type: "match_found";
+  gameId: string;
+  rejoinToken: string;
   opponentName: string;
   boardRows: number;
   boardCols: number;
@@ -54,6 +63,15 @@ export interface OpponentDisconnectedMsg {
   type: "opponent_disconnected";
 }
 
+export interface OpponentReconnectingMsg {
+  type: "opponent_reconnecting";
+  reconnectionDeadlineUnixMs: number;
+}
+
+export interface OpponentReconnectedMsg {
+  type: "opponent_reconnected";
+}
+
 export interface TurnTimeoutMsg {
   type: "turn_timeout";
 }
@@ -65,4 +83,6 @@ export type ServerMessage =
   | GameStateMsg
   | GameOverMsg
   | OpponentDisconnectedMsg
+  | OpponentReconnectingMsg
+  | OpponentReconnectedMsg
   | TurnTimeoutMsg;

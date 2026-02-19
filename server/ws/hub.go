@@ -19,6 +19,7 @@ var upgrader = websocket.Upgrader{
 // MatchmakerInterface defines what the Hub needs from the Matchmaker.
 type MatchmakerInterface interface {
 	Enqueue(c *Client)
+	Rejoin(gameID, rejoinToken, name string) (*game.Game, int, error)
 }
 
 // Hub maintains the set of active clients and routes messages.
@@ -55,11 +56,11 @@ func (h *Hub) Run() {
 				close(client.Send)
 				log.Printf("Client disconnected. Total clients: %d", len(h.Clients))
 
-				// If the client was in a game, notify the game
+				// If the client was in a game, start reconnection window (do not end game immediately)
 				if client.Game != nil && !client.Game.Finished {
 					select {
 					case client.Game.Actions <- game.Action{
-						Type:      game.ActionDisconnect,
+						Type:      game.ActionPlayerDisconnected,
 						PlayerIdx: client.PlayerID,
 					}:
 					default:

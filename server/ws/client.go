@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -109,6 +110,8 @@ func (c *Client) handleMessage(data []byte) {
 	switch envelope.Type {
 	case "set_name":
 		c.handleSetName(envelope.Raw)
+	case "rejoin":
+		c.handleRejoin(envelope.Raw)
 	case "flip_card":
 		c.handleFlipCard(envelope.Raw)
 	case "use_power_up":
@@ -148,6 +151,76 @@ func (c *Client) handleSetName(raw json.RawMessage) {
 	waitMsg := WaitingForMatchMsg{Type: "waiting_for_match"}
 	data, _ := json.Marshal(waitMsg)
 	safeSend(c.Send, data)
+}
+
+func (c *Client) handleRejoin(raw json.RawMessage) {
+	if c.Game != nil {
+		c.sendError("Already in a game.")
+		return
+	}
+	var msg RejoinMsg
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		c.sendError("Invalid rejoin message.")
+		return
+	}
+	if msg.GameID == "" || msg.RejoinToken == "" || msg.Name == "" {
+		c.sendError("Missing gameId, rejoinToken, or name.")
+		return
+	}
+	g, playerIdx, err := c.Hub.Matchmaker.Rejoin(msg.GameID, msg.RejoinToken, msg.Name)
+	if err != nil {
+		switch {
+		case strings.Contains(err.Error(), "not found"), strings.Contains(err.Error(), "finished"):
+			c.sendError("Game not found or already ended.")
+		case strings.Contains(err.Error(), "token"):
+			c.sendError("Invalid rejoin token.")
+		case strings.Contains(err.Error(), "not disconnected"):
+			c.sendError("Cannot rejoin: you are already connected.")
+		default:
+			c.sendError(err.Error())
+		}
+		return
+	}
+	c.Game = g
+	c.PlayerID = playerIdx
+	c.Name = msg.Name
+
+	// Tell the game loop to update the player's Send channel and clear reconnection state
+	select {
+	case g.Actions <- game.Action{
+		Type:      game.ActionRejoinCompleted,
+		PlayerIdx: playerIdx,
+		NewSend:   c.Send,
+	}:
+	default:
+		c.sendError("Game is busy. Try again.")
+		c.Game = nil
+		c.PlayerID = 0
+		return
+	}
+
+	// Send match_found so the client can show the game screen; game_state will follow from broadcastState()
+	opponentIdx := 1 - playerIdx
+	opponentName := ""
+	if g.Players[opponentIdx] != nil {
+		opponentName = g.Players[opponentIdx].Name
+	}
+	matchMsg := MatchFoundMsg{
+		Type:         "match_found",
+		GameID:       g.ID,
+		RejoinToken:  msg.RejoinToken,
+		OpponentName: opponentName,
+		BoardRows:    c.Hub.Config.BoardRows,
+		BoardCols:    c.Hub.Config.BoardCols,
+		YourTurn:     playerIdx == g.CurrentTurn,
+	}
+	matchData, _ := json.Marshal(matchMsg)
+	safeSend(c.Send, matchData)
+
+	// Send current game state so client has it immediately (game loop will also broadcastState)
+	state := g.BuildStateForPlayer(playerIdx)
+	stateData, _ := json.Marshal(state)
+	safeSend(c.Send, stateData)
 }
 
 func (c *Client) handleFlipCard(raw json.RawMessage) {

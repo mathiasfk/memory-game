@@ -3,6 +3,18 @@
   gap: 1rem;
 }
 
+.reconnectBanner {
+  padding: 0.6rem 1rem;
+  background: var(--color-warning-bg, #fff3cd);
+  color: var(--color-warning-fg, #856404);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.reconnectCountdown {
+  font-weight: 600;
+}
+
 .header {
   display: flex;
   align-items: center;

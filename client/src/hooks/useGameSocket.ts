@@ -19,6 +19,8 @@ const MESSAGE_TYPES: ReadonlySet<ServerMessage["type"]> = new Set([
   "game_state",
   "game_over",
   "opponent_disconnected",
+  "opponent_reconnecting",
+  "opponent_reconnected",
   "turn_timeout",
 ]);
 
