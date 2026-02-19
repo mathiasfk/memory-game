@@ -18,6 +18,6 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
   radar: {
     icon: "RDR",
     label: "Radar",
-    description: "Reveals a 3x3 area around the card you choose for 1 second, then hides it again.",
+    description: "Reveals a 3x3 area around the card you choose for 2 seconds, then hides it again.",
   },
 };
