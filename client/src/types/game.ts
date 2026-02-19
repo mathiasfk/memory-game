@@ -32,4 +32,8 @@ export interface GameState {
   availablePowerUps: PowerUpView[];
   flippedIndices: number[];
   phase: TurnPhase;
+  /** When the current turn ends (Unix ms). Only set when it's your turn and timer is active. */
+  turnEndsAtUnixMs?: number;
+  /** How many seconds before turn end to show the countdown. */
+  turnCountdownShowSec?: number;
 }

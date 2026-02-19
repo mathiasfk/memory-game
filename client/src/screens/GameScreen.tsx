@@ -6,29 +6,55 @@ import ScorePanel from "../components/ScorePanel";
 import TurnIndicator from "../components/TurnIndicator";
 import type { GameStateMsg, MatchFoundMsg } from "../types/messages";
 import styles from "../styles/GameScreen.module.css";
+import countdownStyles from "../styles/TurnCountdown.module.css";
 
 interface GameScreenProps {
   connected: boolean;
   matchInfo: MatchFoundMsg | null;
   gameState: GameStateMsg | null;
+  showTimesUp: boolean;
   onFlipCard: (index: number) => void;
   onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
+}
+
+function getSecondsRemaining(turnEndsAtUnixMs: number): number {
+  return Math.max(0, Math.ceil((turnEndsAtUnixMs - Date.now()) / 1000));
 }
 
 export default function GameScreen({
   connected,
   matchInfo,
   gameState,
+  showTimesUp,
   onFlipCard,
   onUsePowerUp,
 }: GameScreenProps) {
   const [pendingRadarTarget, setPendingRadarTarget] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     if (gameState && (!gameState.yourTurn || gameState.phase !== "first_flip")) {
       setPendingRadarTarget(false);
     }
   }, [gameState?.yourTurn, gameState?.phase]);
+
+  // Update countdown every second when it's our turn and we have a turn deadline
+  useEffect(() => {
+    if (
+      !gameState?.yourTurn ||
+      gameState.turnEndsAtUnixMs == null ||
+      gameState.turnEndsAtUnixMs <= 0
+    ) {
+      setSecondsRemaining(null);
+      return;
+    }
+    const update = (): void => {
+      setSecondsRemaining(getSecondsRemaining(gameState.turnEndsAtUnixMs!));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [gameState?.yourTurn, gameState?.turnEndsAtUnixMs]);
 
   if (!matchInfo) {
     return (
@@ -66,11 +92,35 @@ export default function GameScreen({
     }
   };
 
+  const showCountdown =
+    !showTimesUp &&
+    gameState.yourTurn &&
+    secondsRemaining !== null &&
+    gameState.turnCountdownShowSec != null &&
+    secondsRemaining <= gameState.turnCountdownShowSec;
+
   return (
     <section className={styles.screen}>
       <header className={styles.header}>
         <h2>You vs {matchInfo.opponentName}</h2>
-        <TurnIndicator yourTurn={gameState.yourTurn} phase={gameState.phase} />
+        <div className={styles.headerRight}>
+          {showTimesUp && (
+            <div className={countdownStyles.timesUp} role="alert">
+              Time's up!
+            </div>
+          )}
+          {showCountdown && (
+            <div
+              className={countdownStyles.countdown}
+              key={secondsRemaining}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {secondsRemaining}s
+            </div>
+          )}
+          <TurnIndicator yourTurn={gameState.yourTurn} phase={gameState.phase} />
+        </div>
       </header>
 
       <div className={styles.main}>

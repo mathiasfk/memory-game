@@ -51,6 +51,11 @@ type Config struct {
 	MaxLatencyMS     int `json:"max_latency_ms"`
 	AIPairTimeoutSec int `json:"ai_pair_timeout_sec"`
 
+	// TurnLimitSec is the max time per turn in seconds; 0 = disabled.
+	TurnLimitSec int `json:"turn_limit_sec"`
+	// TurnCountdownShowSec is how many seconds before turn end to show the countdown.
+	TurnCountdownShowSec int `json:"turn_countdown_show_sec"`
+
 	// PowerUps holds configuration for each power-up.
 	PowerUps PowerUpsConfig `json:"powerups"`
 
@@ -69,6 +74,8 @@ func Defaults() *Config {
 		WSPort:           8080,
 		MaxLatencyMS:     500,
 		AIPairTimeoutSec: 15,
+		TurnLimitSec:     60,
+		TurnCountdownShowSec: 30,
 		PowerUps: PowerUpsConfig{
 			Shuffle:      ShufflePowerUpConfig{Cost: 2},
 			SecondChance: SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5},
@@ -110,6 +117,8 @@ func Load() *Config {
 	overrideInt(&cfg.WSPort, "WS_PORT")
 	overrideInt(&cfg.MaxLatencyMS, "MAX_LATENCY_MS")
 	overrideInt(&cfg.AIPairTimeoutSec, "AI_PAIR_TIMEOUT_SEC")
+	overrideInt(&cfg.TurnLimitSec, "TURN_LIMIT_SEC")
+	overrideInt(&cfg.TurnCountdownShowSec, "TURN_COUNTDOWN_SHOW_SEC")
 	if len(cfg.AIProfiles) > 0 {
 		overrideString(&cfg.AIProfiles[0].Name, "AI_NAME")
 		overrideInt(&cfg.AIProfiles[0].DelayMinMS, "AI_DELAY_MIN_MS")

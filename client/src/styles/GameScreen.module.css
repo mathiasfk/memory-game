@@ -10,6 +10,12 @@
   gap: 1rem;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .header h2 {
   margin: 0;
 }

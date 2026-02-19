@@ -54,10 +54,15 @@ export interface OpponentDisconnectedMsg {
   type: "opponent_disconnected";
 }
 
+export interface TurnTimeoutMsg {
+  type: "turn_timeout";
+}
+
 export type ServerMessage =
   | ErrorMsg
   | WaitingForMatchMsg
   | MatchFoundMsg
   | GameStateMsg
   | GameOverMsg
-  | OpponentDisconnectedMsg;
+  | OpponentDisconnectedMsg
+  | TurnTimeoutMsg;

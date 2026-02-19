@@ -41,6 +41,12 @@ func TestDefaults(t *testing.T) {
 	if cfg.AIPairTimeoutSec != 15 {
 		t.Errorf("expected AIPairTimeoutSec=15, got %d", cfg.AIPairTimeoutSec)
 	}
+	if cfg.TurnLimitSec != 60 {
+		t.Errorf("expected TurnLimitSec=60, got %d", cfg.TurnLimitSec)
+	}
+	if cfg.TurnCountdownShowSec != 30 {
+		t.Errorf("expected TurnCountdownShowSec=30, got %d", cfg.TurnCountdownShowSec)
+	}
 	if len(cfg.AIProfiles) != 3 {
 		t.Fatalf("expected 3 AI profiles, got %d", len(cfg.AIProfiles))
 	}

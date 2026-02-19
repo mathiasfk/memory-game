@@ -41,6 +41,7 @@ const (
 	ActionDisconnect
 	ActionResolveMismatch    // internal: fired after reveal timer expires
 	ActionHideRadarReveal    // internal: hide cards that were temporarily revealed by Radar
+	ActionTurnTimeout        // internal: fired when turn time limit is reached
 )
 
 // Action represents a player action sent into the game's action channel.
@@ -84,6 +85,10 @@ type Game struct {
 	// Round increments each time the turn passes after a mismatch (used for Second Chance duration).
 	Round int
 
+	// turnEndsAt is when the current turn ends (zero = timer disabled).
+	turnEndsAt     time.Time
+	turnTimerCancel chan struct{}
+
 	Actions chan Action
 	Done    chan struct{}
 }
@@ -115,6 +120,7 @@ func (g *Game) Run() {
 
 	// Broadcast initial game state to both players
 	g.broadcastState()
+	g.startTurnTimer()
 
 	for {
 		action, ok := <-g.Actions
@@ -133,6 +139,8 @@ func (g *Game) Run() {
 			g.handleResolveMismatch(action.PlayerIdx)
 		case ActionHideRadarReveal:
 			g.handleHideRadarReveal(action.RadarRevealIndices)
+		case ActionTurnTimeout:
+			g.handleTurnTimeout()
 		}
 		if g.Finished {
 			return
@@ -204,13 +212,16 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 
 		// Check if game is over
 		if AllMatched(g.Board) {
+			g.cancelTurnTimer()
 			g.broadcastState()
 			g.broadcastGameOver()
 			g.Finished = true
 			return
 		}
 
-		// Same player keeps the turn
+		// Same player keeps the turn; reset turn timer
+		g.cancelTurnTimer()
+		g.startTurnTimer()
 		g.broadcastState()
 	} else {
 		// No match - enter resolve phase, broadcast the revealed state,
@@ -233,6 +244,10 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 }
 
 func (g *Game) handleResolveMismatch(playerIdx int) {
+	// Turn may have already passed (e.g. due to turn timeout)
+	if g.CurrentTurn != playerIdx {
+		return
+	}
 	player := g.Players[playerIdx]
 
 	// Second Chance: +1 point per error while active
@@ -253,6 +268,8 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	g.CurrentTurn = 1 - g.CurrentTurn
 	g.TurnPhase = FirstFlip
 
+	g.cancelTurnTimer()
+	g.startTurnTimer()
 	g.broadcastState()
 }
 
@@ -370,6 +387,74 @@ func (g *Game) handleHideRadarReveal(indices []int) {
 	g.broadcastState()
 }
 
+// cancelTurnTimer closes the turn timer cancel channel so the timer goroutine exits. Safe if already nil.
+func (g *Game) cancelTurnTimer() {
+	if g.turnTimerCancel != nil {
+		close(g.turnTimerCancel)
+		g.turnTimerCancel = nil
+	}
+	g.turnEndsAt = time.Time{}
+}
+
+// startTurnTimer starts a timer for the current turn. If it expires, ActionTurnTimeout is sent.
+// No-op if Config.TurnLimitSec <= 0. Cancels any existing turn timer first.
+func (g *Game) startTurnTimer() {
+	if g.Config.TurnLimitSec <= 0 {
+		return
+	}
+	g.cancelTurnTimer()
+	g.turnEndsAt = time.Now().Add(time.Duration(g.Config.TurnLimitSec) * time.Second)
+	g.turnTimerCancel = make(chan struct{})
+	cancel := g.turnTimerCancel
+	limit := time.Duration(g.Config.TurnLimitSec) * time.Second
+	go func() {
+		select {
+		case <-time.After(limit):
+			select {
+			case g.Actions <- Action{Type: ActionTurnTimeout}:
+			case <-g.Done:
+			}
+		case <-cancel:
+		}
+	}()
+}
+
+func (g *Game) broadcastTurnTimeout() {
+	msg := map[string]string{"type": "turn_timeout"}
+	data, _ := json.Marshal(msg)
+	for i := 0; i < 2; i++ {
+		if g.Players[i] != nil && g.Players[i].Send != nil {
+			safeSend(g.Players[i].Send, data)
+		}
+	}
+}
+
+func (g *Game) handleTurnTimeout() {
+	// Timer may have been cancelled (e.g. resolve already switched turn)
+	if g.turnTimerCancel == nil {
+		return
+	}
+	g.cancelTurnTimer()
+
+	g.broadcastTurnTimeout()
+
+	// Hide any flipped cards
+	for _, idx := range g.FlippedIndices {
+		g.Board.Cards[idx].State = Hidden
+	}
+	player := g.Players[g.CurrentTurn]
+	if player != nil {
+		player.ComboStreak = 0
+	}
+	g.FlippedIndices = g.FlippedIndices[:0]
+	g.Round++
+	g.CurrentTurn = 1 - g.CurrentTurn
+	g.TurnPhase = FirstFlip
+
+	g.startTurnTimer()
+	g.broadcastState()
+}
+
 func (g *Game) handleDisconnect(playerIdx int) {
 	g.Finished = true
 	// Notify the opponent
@@ -444,7 +529,7 @@ func (g *Game) buildStateForPlayer(playerIdx int) GameStateMsg {
 		flipped = []int{}
 	}
 
-	return GameStateMsg{
+	state := GameStateMsg{
 		Type:              "game_state",
 		Cards:             BuildCardViews(g.Board),
 		You:               BuildPlayerView(g.Players[playerIdx], g.Round),
@@ -454,6 +539,11 @@ func (g *Game) buildStateForPlayer(playerIdx int) GameStateMsg {
 		FlippedIndices:    flipped,
 		Phase:             g.TurnPhase.String(),
 	}
+	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
+		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()
+		state.TurnCountdownShowSec = g.Config.TurnCountdownShowSec
+	}
+	return state
 }
 
 func (g *Game) broadcastGameOver() {

@@ -29,14 +29,16 @@ type PowerUpView struct {
 
 // GameStateMsg is the full game state broadcast to a specific player.
 type GameStateMsg struct {
-	Type             string        `json:"type"`
-	Cards            []CardView    `json:"cards"`
-	You              PlayerView    `json:"you"`
-	Opponent         PlayerView    `json:"opponent"`
-	YourTurn         bool          `json:"yourTurn"`
-	AvailablePowerUps []PowerUpView `json:"availablePowerUps"`
-	FlippedIndices   []int         `json:"flippedIndices"`
-	Phase            string        `json:"phase"`
+	Type                  string        `json:"type"`
+	Cards                 []CardView    `json:"cards"`
+	You                   PlayerView    `json:"you"`
+	Opponent              PlayerView    `json:"opponent"`
+	YourTurn              bool          `json:"yourTurn"`
+	AvailablePowerUps     []PowerUpView `json:"availablePowerUps"`
+	FlippedIndices        []int         `json:"flippedIndices"`
+	Phase                 string        `json:"phase"`
+	TurnEndsAtUnixMs      int64         `json:"turnEndsAtUnixMs,omitempty"`
+	TurnCountdownShowSec  int           `json:"turnCountdownShowSec,omitempty"`
 }
 
 // BuildCardViews constructs the client-facing card list.
