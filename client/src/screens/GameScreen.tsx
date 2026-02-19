@@ -12,7 +12,6 @@ interface GameScreenProps {
   connected: boolean;
   matchInfo: MatchFoundMsg | null;
   gameState: GameStateMsg | null;
-  showTimesUp: boolean;
   onFlipCard: (index: number) => void;
   onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
 }
@@ -25,7 +24,6 @@ export default function GameScreen({
   connected,
   matchInfo,
   gameState,
-  showTimesUp,
   onFlipCard,
   onUsePowerUp,
 }: GameScreenProps) {
@@ -93,7 +91,6 @@ export default function GameScreen({
   };
 
   const showCountdown =
-    !showTimesUp &&
     gameState.yourTurn &&
     secondsRemaining !== null &&
     gameState.turnCountdownShowSec != null &&
@@ -104,19 +101,15 @@ export default function GameScreen({
       <header className={styles.header}>
         <h2>You vs {matchInfo.opponentName}</h2>
         <div className={styles.headerRight}>
-          {showTimesUp && (
-            <div className={countdownStyles.timesUp} role="alert">
-              Time's up!
-            </div>
-          )}
           {showCountdown && (
-            <div
-              className={countdownStyles.countdown}
-              key={secondsRemaining}
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {secondsRemaining}s
+            <div className={countdownStyles.countdownWrap} aria-live="polite" aria-atomic="true">
+              <span className={countdownStyles.countdownLabel}>Time is almost up!</span>
+              <span
+                className={countdownStyles.countdown}
+                key={secondsRemaining}
+              >
+                {secondsRemaining}s
+              </span>
             </div>
           )}
           <TurnIndicator yourTurn={gameState.yourTurn} phase={gameState.phase} />

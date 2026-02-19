@@ -18,8 +18,6 @@ export default function App() {
   const [gameResult, setGameResult] = useState<GameOverMsg | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showTimesUp, setShowTimesUp] = useState(false);
-
   const handleMessage = useCallback((msg: import("./types/messages").ServerMessage) => {
     switch (msg.type) {
       case "waiting_for_match":
@@ -35,11 +33,9 @@ export default function App() {
         break;
       case "game_state":
         setGameState(msg);
-        setShowTimesUp(false);
         break;
       case "turn_timeout":
-        setShowTimesUp(true);
-        setTimeout(() => setShowTimesUp(false), 3000);
+        /* Turn already switched; countdown message is shown during countdown. */
         break;
       case "game_over":
         setGameResult(msg);
@@ -103,7 +99,6 @@ export default function App() {
           connected={connected}
           matchInfo={matchInfo}
           gameState={gameState}
-          showTimesUp={showTimesUp}
           onFlipCard={handleFlipCard}
           onUsePowerUp={handleUsePowerUp}
         />
