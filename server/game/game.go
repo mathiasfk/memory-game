@@ -106,6 +106,9 @@ type Game struct {
 
 	Actions chan Action
 	Done    chan struct{}
+
+	// OnGameEnd is called when the game ends (normal finish or opponent disconnect). winnerIndex is 0, 1, or -1 for draw.
+	OnGameEnd func(gameID, player0UserID, player1UserID, player0Name, player1Name string, player0Score, player1Score int, winnerIndex int, endReason string)
 }
 
 // NewGame creates a new Game between two players.
@@ -486,8 +489,11 @@ func (g *Game) handleTurnTimeout() {
 
 func (g *Game) handleDisconnect(playerIdx int) {
 	g.Finished = true
-	// Notify the opponent
 	opponentIdx := 1 - playerIdx
+	if g.OnGameEnd != nil {
+		g.OnGameEnd(g.ID, g.PlayerUserIDs[0], g.PlayerUserIDs[1], g.Players[0].Name, g.Players[1].Name, g.Players[0].Score, g.Players[1].Score, opponentIdx, "opponent_disconnected")
+	}
+	// Notify the opponent
 	opponent := g.Players[opponentIdx]
 	if opponent != nil && opponent.Send != nil {
 		msg := map[string]string{"type": "opponent_disconnected"}
@@ -669,5 +675,15 @@ func (g *Game) broadcastGameOver() {
 		if g.Players[i] != nil && g.Players[i].Send != nil {
 			safeSend(g.Players[i].Send, data)
 		}
+	}
+	// Persist once for history (winnerIndex: 0, 1, or -1 for draw)
+	if g.OnGameEnd != nil {
+		winnerIdx := -1
+		if g.Players[0].Score > g.Players[1].Score {
+			winnerIdx = 0
+		} else if g.Players[1].Score > g.Players[0].Score {
+			winnerIdx = 1
+		}
+		g.OnGameEnd(g.ID, g.PlayerUserIDs[0], g.PlayerUserIDs[1], g.Players[0].Name, g.Players[1].Name, g.Players[0].Score, g.Players[1].Score, winnerIdx, "completed")
 	}
 }

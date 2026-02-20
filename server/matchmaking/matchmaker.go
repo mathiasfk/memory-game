@@ -1,6 +1,7 @@
 package matchmaking
 
 import (
+	"context"
 	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -15,6 +16,7 @@ import (
 	"memory-game-server/ai"
 	"memory-game-server/config"
 	"memory-game-server/game"
+	"memory-game-server/storage"
 	"memory-game-server/ws"
 )
 
@@ -26,17 +28,19 @@ type Matchmaker struct {
 	queue        chan *ws.Client
 	config       *config.Config
 	powerUps     game.PowerUpProvider
+	historyStore *storage.Store
 	activeGames  map[string]*game.Game
 	userIDToGame map[string]string // userID -> gameID for rejoin by user (cross-device)
 	mu           sync.RWMutex
 }
 
-// NewMatchmaker creates a new Matchmaker.
-func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider) *Matchmaker {
+// NewMatchmaker creates a new Matchmaker. historyStore may be nil to disable game history persistence.
+func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider, historyStore *storage.Store) *Matchmaker {
 	return &Matchmaker{
 		queue:        make(chan *ws.Client, 100),
 		config:       cfg,
 		powerUps:     pups,
+		historyStore: historyStore,
 		activeGames:  make(map[string]*game.Game),
 		userIDToGame: make(map[string]string),
 	}
@@ -93,6 +97,12 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 	g.RejoinTokens[1] = t1
 	g.PlayerUserIDs[0] = client1.UserID
 	g.PlayerUserIDs[1] = client2.UserID
+	if m.historyStore != nil {
+		store := m.historyStore
+		g.OnGameEnd = func(gameID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
+			_ = store.InsertGameResult(context.Background(), gameID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason)
+		}
+	}
 
 	m.mu.Lock()
 	m.activeGames[gameID] = g
@@ -136,7 +146,13 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 	g.RejoinTokens[0] = t0
 	g.RejoinTokens[1] = t1
 	g.PlayerUserIDs[0] = client1.UserID
-	// PlayerUserIDs[1] left empty for AI
+	g.PlayerUserIDs[1] = "ai" // sentinel for AI opponent so history can be stored
+	if m.historyStore != nil {
+		store := m.historyStore
+		g.OnGameEnd = func(gameID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
+			_ = store.InsertGameResult(context.Background(), gameID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason)
+		}
+	}
 
 	m.mu.Lock()
 	m.activeGames[gameID] = g

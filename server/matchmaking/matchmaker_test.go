@@ -38,7 +38,7 @@ func TestMatchmakerPairsPlayers(t *testing.T) {
 	}
 
 	pups := &mockPowerUpProvider{}
-	mm := NewMatchmaker(cfg, pups)
+	mm := NewMatchmaker(cfg, pups, nil)
 	go mm.Run()
 
 	// Create two mock clients with send channels
@@ -115,7 +115,7 @@ func TestMatchmakerPairsWithAIAfterTimeout(t *testing.T) {
 	}
 
 	pups := &mockPowerUpProvider{}
-	mm := NewMatchmaker(cfg, pups)
+	mm := NewMatchmaker(cfg, pups, nil)
 	go mm.Run()
 
 	send1 := make(chan []byte, 100)

@@ -42,15 +42,16 @@ type PowerUpsConfig struct {
 
 // Config holds all configurable game parameters.
 type Config struct {
-	BoardRows        int `json:"board_rows"`
-	BoardCols        int `json:"board_cols"`
-	ComboBasePoints  int `json:"combo_base_points"`
-	RevealDurationMS int `json:"reveal_duration_ms"`
+	BoardRows        int    `json:"board_rows"`
+	BoardCols        int    `json:"board_cols"`
+	ComboBasePoints  int    `json:"combo_base_points"`
+	RevealDurationMS int    `json:"reveal_duration_ms"`
 	MaxNameLength    int    `json:"max_name_length"`
 	WSPort           int    `json:"ws_port"`
 	NeonAuthBaseURL  string `json:"-"` // From NEON_AUTH_BASE_URL; not persisted in config.json
+	DatabaseURL      string `json:"-"` // From DATABASE_URL; not persisted (override in production)
 	MaxLatencyMS     int    `json:"max_latency_ms"`
-	AIPairTimeoutSec int `json:"ai_pair_timeout_sec"`
+	AIPairTimeoutSec int    `json:"ai_pair_timeout_sec"`
 
 	// TurnLimitSec is the max time per turn in seconds; 0 = disabled.
 	TurnLimitSec int `json:"turn_limit_sec"`
@@ -125,6 +126,7 @@ func Load() *Config {
 	overrideInt(&cfg.TurnCountdownShowSec, "TURN_COUNTDOWN_SHOW_SEC")
 	overrideInt(&cfg.ReconnectTimeoutSec, "RECONNECT_TIMEOUT_SEC")
 	overrideString(&cfg.NeonAuthBaseURL, "NEON_AUTH_BASE_URL")
+	overrideString(&cfg.DatabaseURL, "DATABASE_URL")
 	if len(cfg.AIProfiles) > 0 {
 		overrideString(&cfg.AIProfiles[0].Name, "AI_NAME")
 		overrideInt(&cfg.AIProfiles[0].DelayMinMS, "AI_DELAY_MIN_MS")

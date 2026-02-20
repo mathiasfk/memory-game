@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import styles from "../styles/LobbyScreen.module.css";
 
 interface LobbyScreenProps {
@@ -15,6 +16,7 @@ export default function LobbyScreen({
   onFindMatch,
   onSignOut,
 }: LobbyScreenProps) {
+  const navigate = useNavigate();
   const canFindGame = connected && authReady;
 
   return (
@@ -30,6 +32,13 @@ export default function LobbyScreen({
           className={styles.primaryButton}
         >
           Find game
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/history")}
+          className={styles.historyButton}
+        >
+          History
         </button>
         <button type="button" onClick={onSignOut} className={styles.signOut}>
           Log out

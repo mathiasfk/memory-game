@@ -1,7 +1,7 @@
 .screen {
-  max-width: 520px;
-  margin: 6rem auto 0;
-  padding: 1.5rem;
+  max-width: 460px;
+  margin: 4rem auto 0;
+  padding: 2rem;
   border-radius: 0.75rem;
   text-align: center;
   background: rgba(15, 23, 42, 0.65);
@@ -9,27 +9,68 @@
 }
 
 .title {
-  margin: 0 0 1rem;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
 }
 
 .scores {
-  margin-bottom: 1rem;
+  margin: 1rem 0 1.5rem;
+  font-size: 1rem;
+  color: #cbd5e1;
 }
 
-.screen button {
-  border: 0;
+.scores p {
+  margin: 0.25rem 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.primaryButton {
+  padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  padding: 0.65rem 1rem;
-  font-weight: 700;
+  border: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #22c55e;
+  color: #052e16;
   cursor: pointer;
+  transition: background-color 0.15s;
 }
 
-.screen button:disabled {
-  opacity: 0.65;
+.primaryButton:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
+.secondaryButton {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #475569;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.secondaryButton:hover {
+  background: #64748b;
+}
+
 .connection {
-  margin-top: 0.75rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
   color: #fbbf24;
 }

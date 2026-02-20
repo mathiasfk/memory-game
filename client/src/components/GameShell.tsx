@@ -255,6 +255,17 @@ export function GameShell() {
     setScreen("waiting");
   }, [send]);
 
+  const handleBackToHome = useCallback(() => {
+    setErrorMessage(null);
+    setGameResult(null);
+    setMatchInfo(null);
+    setGameState(null);
+    setOpponentDisconnected(false);
+    setOpponentReconnecting(null);
+    clearGameSession();
+    setScreen("lobby");
+  }, []);
+
   const handleSignOut = useCallback(async () => {
     await authClient.signOut();
     navigate("/auth/sign-in", { replace: true });
@@ -291,6 +302,7 @@ export function GameShell() {
           opponentDisconnected={opponentDisconnected}
           latestGameState={gameState}
           onPlayAgain={handlePlayAgain}
+          onBackToHome={handleBackToHome}
         />
       )}
     </main>
