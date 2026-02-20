@@ -46,9 +46,10 @@ type Config struct {
 	BoardCols        int `json:"board_cols"`
 	ComboBasePoints  int `json:"combo_base_points"`
 	RevealDurationMS int `json:"reveal_duration_ms"`
-	MaxNameLength    int `json:"max_name_length"`
-	WSPort           int `json:"ws_port"`
-	MaxLatencyMS     int `json:"max_latency_ms"`
+	MaxNameLength    int    `json:"max_name_length"`
+	WSPort           int    `json:"ws_port"`
+	NeonAuthBaseURL  string `json:"-"` // From NEON_AUTH_BASE_URL; not persisted in config.json
+	MaxLatencyMS     int    `json:"max_latency_ms"`
 	AIPairTimeoutSec int `json:"ai_pair_timeout_sec"`
 
 	// TurnLimitSec is the max time per turn in seconds; 0 = disabled.
@@ -68,17 +69,17 @@ type Config struct {
 // Defaults returns a Config with all default values from the spec.
 func Defaults() *Config {
 	return &Config{
-		BoardRows:        6,
-		BoardCols:        6,
-		ComboBasePoints:  1,
-		RevealDurationMS: 1000,
-		MaxNameLength:    24,
-		WSPort:           8080,
-		MaxLatencyMS:     500,
-		AIPairTimeoutSec: 15,
-		TurnLimitSec:        60,
+		BoardRows:            6,
+		BoardCols:            6,
+		ComboBasePoints:      1,
+		RevealDurationMS:     1000,
+		MaxNameLength:        24,
+		WSPort:               8080,
+		MaxLatencyMS:         500,
+		AIPairTimeoutSec:     15,
+		TurnLimitSec:         60,
 		TurnCountdownShowSec: 30,
-		ReconnectTimeoutSec: 120,
+		ReconnectTimeoutSec:  120,
 		PowerUps: PowerUpsConfig{
 			Shuffle:      ShufflePowerUpConfig{Cost: 2},
 			SecondChance: SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5},
@@ -123,6 +124,7 @@ func Load() *Config {
 	overrideInt(&cfg.TurnLimitSec, "TURN_LIMIT_SEC")
 	overrideInt(&cfg.TurnCountdownShowSec, "TURN_COUNTDOWN_SHOW_SEC")
 	overrideInt(&cfg.ReconnectTimeoutSec, "RECONNECT_TIMEOUT_SEC")
+	overrideString(&cfg.NeonAuthBaseURL, "NEON_AUTH_BASE_URL")
 	if len(cfg.AIProfiles) > 0 {
 		overrideString(&cfg.AIProfiles[0].Name, "AI_NAME")
 		overrideInt(&cfg.AIProfiles[0].DelayMinMS, "AI_DELAY_MIN_MS")

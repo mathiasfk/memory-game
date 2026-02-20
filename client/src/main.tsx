@@ -1,10 +1,18 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
+import { NeonAuthUIProvider } from "@neondatabase/neon-js/auth/react";
+import "@neondatabase/neon-js/ui/css";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { authClient } from "./lib/auth";
 import "./styles/global.css";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <NeonAuthUIProvider authClient={authClient}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </NeonAuthUIProvider>
+  </StrictMode>,
 );

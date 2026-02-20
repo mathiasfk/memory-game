@@ -26,6 +26,12 @@ func (e *InboundEnvelope) UnmarshalJSON(data []byte) error {
 
 // --- Client-to-Server message payloads ---
 
+// AuthMsg is sent by the client as the first message with a Neon Auth JWT.
+type AuthMsg struct {
+	Type  string `json:"type"`
+	Token string `json:"token"`
+}
+
 // SetNameMsg is sent by the client to declare a display name.
 type SetNameMsg struct {
 	Type string `json:"type"`

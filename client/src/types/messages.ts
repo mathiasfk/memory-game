@@ -1,5 +1,10 @@
 import type { GameState, PlayerView } from "./game";
 
+export interface AuthMsg {
+  type: "auth";
+  token: string;
+}
+
 export interface SetNameMsg {
   type: "set_name";
   name: string;
@@ -27,7 +32,13 @@ export interface RejoinMsg {
   name: string;
 }
 
-export type ClientMessage = SetNameMsg | RejoinMsg | FlipCardMsg | UsePowerUpMsg | PlayAgainMsg;
+export type ClientMessage =
+  | AuthMsg
+  | SetNameMsg
+  | RejoinMsg
+  | FlipCardMsg
+  | UsePowerUpMsg
+  | PlayAgainMsg;
 
 export interface ErrorMsg {
   type: "error";

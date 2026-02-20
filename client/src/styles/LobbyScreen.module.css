@@ -1,7 +1,7 @@
 .screen {
   max-width: 460px;
-  margin: 6rem auto 0;
-  padding: 1.5rem;
+  margin: 4rem auto 0;
+  padding: 2rem;
   border-radius: 0.75rem;
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(148, 163, 184, 0.25);
@@ -10,42 +10,70 @@
 .title {
   margin: 0;
   font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.welcome {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
 .subtitle {
-  margin: 0.5rem 0 1.25rem;
+  margin: 1rem 0 1.5rem;
+  font-size: 0.9375rem;
   color: #cbd5e1;
+  line-height: 1.5;
 }
 
-.form {
-  display: grid;
+.actions {
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
-.form input {
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid #475569;
-  background: #0b1220;
-  color: inherit;
-}
-
-.form button {
-  padding: 0.65rem 0.8rem;
+.primaryButton {
+  padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
+  font-size: 1rem;
+  font-weight: 600;
   background: #22c55e;
   color: #052e16;
-  font-weight: 700;
   cursor: pointer;
+  transition: background-color 0.15s;
 }
 
-.form button:disabled {
+.primaryButton:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.primaryButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+.signOut {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #475569;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.signOut:hover {
+  background: #64748b;
+}
+
 .connection {
-  margin-top: 0.85rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
   color: #fbbf24;
 }

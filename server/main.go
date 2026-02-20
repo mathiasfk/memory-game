@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/joho/godotenv"
 	"memory-game-server/config"
 	"memory-game-server/matchmaking"
 	"memory-game-server/powerup"
@@ -12,7 +13,19 @@ import (
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		if err2 := godotenv.Load("server/.env"); err2 != nil {
+			log.Print("No .env file found; using environment variables. For local dev, run from server/ or set NEON_AUTH_BASE_URL and WS_PORT.")
+		}
+	}
+
 	cfg := config.Load()
+
+	if cfg.NeonAuthBaseURL == "" {
+		log.Print("Auth: NEON_AUTH_BASE_URL is not set — WebSocket auth will reject clients with 'Server auth not configured.'")
+	} else {
+		log.Printf("Auth: configured (base URL: %s)", cfg.NeonAuthBaseURL)
+	}
 
 	log.Printf("Configuration: BoardRows=%d, BoardCols=%d, ComboBasePoints=%d, RevealDurationMS=%d, ShuffleCost=%d, WSPort=%d",
 		cfg.BoardRows, cfg.BoardCols, cfg.ComboBasePoints, cfg.RevealDurationMS, cfg.PowerUps.Shuffle.Cost, cfg.WSPort)

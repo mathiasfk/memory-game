@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"memory-game-server/auth"
 	"memory-game-server/game"
 )
 
@@ -26,12 +27,14 @@ const (
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	Hub      *Hub
-	Conn     *websocket.Conn
-	Send     chan []byte
-	Name     string
-	Game     *game.Game
-	PlayerID int // 0 or 1 within the game
+	Hub           *Hub
+	Conn          *websocket.Conn
+	Send          chan []byte
+	Name          string
+	Game          *game.Game
+	PlayerID      int    // 0 or 1 within the game
+	UserID        string // from JWT sub claim
+	Authenticated bool
 }
 
 // ReadPump pumps messages from the websocket connection to the hub.
@@ -107,7 +110,14 @@ func (c *Client) handleMessage(data []byte) {
 		return
 	}
 
+	if !c.Authenticated && envelope.Type != "auth" {
+		c.sendError("Authentication required. Send an auth message first.")
+		return
+	}
+
 	switch envelope.Type {
+	case "auth":
+		c.handleAuth(envelope.Raw)
 	case "set_name":
 		c.handleSetName(envelope.Raw)
 	case "rejoin":
@@ -123,15 +133,46 @@ func (c *Client) handleMessage(data []byte) {
 	}
 }
 
+func (c *Client) handleAuth(raw json.RawMessage) {
+	if c.Authenticated {
+		log.Printf("[auth] client already authenticated, rejecting")
+		c.sendError("Already authenticated.")
+		return
+	}
+	var msg AuthMsg
+	if err := json.Unmarshal(raw, &msg); err != nil || msg.Token == "" {
+		log.Printf("[auth] invalid auth message: unmarshal err=%v, token empty=%v", err != nil, msg.Token == "")
+		c.sendError("Invalid auth message.")
+		return
+	}
+	baseURL := c.Hub.Config.NeonAuthBaseURL
+	if baseURL == "" {
+		log.Printf("[auth] NEON_AUTH_BASE_URL not set on server; cannot validate token")
+		c.sendError("Server auth not configured.")
+		return
+	}
+	claims, err := auth.ValidateNeonToken(baseURL, msg.Token)
+	if err != nil {
+		log.Printf("[auth] token validation failed: %v", err)
+		c.sendError("Invalid or expired token.")
+		return
+	}
+	c.UserID = auth.UserIDFromClaims(claims)
+	c.Name = auth.FirstNameFromClaims(claims)
+	c.Authenticated = true
+	log.Printf("[auth] authenticated user id=%s name=%s", c.UserID, c.Name)
+}
+
 func (c *Client) handleSetName(raw json.RawMessage) {
+	// Name is taken from JWT at auth time; we ignore the client-sent name for security.
 	var msg SetNameMsg
 	if err := json.Unmarshal(raw, &msg); err != nil {
 		c.sendError("Invalid set_name message.")
 		return
 	}
 
-	// Validate name length
-	if len(msg.Name) < 1 || len(msg.Name) > c.Hub.Config.MaxNameLength {
+	// Validate name length (c.Name was set from JWT in handleAuth)
+	if len(c.Name) < 1 || len(c.Name) > c.Hub.Config.MaxNameLength {
 		c.sendError("Name must be between 1 and " + intToStr(c.Hub.Config.MaxNameLength) + " characters.")
 		return
 	}
@@ -142,9 +183,7 @@ func (c *Client) handleSetName(raw json.RawMessage) {
 		return
 	}
 
-	c.Name = msg.Name
-
-	// Enter matchmaking queue
+	// Enter matchmaking queue (c.Name already set from JWT)
 	c.Hub.Matchmaker.Enqueue(c)
 
 	// Send WaitingForMatch
