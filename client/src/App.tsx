@@ -6,7 +6,14 @@ import { Home } from "./pages/Home";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route
+        path="/"
+        element={
+          <div className="appTheme">
+            <Home />
+          </div>
+        }
+      />
       <Route path="/auth/:pathname" element={<Auth />} />
       <Route path="/account/:pathname" element={<Account />} />
     </Routes>

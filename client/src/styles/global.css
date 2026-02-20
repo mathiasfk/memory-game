@@ -1,8 +1,24 @@
 :root {
   font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #e7eaf2;
   background-color: #0f172a;
   line-height: 1.4;
+}
+
+/*
+ * Our app theme: light text on dark blue. Applied only to game/home content
+ * so Neon Auth UI (login, account) keeps its default styles.
+ */
+.appTheme {
+  min-height: 100vh;
+  color: #e7eaf2;
+  --neon-foreground: #e7eaf2;
+  --neon-muted-foreground: #cbd5e1;
+  --neon-card-foreground: #e7eaf2;
+  --neon-popover-foreground: #e7eaf2;
+  --neon-primary-foreground: #e7eaf2;
+  --neon-secondary-foreground: #e2e8f0;
+  --neon-accent-foreground: #e7eaf2;
+  --neon-destructive-foreground: #fecaca;
 }
 
 * {
