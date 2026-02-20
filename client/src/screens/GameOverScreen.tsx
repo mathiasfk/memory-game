@@ -7,6 +7,7 @@ interface GameOverScreenProps {
   opponentDisconnected: boolean;
   latestGameState: GameStateMsg | null;
   onPlayAgain: () => void;
+  onBackToHome: () => void;
 }
 
 function resultLabel(result: GameOverMsg["result"]): string {
@@ -26,6 +27,7 @@ export default function GameOverScreen({
   opponentDisconnected,
   latestGameState,
   onPlayAgain,
+  onBackToHome,
 }: GameOverScreenProps) {
   const yourScore = result?.you.score ?? latestGameState?.you.score ?? 0;
   const opponentScore = result?.opponent.score ?? latestGameState?.opponent.score ?? 0;
@@ -49,9 +51,19 @@ export default function GameOverScreen({
         </p>
       </div>
 
-      <button type="button" onClick={onPlayAgain} disabled={!connected}>
-        Play Again
-      </button>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          onClick={onPlayAgain}
+          disabled={!connected}
+          className={styles.primaryButton}
+        >
+          Play Again
+        </button>
+        <button type="button" onClick={onBackToHome} className={styles.secondaryButton}>
+          Back to home
+        </button>
+      </div>
 
       {!connected && <p className={styles.connection}>Reconnecting to server...</p>}
     </section>
