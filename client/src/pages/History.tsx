@@ -125,6 +125,8 @@ export function HistoryPage() {
 function GameHistoryItem({ record }: { record: GameRecord }) {
   const yourIdx = record.your_index ?? 0;
   const oppName = yourIdx === 0 ? record.player1_name : record.player0_name;
+  const oppUserId = yourIdx === 0 ? record.player1_user_id : record.player0_user_id;
+  const oppIsBot = oppUserId === "ai";
   const yourScore = yourIdx === 0 ? record.player0_score : record.player1_score;
   const oppScore = yourIdx === 0 ? record.player1_score : record.player0_score;
   const winnerIdx = record.winner_index;
@@ -135,7 +137,7 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
   const dateStr = (() => {
     try {
       const d = new Date(record.played_at);
-      return d.toLocaleDateString(undefined, {
+      return d.toLocaleString(undefined, {
         dateStyle: "medium",
         timeStyle: "short",
       });
@@ -147,15 +149,22 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
   return (
     <li className={styles.item}>
       <p className={styles.date}>{dateStr}</p>
-      <p className={styles.players}>
-        <span className={youWon ? styles.winner : youLost ? styles.loser : undefined}>
-          You: {yourScore}
-        </span>
-        {" vs "}
-        <span className={youLost ? styles.winner : youWon ? styles.loser : undefined}>
-          {oppName}: {oppScore}
-        </span>
-      </p>
+      <div className={styles.playersRow}>
+        <div className={styles.playerBlock}>
+          <span className={[styles.playerName, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>
+            You
+          </span>
+          <span className={[styles.playerScore, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>{yourScore}</span>
+        </div>
+        <span className={styles.vs}>vs</span>
+        <div className={styles.playerBlock}>
+          <span className={[styles.playerName, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>
+            {oppName}
+            {oppIsBot && <span className={styles.botTag}>Bot</span>}
+          </span>
+          <span className={[styles.playerScore, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>{oppScore}</span>
+        </div>
+      </div>
       <p className={styles.result}>
         {draw && "Draw"}
         {youWon && "You won"}
