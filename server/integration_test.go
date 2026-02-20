@@ -24,7 +24,7 @@ func setupTestServerWithConfig(t *testing.T, cfg *config.Config) (*httptest.Serv
 	registry.Register(&powerup.ShufflePowerUp{CostValue: cfg.PowerUps.Shuffle.Cost})
 	registry.Register(&powerup.SecondChancePowerUp{CostValue: cfg.PowerUps.SecondChance.Cost, DurationRounds: cfg.PowerUps.SecondChance.DurationRounds})
 
-	mm := matchmaking.NewMatchmaker(cfg, registry)
+	mm := matchmaking.NewMatchmaker(cfg, registry, nil)
 	go mm.Run()
 
 	hub := ws.NewHub(cfg, mm)

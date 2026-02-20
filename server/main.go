@@ -1,14 +1,19 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/joho/godotenv"
+	"memory-game-server/auth"
 	"memory-game-server/config"
 	"memory-game-server/matchmaking"
 	"memory-game-server/powerup"
+	"memory-game-server/storage"
 	"memory-game-server/ws"
 )
 
@@ -40,8 +45,18 @@ func main() {
 	}
 	registry.Register(&powerup.RadarPowerUp{CostValue: cfg.PowerUps.Radar.Cost, RevealDuration: radarRevealSec})
 
+	// Game history storage (optional; DATABASE_URL empty = no persistence)
+	ctx := context.Background()
+	historyStore, err := storage.NewStore(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	if historyStore != nil {
+		defer historyStore.Close()
+	}
+
 	// Set up matchmaker
-	mm := matchmaking.NewMatchmaker(cfg, registry)
+	mm := matchmaking.NewMatchmaker(cfg, registry, historyStore)
 	go mm.Run()
 
 	// Set up WebSocket hub
@@ -51,6 +66,56 @@ func main() {
 	// HTTP handler for WebSocket upgrades
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		hub.ServeWS(w, r)
+	})
+
+	// GET /api/history — returns game history for the authenticated user (JWT required)
+	http.HandleFunc("/api/history", func(w http.ResponseWriter, r *http.Request) {
+		// CORS
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		// JWT
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "authorization required", http.StatusUnauthorized)
+			return
+		}
+		const prefix = "Bearer "
+		if !strings.HasPrefix(authHeader, prefix) {
+			http.Error(w, "invalid authorization", http.StatusUnauthorized)
+			return
+		}
+		token := strings.TrimSpace(authHeader[len(prefix):])
+		claims, err := auth.ValidateNeonToken(cfg.NeonAuthBaseURL, token)
+		if err != nil {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+		userID := auth.UserIDFromClaims(claims)
+		if userID == "" {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+		// Return list (empty if no DB)
+		list := []storage.GameRecord{}
+		if historyStore != nil {
+			list, err = historyStore.ListByUserID(r.Context(), userID)
+			if err != nil {
+				log.Printf("ListByUserID: %v", err)
+				http.Error(w, "failed to load history", http.StatusInternalServerError)
+				return
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(list)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.WSPort)

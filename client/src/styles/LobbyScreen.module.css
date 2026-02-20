@@ -56,6 +56,22 @@
   cursor: not-allowed;
 }
 
+.historyButton {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #334155;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.historyButton:hover {
+  background: #475569;
+}
+
 .signOut {
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
