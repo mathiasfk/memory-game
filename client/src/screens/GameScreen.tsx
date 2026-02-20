@@ -141,7 +141,7 @@ export default function GameScreen({
       )}
       <header className={styles.header}>
         <h2>You vs {matchInfo.opponentName}</h2>
-        <div className={styles.headerRight}>
+        <div className={styles.countdownRow}>
           {showCountdown && (
             <div className={countdownStyles.countdownWrap} aria-live="polite" aria-atomic="true">
               <span className={countdownStyles.countdownLabel}>Time is almost up!</span>
@@ -153,6 +153,8 @@ export default function GameScreen({
               </span>
             </div>
           )}
+        </div>
+        <div className={styles.turnIndicatorWrap}>
           <TurnIndicator yourTurn={gameState.yourTurn} phase={gameState.phase} />
         </div>
       </header>
