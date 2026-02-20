@@ -122,6 +122,8 @@ func (c *Client) handleMessage(data []byte) {
 		c.handleSetName(envelope.Raw)
 	case "rejoin":
 		c.handleRejoin(envelope.Raw)
+	case "rejoin_my_game":
+		c.handleRejoinMyGame()
 	case "flip_card":
 		c.handleFlipCard(envelope.Raw)
 	case "use_power_up":
@@ -257,6 +259,64 @@ func (c *Client) handleRejoin(raw json.RawMessage) {
 	safeSend(c.Send, matchData)
 
 	// Send current game state so client has it immediately (game loop will also broadcastState)
+	state := g.BuildStateForPlayer(playerIdx)
+	stateData, _ := json.Marshal(state)
+	safeSend(c.Send, stateData)
+}
+
+func (c *Client) handleRejoinMyGame() {
+	if c.Game != nil {
+		c.sendError("Already in a game.")
+		return
+	}
+	g, playerIdx, rejoinToken, err := c.Hub.Matchmaker.RejoinByUser(c.UserID)
+	if err != nil {
+		switch {
+		case strings.Contains(err.Error(), "not found"), strings.Contains(err.Error(), "finished"):
+			c.sendError("Game not found or already ended.")
+		case strings.Contains(err.Error(), "no active game"):
+			c.sendError("No active game for this user.")
+		case strings.Contains(err.Error(), "not disconnected"):
+			c.sendError("Cannot rejoin: you are already connected.")
+		default:
+			c.sendError(err.Error())
+		}
+		return
+	}
+	c.Game = g
+	c.PlayerID = playerIdx
+	// c.Name already set from JWT at auth time
+
+	select {
+	case g.Actions <- game.Action{
+		Type:      game.ActionRejoinCompleted,
+		PlayerIdx: playerIdx,
+		NewSend:   c.Send,
+	}:
+	default:
+		c.sendError("Game is busy. Try again.")
+		c.Game = nil
+		c.PlayerID = 0
+		return
+	}
+
+	opponentIdx := 1 - playerIdx
+	opponentName := ""
+	if g.Players[opponentIdx] != nil {
+		opponentName = g.Players[opponentIdx].Name
+	}
+	matchMsg := MatchFoundMsg{
+		Type:         "match_found",
+		GameID:       g.ID,
+		RejoinToken:  rejoinToken,
+		OpponentName: opponentName,
+		BoardRows:    c.Hub.Config.BoardRows,
+		BoardCols:    c.Hub.Config.BoardCols,
+		YourTurn:     playerIdx == g.CurrentTurn,
+	}
+	matchData, _ := json.Marshal(matchMsg)
+	safeSend(c.Send, matchData)
+
 	state := g.BuildStateForPlayer(playerIdx)
 	stateData, _ := json.Marshal(state)
 	safeSend(c.Send, stateData)

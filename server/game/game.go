@@ -96,6 +96,9 @@ type Game struct {
 	// RejoinTokens allow a disconnected player to rejoin; set by matchmaker.
 	RejoinTokens [2]string
 
+	// PlayerUserIDs are the auth user IDs for each seat (index 0 and 1); used for rejoin by user (cross-device). Set by matchmaker.
+	PlayerUserIDs [2]string
+
 	// DisconnectedPlayerIdx is the player who lost connection (-1 = none); game is paused until rejoin or timeout.
 	DisconnectedPlayerIdx  int
 	ReconnectionDeadline   time.Time

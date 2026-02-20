@@ -20,6 +20,7 @@ var upgrader = websocket.Upgrader{
 type MatchmakerInterface interface {
 	Enqueue(c *Client)
 	Rejoin(gameID, rejoinToken, name string) (*game.Game, int, error)
+	RejoinByUser(userID string) (*game.Game, int, string, error)
 }
 
 // Hub maintains the set of active clients and routes messages.

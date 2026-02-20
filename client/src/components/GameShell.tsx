@@ -89,7 +89,10 @@ export function GameShell() {
         if (msg.message.includes("Game not found") || msg.message.includes("Invalid rejoin")) {
           clearGameSession();
         }
-        setErrorMessage(msg.message);
+        // Do not show "No active game" as error; it is normal when user has no game in progress
+        if (!msg.message.includes("No active game for this user")) {
+          setErrorMessage(msg.message);
+        }
         break;
       default: {
         const _exhaustiveCheck: never = msg;
@@ -133,6 +136,7 @@ export function GameShell() {
       send({ type: "auth", token: jwt });
       authSentRef.current = true;
       setAuthSent(true);
+      setErrorMessage(null); // Clear any prior error so rejoin can show clean state
     }
 
     const getSessionUrl = `${NEON_AUTH_URL.replace(/\/$/, "")}/get-session`;
@@ -185,25 +189,37 @@ export function GameShell() {
     }
   }, [connected]);
 
-  // Rejoin saved game when socket reconnects
+  // Rejoin saved game when socket reconnects (only after auth was sent to avoid "Authentication required").
+  // With session (same device): send rejoin. Without session (e.g. other device): send rejoin_my_game once.
   const prevConnectedRef = useRef(false);
+  const rejoinMyGameSentRef = useRef(false);
   useEffect(() => {
     if (!connected) {
       prevConnectedRef.current = false;
+      rejoinMyGameSentRef.current = false;
       return;
     }
-    if (prevConnectedRef.current) return;
-    const session = getGameSession();
-    if (!session?.gameId || !session?.rejoinToken || !session?.playerName) return;
+    if (!authSent) return; // Wait for auth first so server does not receive rejoin before auth
     if (screen !== "lobby" && screen !== "waiting") return;
-    prevConnectedRef.current = true;
-    send({
-      type: "rejoin",
-      gameId: session.gameId,
-      rejoinToken: session.rejoinToken,
-      name: session.playerName,
-    });
-  }, [connected, send, screen]);
+    const session = getGameSession();
+    if (session?.gameId && session?.rejoinToken && session?.playerName) {
+      if (prevConnectedRef.current) return;
+      prevConnectedRef.current = true;
+      setErrorMessage(null);
+      send({
+        type: "rejoin",
+        gameId: session.gameId,
+        rejoinToken: session.rejoinToken,
+        name: session.playerName,
+      });
+      return;
+    }
+    // No local session: try rejoin by user (cross-device, same account)
+    if (rejoinMyGameSentRef.current) return;
+    rejoinMyGameSentRef.current = true;
+    setErrorMessage(null);
+    send({ type: "rejoin_my_game" });
+  }, [connected, authSent, send, screen]);
 
   const handleFindMatch = useCallback(() => {
     if (!authSentRef.current) return; // Auth must be sent first; button is disabled until then

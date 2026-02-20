@@ -23,20 +23,22 @@ var gameCounter uint64
 
 // Matchmaker manages the queue of players waiting for a match.
 type Matchmaker struct {
-	queue       chan *ws.Client
-	config      *config.Config
-	powerUps    game.PowerUpProvider
-	activeGames map[string]*game.Game
-	mu          sync.RWMutex
+	queue        chan *ws.Client
+	config       *config.Config
+	powerUps     game.PowerUpProvider
+	activeGames  map[string]*game.Game
+	userIDToGame map[string]string // userID -> gameID for rejoin by user (cross-device)
+	mu           sync.RWMutex
 }
 
 // NewMatchmaker creates a new Matchmaker.
 func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider) *Matchmaker {
 	return &Matchmaker{
-		queue:       make(chan *ws.Client, 100),
-		config:      cfg,
-		powerUps:    pups,
-		activeGames: make(map[string]*game.Game),
+		queue:        make(chan *ws.Client, 100),
+		config:       cfg,
+		powerUps:     pups,
+		activeGames:  make(map[string]*game.Game),
+		userIDToGame: make(map[string]string),
 	}
 }
 
@@ -89,9 +91,13 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 	g := game.NewGame(gameID, m.config, p0, p1, m.powerUps)
 	g.RejoinTokens[0] = t0
 	g.RejoinTokens[1] = t1
+	g.PlayerUserIDs[0] = client1.UserID
+	g.PlayerUserIDs[1] = client2.UserID
 
 	m.mu.Lock()
 	m.activeGames[gameID] = g
+	m.userIDToGame[client1.UserID] = gameID
+	m.userIDToGame[client2.UserID] = gameID
 	m.mu.Unlock()
 
 	client1.Game = g
@@ -129,9 +135,12 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 	g := game.NewGame(gameID, m.config, p0, p1, m.powerUps)
 	g.RejoinTokens[0] = t0
 	g.RejoinTokens[1] = t1
+	g.PlayerUserIDs[0] = client1.UserID
+	// PlayerUserIDs[1] left empty for AI
 
 	m.mu.Lock()
 	m.activeGames[gameID] = g
+	m.userIDToGame[client1.UserID] = gameID
 	m.mu.Unlock()
 
 	client1.Game = g
@@ -169,7 +178,15 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 
 func (m *Matchmaker) removeGame(gameID string) {
 	m.mu.Lock()
+	g := m.activeGames[gameID]
 	delete(m.activeGames, gameID)
+	if g != nil {
+		for i := 0; i < 2; i++ {
+			if g.PlayerUserIDs[i] != "" {
+				delete(m.userIDToGame, g.PlayerUserIDs[i])
+			}
+		}
+	}
 	m.mu.Unlock()
 }
 
@@ -178,6 +195,7 @@ var (
 	ErrGameFinished    = errors.New("game finished")
 	ErrInvalidToken    = errors.New("invalid rejoin token")
 	ErrNotDisconnected = errors.New("this player is not disconnected")
+	ErrNoActiveGame    = errors.New("no active game for this user")
 )
 
 // Rejoin looks up a game by ID and rejoin token, and returns the game and player index if the token
@@ -209,6 +227,41 @@ func (m *Matchmaker) Rejoin(gameID, rejoinToken, name string) (*game.Game, int, 
 		return nil, -1, errors.New("invalid name length")
 	}
 	return g, playerIdx, nil
+}
+
+// RejoinByUser looks up the active game for the given user ID (for cross-device rejoin).
+// Only the disconnected player can rejoin. Returns the game, player index, and rejoin token for that player.
+func (m *Matchmaker) RejoinByUser(userID string) (*game.Game, int, string, error) {
+	m.mu.RLock()
+	gameID, ok := m.userIDToGame[userID]
+	m.mu.RUnlock()
+	if !ok || gameID == "" {
+		return nil, -1, "", ErrNoActiveGame
+	}
+	m.mu.RLock()
+	g := m.activeGames[gameID]
+	m.mu.RUnlock()
+	if g == nil {
+		return nil, -1, "", ErrGameNotFound
+	}
+	if g.Finished {
+		return nil, -1, "", ErrGameFinished
+	}
+	playerIdx := -1
+	for i := 0; i < 2; i++ {
+		if g.PlayerUserIDs[i] == userID {
+			playerIdx = i
+			break
+		}
+	}
+	if playerIdx < 0 {
+		return nil, -1, "", ErrNoActiveGame
+	}
+	if g.DisconnectedPlayerIdx != playerIdx {
+		return nil, -1, "", ErrNotDisconnected
+	}
+	token := g.RejoinTokens[playerIdx]
+	return g, playerIdx, token, nil
 }
 
 // safeSend sends data to a channel without panicking if the channel is closed.

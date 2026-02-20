@@ -32,10 +32,15 @@ export interface RejoinMsg {
   name: string;
 }
 
+export interface RejoinMyGameMsg {
+  type: "rejoin_my_game";
+}
+
 export type ClientMessage =
   | AuthMsg
   | SetNameMsg
   | RejoinMsg
+  | RejoinMyGameMsg
   | FlipCardMsg
   | UsePowerUpMsg
   | PlayAgainMsg;
