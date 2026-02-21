@@ -80,8 +80,8 @@
 }
 
 .youHighlight {
-  font-weight: 600;
-  color: #f8fafc;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .botTag {
@@ -129,6 +129,7 @@
 }
 
 .yourPositionCard {
-  background: rgba(34, 197, 94, 0.08);
-  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+  border-width: 1.5px;
 }

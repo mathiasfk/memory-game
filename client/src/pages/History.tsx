@@ -130,7 +130,7 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
   const yourIdx = record.your_index ?? 0;
   const oppName = yourIdx === 0 ? record.player1_name : record.player0_name;
   const oppUserId = yourIdx === 0 ? record.player1_user_id : record.player0_user_id;
-  const oppIsBot = oppUserId === "ai";
+  const oppIsBot = oppUserId === "ai" || oppUserId.startsWith("ai:");
   const yourScore = yourIdx === 0 ? record.player0_score : record.player1_score;
   const oppScore = yourIdx === 0 ? record.player1_score : record.player0_score;
   const yourEloBefore = yourIdx === 0 ? record.player0_elo_before : record.player1_elo_before;
@@ -170,9 +170,9 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
           <div className={styles.playerNameRow}>
             <span className={[styles.playerName, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>
               {oppName}
-              {oppIsBot && <span className={styles.botTag}>Bot</span>}
             </span>
             {oppEloBefore != null && <span className={styles.playerElo}>({oppEloBefore})</span>}
+            {oppIsBot && <span className={styles.botTag}>Bot</span>}
           </div>
           <span className={[styles.playerScore, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>{oppScore}</span>
         </div>

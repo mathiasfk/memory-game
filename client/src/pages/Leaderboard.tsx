@@ -56,7 +56,7 @@ function LeaderboardCard({
         </span>
       </div>
       <div className={styles.cardStats}>
-        <span className={styles.stat}><span className={styles.statLabel}>Elo</span> {entry.elo}</span>
+        <span className={styles.stat}><span className={styles.statLabel}>Rating</span> {entry.elo}</span>
         <span className={styles.stat}><span className={styles.statLabel}>Wins</span> {entry.wins}</span>
         <span className={styles.stat}><span className={styles.statLabel}>Losses</span> {entry.losses}</span>
       </div>
