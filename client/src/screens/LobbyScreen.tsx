@@ -40,6 +40,13 @@ export default function LobbyScreen({
         >
           History
         </button>
+        <button
+          type="button"
+          onClick={() => navigate("/leaderboard")}
+          className={styles.historyButton}
+        >
+          Leaderboard
+        </button>
         <button type="button" onClick={onSignOut} className={styles.signOut}>
           Log out
         </button>

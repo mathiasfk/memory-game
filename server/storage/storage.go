@@ -2,11 +2,13 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -264,13 +266,14 @@ func (s *Store) ListByUserID(ctx context.Context, userID string) ([]GameRecord, 
 
 // LeaderboardEntry is a single row for the leaderboard API.
 type LeaderboardEntry struct {
-	UserID      string `json:"user_id"`
-	DisplayName string `json:"display_name"`
-	Elo         int    `json:"elo"`
-	Wins        int    `json:"wins"`
-	Losses      int    `json:"losses"`
-	Draws       int    `json:"draws"`
-	IsBot       bool   `json:"is_bot"`
+	UserID        string `json:"user_id"`
+	DisplayName   string `json:"display_name"`
+	Elo           int    `json:"elo"`
+	Wins          int    `json:"wins"`
+	Losses        int    `json:"losses"`
+	Draws         int    `json:"draws"`
+	IsBot         bool   `json:"is_bot"`
+	IsCurrentUser bool   `json:"is_current_user,omitempty"`
 }
 
 // ListLeaderboard returns entries ordered by elo DESC, with optional limit and offset.
@@ -307,4 +310,25 @@ func (s *Store) ListLeaderboard(ctx context.Context, limit, offset int) ([]Leade
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+// GetLeaderboardEntryByUserID returns one player's leaderboard entry by user_id, or (nil, nil) if not found.
+func (s *Store) GetLeaderboardEntryByUserID(ctx context.Context, userID string) (*LeaderboardEntry, error) {
+	if s == nil || s.pool == nil || userID == "" {
+		return nil, nil
+	}
+	var e LeaderboardEntry
+	err := s.pool.QueryRow(ctx, `
+		SELECT user_id, display_name, elo, wins, losses, draws
+		FROM player_ratings
+		WHERE user_id = $1`,
+		userID).Scan(&e.UserID, &e.DisplayName, &e.Elo, &e.Wins, &e.Losses, &e.Draws)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	e.IsBot = strings.HasPrefix(e.UserID, aiUserIDPrefix)
+	return &e, nil
 }

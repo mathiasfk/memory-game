@@ -119,7 +119,7 @@ func main() {
 		_ = json.NewEncoder(w).Encode(list)
 	})
 
-	// GET /api/leaderboard — returns global leaderboard ordered by ELO (public)
+	// GET /api/leaderboard — returns global leaderboard ordered by ELO; optional JWT to include current_user_entry when not in top N
 	http.HandleFunc("/api/leaderboard", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
@@ -133,19 +133,58 @@ func main() {
 			return
 		}
 		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+		if limit <= 0 {
+			limit = 20
+		}
 		offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-		list := []storage.LeaderboardEntry{}
+		if offset < 0 {
+			offset = 0
+		}
+		entries := []storage.LeaderboardEntry{}
 		if historyStore != nil {
 			var err error
-			list, err = historyStore.ListLeaderboard(r.Context(), limit, offset)
+			entries, err = historyStore.ListLeaderboard(r.Context(), limit, offset)
 			if err != nil {
 				log.Printf("ListLeaderboard: %v", err)
 				http.Error(w, "failed to load leaderboard", http.StatusInternalServerError)
 				return
 			}
 		}
+		var currentUserEntry *storage.LeaderboardEntry
+		var authUserID string
+		authHeader := r.Header.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token := strings.TrimSpace(authHeader[len("Bearer "):])
+			claims, err := auth.ValidateNeonToken(cfg.NeonAuthBaseURL, token)
+			if err == nil {
+				authUserID = auth.UserIDFromClaims(claims)
+				if authUserID != "" && historyStore != nil {
+					cur, err := historyStore.GetLeaderboardEntryByUserID(r.Context(), authUserID)
+					if err != nil {
+						log.Printf("GetLeaderboardEntryByUserID: %v", err)
+					} else if cur != nil {
+						inTop := false
+						for i := range entries {
+							if entries[i].UserID == authUserID {
+								entries[i].IsCurrentUser = true
+								inTop = true
+								break
+							}
+						}
+						if !inTop {
+							cur.IsCurrentUser = true
+							currentUserEntry = cur
+						}
+					}
+				}
+			}
+		}
+		type response struct {
+			Entries          []storage.LeaderboardEntry  `json:"entries"`
+			CurrentUserEntry *storage.LeaderboardEntry   `json:"current_user_entry"`
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(list)
+		_ = json.NewEncoder(w).Encode(response{Entries: entries, CurrentUserEntry: currentUserEntry})
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.WSPort)

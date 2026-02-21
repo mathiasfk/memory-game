@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { Account } from "./pages/Account";
 import { Auth } from "./pages/Auth";
 import { HistoryPage } from "./pages/History";
+import { LeaderboardPage } from "./pages/Leaderboard";
 import { Home } from "./pages/Home";
 
 export default function App() {
@@ -20,6 +21,14 @@ export default function App() {
         element={
           <div className="appTheme">
             <HistoryPage />
+          </div>
+        }
+      />
+      <Route
+        path="/leaderboard"
+        element={
+          <div className="appTheme">
+            <LeaderboardPage />
           </div>
         }
       />
