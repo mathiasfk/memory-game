@@ -100,7 +100,15 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 	if m.historyStore != nil {
 		store := m.historyStore
 		g.OnGameEnd = func(gameID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
-			_ = store.InsertGameResult(context.Background(), gameID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason)
+			var e0Before, e0After, e1Before, e1After *int
+			if endReason == "completed" {
+				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
+				if err == nil {
+					e0Before, e0After = &eb0, &ea0
+					e1Before, e1After = &eb1, &ea1
+				}
+			}
+			_ = store.InsertGameResult(context.Background(), gameID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
 		}
 	}
 
@@ -146,11 +154,19 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 	g.RejoinTokens[0] = t0
 	g.RejoinTokens[1] = t1
 	g.PlayerUserIDs[0] = client1.UserID
-	g.PlayerUserIDs[1] = "ai" // sentinel for AI opponent so history can be stored
+	g.PlayerUserIDs[1] = "ai:" + profile.Name // fixed ID per bot for ELO and leaderboard
 	if m.historyStore != nil {
 		store := m.historyStore
 		g.OnGameEnd = func(gameID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
-			_ = store.InsertGameResult(context.Background(), gameID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason)
+			var e0Before, e0After, e1Before, e1After *int
+			if endReason == "completed" {
+				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
+				if err == nil {
+					e0Before, e0After = &eb0, &ea0
+					e1Before, e1After = &eb1, &ea1
+				}
+			}
+			_ = store.InsertGameResult(context.Background(), gameID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
 		}
 	}
 

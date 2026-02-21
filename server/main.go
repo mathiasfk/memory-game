@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -111,6 +112,35 @@ func main() {
 			if err != nil {
 				log.Printf("ListByUserID: %v", err)
 				http.Error(w, "failed to load history", http.StatusInternalServerError)
+				return
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(list)
+	})
+
+	// GET /api/leaderboard — returns global leaderboard ordered by ELO (public)
+	http.HandleFunc("/api/leaderboard", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+		offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+		list := []storage.LeaderboardEntry{}
+		if historyStore != nil {
+			var err error
+			list, err = historyStore.ListLeaderboard(r.Context(), limit, offset)
+			if err != nil {
+				log.Printf("ListLeaderboard: %v", err)
+				http.Error(w, "failed to load leaderboard", http.StatusInternalServerError)
 				return
 			}
 		}
