@@ -89,7 +89,7 @@ func Defaults() *Config {
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
 			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 80, ForgetChance: 15},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 75, ForgetChance: 30},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 85, ForgetChance: 30},
 		},
 	}
 }
