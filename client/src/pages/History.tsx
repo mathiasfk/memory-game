@@ -30,6 +30,10 @@ export interface GameRecord {
   winner_index: number | null;
   end_reason: string;
   your_index: number | null;
+  player0_elo_before?: number | null;
+  player1_elo_before?: number | null;
+  player0_elo_after?: number | null;
+  player1_elo_after?: number | null;
 }
 
 export function HistoryPage() {
@@ -129,6 +133,9 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
   const oppIsBot = oppUserId === "ai";
   const yourScore = yourIdx === 0 ? record.player0_score : record.player1_score;
   const oppScore = yourIdx === 0 ? record.player1_score : record.player0_score;
+  const yourEloBefore = yourIdx === 0 ? record.player0_elo_before : record.player1_elo_before;
+  const yourEloAfter = yourIdx === 0 ? record.player0_elo_after : record.player1_elo_after;
+  const oppEloBefore = yourIdx === 0 ? record.player1_elo_before : record.player0_elo_before;
   const winnerIdx = record.winner_index;
   const youWon = winnerIdx !== null && winnerIdx === yourIdx;
   const youLost = winnerIdx !== null && winnerIdx !== yourIdx;
@@ -148,27 +155,41 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
 
   return (
     <li className={styles.item}>
-      <p className={styles.date}>{dateStr}</p>
       <div className={styles.playersRow}>
         <div className={styles.playerBlock}>
-          <span className={[styles.playerName, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>
-            You
-          </span>
+          <div className={styles.playerNameRow}>
+            <span className={[styles.playerName, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>
+              You
+            </span>
+            {yourEloBefore != null && <span className={styles.playerElo}>({yourEloBefore})</span>}
+          </div>
           <span className={[styles.playerScore, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>{yourScore}</span>
         </div>
         <span className={styles.vs}>vs</span>
         <div className={styles.playerBlock}>
-          <span className={[styles.playerName, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>
-            {oppName}
-            {oppIsBot && <span className={styles.botTag}>Bot</span>}
-          </span>
+          <div className={styles.playerNameRow}>
+            <span className={[styles.playerName, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>
+              {oppName}
+              {oppIsBot && <span className={styles.botTag}>Bot</span>}
+            </span>
+            {oppEloBefore != null && <span className={styles.playerElo}>({oppEloBefore})</span>}
+          </div>
           <span className={[styles.playerScore, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>{oppScore}</span>
         </div>
       </div>
+      <p className={styles.date}>{dateStr}</p>
       <p className={styles.result}>
         {draw && "Draw"}
-        {youWon && "You won"}
-        {youLost && "You lost"}
+        {youWon && "Victory!"}
+        {youLost && "Defeat!"}
+        {yourEloBefore != null && yourEloAfter != null && (
+          <>
+            {'  Rating: '}
+            <span className={yourEloAfter >= yourEloBefore ? styles.resultRatingUp : styles.resultRatingDown}>
+              {yourEloBefore}{' → '}{yourEloAfter}
+            </span>
+          </>
+        )}
         {record.end_reason === "opponent_disconnected" && " (opponent left)"}
       </p>
     </li>
