@@ -1,58 +1,92 @@
-.card {
+.cardWrapper {
   width: 100%;
   aspect-ratio: 1;
-  border: 1px solid #475569;
-  border-radius: 0.55rem;
-  color: #f8fafc;
-  background: #1f2937;
-  font-size: clamp(1rem, 2vw, 1.5rem);
-  font-weight: 700;
+  perspective: 800px;
   cursor: pointer;
-  transition: transform 120ms ease, background-color 150ms ease, box-shadow 200ms ease, border-color 150ms ease;
+  border: none;
+  padding: 0;
+  background: transparent;
 }
 
-.card:disabled {
+.cardWrapper:disabled {
   cursor: not-allowed;
 }
 
-.card:not(:disabled):hover {
-  transform: translateY(-1px);
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
+.cardInner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Radar targeting: center card (the one that will be clicked) */
-.radarCenter {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6);
+.cardInner.faceUp {
+  transform: rotateY(180deg);
 }
 
-.radarCenter:not(:disabled):hover {
-  border-color: #fbbf24;
-  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
+.cardBack,
+.cardFront {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
-/* Radar targeting: affected cards (3x3 region) */
-.radarAffected {
-  border-color: rgba(56, 189, 248, 0.7);
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+.cardBack {
+  background: #1f2937;
+  border: 1px solid #475569;
+  color: #f8fafc;
+  transform: rotateY(0deg);
 }
 
-.faceUp {
+.cardFront {
   background: #0b1220;
-  border-color: #38bdf8;
+  border: 1px solid #38bdf8;
+  color: #f8fafc;
+  transform: rotateY(180deg);
 }
 
-.matched {
+.cardFront.matched {
   background: #14532d;
   border-color: #22c55e;
   box-shadow: 0 0 0.7rem rgba(34, 197, 94, 0.45);
 }
 
+.cardWrapper:not(:disabled):hover .cardBack {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
+}
+
+/* Radar targeting: center card (the one that will be clicked) */
+.radarCenter .cardBack {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6);
+}
+
+.radarCenter:not(:disabled):hover .cardBack {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
+}
+
+/* Radar targeting: affected cards (3x3 region) */
+.radarAffected .cardBack {
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+}
+
+.cardWrapper:not(:disabled):hover .cardInner {
+  transform: rotateY(0deg) translateY(-1px);
+}
+
+.cardWrapper:not(:disabled):hover .cardInner.faceUp {
+  transform: rotateY(180deg) translateY(-1px);
+}
+
 .inner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  font-weight: 700;
 }

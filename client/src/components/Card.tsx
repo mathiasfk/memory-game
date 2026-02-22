@@ -13,13 +13,6 @@ interface CardProps {
   onMouseLeave?: () => void;
 }
 
-function getCardValue(card: CardView): string {
-  if (card.state === "hidden") {
-    return "?";
-  }
-  return String(card.pairId ?? "");
-}
-
 export default function Card({
   card,
   disabled,
@@ -29,10 +22,10 @@ export default function Card({
   onMouseEnter,
   onMouseLeave,
 }: CardProps) {
-  const cardClasses = [
-    styles.card,
-    card.state !== "hidden" ? styles.faceUp : "",
-    card.state === "matched" ? styles.matched : "",
+  const isFaceUp = card.state !== "hidden";
+
+  const wrapperClasses = [
+    styles.cardWrapper,
     isRadarCenter ? styles.radarCenter : "",
     isRadarAffected ? styles.radarAffected : "",
   ]
@@ -42,14 +35,23 @@ export default function Card({
   return (
     <button
       type="button"
-      className={cardClasses}
+      className={wrapperClasses}
       onClick={() => onClick(card.index)}
       disabled={disabled}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       aria-label={`Card ${card.index}`}
     >
-      <span className={styles.inner}>{getCardValue(card)}</span>
+      <div className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""}`}>
+        <div className={styles.cardBack}>
+          <span className={styles.inner}>?</span>
+        </div>
+        <div
+          className={`${styles.cardFront} ${card.state === "matched" ? styles.matched : ""}`}
+        >
+          <span className={styles.inner}>{String(card.pairId ?? "")}</span>
+        </div>
+      </div>
     </button>
   );
 }
