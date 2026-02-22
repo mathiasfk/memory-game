@@ -300,10 +300,12 @@ sequenceDiagram
     participant C as Client
     participant S as Server
 
+    Note over C,S: Auth required (see Section 11.1)
+    C->>S: Auth (JWT token)
     C->>S: SetName
     S-->>C: WaitingForMatch
-    Note over S: Another player joins
-    S-->>C: MatchFound
+    Note over S: Another player joins (or AI after timeout)
+    S-->>C: MatchFound (includes gameId, rejoinToken)
 
     rect rgb(240, 240, 240)
     Note over C,S: Game Loop
@@ -311,7 +313,7 @@ sequenceDiagram
     S-->>C: GameState (one card revealed)
     C->>S: FlipCard (2nd)
     S-->>C: GameState (match or mismatch resolved)
-    C->>S: UsePowerUp (optional, before flipping)
+    C->>S: UsePowerUp (optional, before flipping; cardIndex for Radar)
     S-->>C: GameState (power-up applied)
     end
 
@@ -319,6 +321,8 @@ sequenceDiagram
     C->>S: PlayAgain (optional)
     S-->>C: WaitingForMatch
 ```
+
+**Reconnection flow** (Section 11.6): After disconnect, client sends `rejoin` (with gameId, rejoinToken, name) or `rejoin_my_game` (with JWT) to rejoin the same game.
 
 ---
 
@@ -381,3 +385,97 @@ All of the following values must be configurable (e.g., via config file, environ
 2. **Server is client-agnostic**: the protocol is plain JSON over WebSocket. Any client (web, mobile, CLI) can implement it.
 3. **No client-side game logic**: the client is a thin renderer. All validation, state transitions, and rule enforcement happen on the server.
 4. **Parametric tuning**: every gameplay-affecting constant is a configurable parameter, not a hard-coded literal.
+
+---
+
+## 11. Architectural Decisions (Implemented)
+
+This section documents architectural decisions that extend the base specification. Both server and client implementations conform to these extensions.
+
+### 11.1 Authentication (JWT via Neon Auth)
+
+- **Decision**: Authentication is required before any game action. The client must send an `auth` message with a JWT token as the first message after connecting.
+- **Rationale**: Enables persistent identity for game history, leaderboard, and cross-device reconnection.
+- **Implementation**: Server validates JWT via Neon Auth JWKS (`NEON_AUTH_BASE_URL`). The display name is derived from the JWT `name` claim (first word). User ID comes from the `sub` claim.
+- **Fallback**: If `NEON_AUTH_BASE_URL` is not set, the server rejects auth with "Server auth not configured."
+
+### 11.2 AI Opponent
+
+- **Decision**: When no human opponent is available within `AI_PAIR_TIMEOUT_SEC` seconds, the player is matched against an AI opponent.
+- **Rationale**: Reduces wait time and allows single-player practice.
+- **Implementation**: The AI uses only information from `game_state` messages (no access to board internals). Configurable profiles (e.g., Mnemosyne, Calliope, Thalia) with parameters: `delay_min_ms`, `delay_max_ms`, `use_known_pair_chance`, `forget_chance`. AI players have user IDs prefixed with `ai:` for storage/leaderboard.
+
+### 11.3 Game History and Persistence
+
+- **Decision**: Game results are persisted to PostgreSQL when `DATABASE_URL` is set.
+- **Rationale**: Enables history view and ELO-based leaderboard.
+- **Implementation**: Tables `game_history` (per-game records) and `player_ratings` (user_id, display_name, elo, wins, losses, draws). ELO is updated after each completed game using the standard K=32 formula. If `DATABASE_URL` is empty, no persistence occurs.
+
+### 11.4 ELO Rating System
+
+- **Decision**: Each player has an ELO rating (default 1000). Ratings are updated after each completed game.
+- **Rationale**: Provides a competitive ranking for the leaderboard.
+- **Implementation**: `computeEloUpdates(r0, r1, winnerIdx)` with K=32. Draws use 0.5/0.5 expected score. Ratings never go below 0.
+
+### 11.5 REST APIs
+
+- **Decision**: HTTP REST endpoints for authenticated data access.
+- **Endpoints**:
+  - `GET /api/history` — Returns game history for the authenticated user (JWT required).
+  - `GET /api/leaderboard` — Returns global leaderboard ordered by ELO. Query params: `limit` (default 20), `offset`. Optional JWT to include `current_user_entry` when the user is not in the top N.
+
+### 11.6 Reconnection and Rejoin
+
+- **Decision**: Players can rejoin an in-progress game after disconnect or page refresh.
+- **Rationale**: Improves UX when network drops or user refreshes.
+- **Implementation**:
+  - Each game issues a `rejoinToken` per player, sent in `match_found`.
+  - `rejoin` message: `{ type: "rejoin", gameId, rejoinToken, name }` — rejoins by token.
+  - `rejoin_my_game` message: rejoins by user ID (cross-device, no token needed).
+  - `ReconnectTimeoutSec`: If the disconnected player does not rejoin within this window, the opponent wins by default.
+
+### 11.7 Turn Limit
+
+- **Decision**: Optional per-turn time limit (`TurnLimitSec`). When enabled, the turn passes to the opponent if the player does not act in time.
+- **Rationale**: Prevents stalling and keeps games moving.
+- **Implementation**: `TurnCountdownShowSec` controls when the countdown UI is shown to the client.
+
+### 11.8 Additional Power-Ups
+
+Beyond the base Shuffle power-up, the following are implemented:
+
+| Power-Up       | ID             | Effect                                                                 | Config                          |
+|----------------|----------------|-----------------------------------------------------------------------|---------------------------------|
+| Second Chance  | `second_chance`| +1 point per mismatch while active. Lasts N rounds.                   | `cost`, `duration_rounds`       |
+| Radar          | `radar`        | Reveals a 3x3 region around a chosen card for a short duration, then hides again. | `cost`, `reveal_duration_ms`    |
+
+Power-ups that target a card (e.g., Radar) use `cardIndex` in the `use_power_up` message.
+
+### 11.9 Protocol Extensions
+
+**Client-to-Server (additional):**
+
+| Type           | Description                                                                 |
+|----------------|-----------------------------------------------------------------------------|
+| `auth`         | First message; sends JWT `token`. Required before any other action.        |
+| `rejoin`       | Rejoin by `gameId`, `rejoinToken`, `name`.                                  |
+| `rejoin_my_game` | Rejoin by authenticated user ID (no token).                              |
+
+**Server-to-Client (additional):**
+
+- `match_found` includes `gameId` and `rejoinToken` for reconnection support.
+
+### 11.10 Configuration Extensions
+
+| Parameter                    | Type  | Default | Description                                           |
+|-----------------------------|-------|---------|-------------------------------------------------------|
+| `NEON_AUTH_BASE_URL`        | string| —       | Base URL for Neon Auth (JWKS validation).             |
+| `DATABASE_URL`              | string| —       | PostgreSQL connection string. Empty = no persistence. |
+| `AI_PAIR_TIMEOUT_SEC`       | int   | `15`    | Seconds to wait for human opponent before AI match.  |
+| `TurnLimitSec`              | int   | `60`    | Max seconds per turn; 0 = disabled.                  |
+| `TurnCountdownShowSec`      | int   | `30`    | Seconds before turn end to show countdown.           |
+| `ReconnectTimeoutSec`       | int   | `120`   | Seconds to wait for disconnected player to rejoin.   |
+| `POWERUP_SECOND_CHANCE_COST`| int   | `2`     | Cost of Second Chance power-up.                      |
+| `POWERUP_SECOND_CHANCE_DURATION_ROUNDS` | int | `5` | Rounds Second Chance stays active.                  |
+| `POWERUP_RADAR_COST`        | int   | `2`     | Cost of Radar power-up.                              |
+| `POWERUP_RADAR_REVEAL_MS`   | int   | `2000`  | How long Radar reveals the 3x3 area (ms).            |
