@@ -15,6 +15,7 @@ interface GameScreenProps {
   opponentReconnectingDeadlineMs: number | null;
   onFlipCard: (index: number) => void;
   onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
+  onAbandon: () => void;
 }
 
 function getSecondsRemaining(turnEndsAtUnixMs: number): number {
@@ -38,6 +39,7 @@ export default function GameScreen({
   opponentReconnectingDeadlineMs,
   onFlipCard,
   onUsePowerUp,
+  onAbandon,
 }: GameScreenProps) {
   const [pendingRadarTarget, setPendingRadarTarget] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
@@ -141,6 +143,14 @@ export default function GameScreen({
       )}
       <header className={styles.header}>
         <h2>You vs {matchInfo.opponentName}</h2>
+        <button
+          type="button"
+          onClick={onAbandon}
+          className={styles.abandonButton}
+          title="Abandonar partida e voltar ao lobby"
+        >
+          Abandonar partida
+        </button>
         <div className={styles.countdownRow}>
           {showCountdown && (
             <div className={countdownStyles.countdownWrap} aria-live="polite" aria-atomic="true">

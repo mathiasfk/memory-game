@@ -26,6 +26,23 @@
   margin: 0;
 }
 
+.abandonButton {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.abandonButton:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.7);
+}
+
 .countdownRow {
   display: flex;
   align-items: center;
@@ -62,7 +79,7 @@
   .header {
     display: grid;
     grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
     gap: 0.25rem 1rem;
     min-height: 4.5rem;
   }
@@ -80,9 +97,15 @@
     justify-self: end;
   }
 
+  .abandonButton {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
   .countdownRow {
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
     min-height: 2rem;
     align-items: center;
   }
