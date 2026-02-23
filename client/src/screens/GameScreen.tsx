@@ -154,12 +154,12 @@ export default function GameScreen({
         </div>
       )}
       <header className={styles.header} ref={menuRef}>
-        <div className={styles.headerCondensed}>
+        <div className={styles.headerCenter}>
           <div
             className={`${styles.playerBlock} ${gameState.yourTurn ? styles.playerBlockActive : ""}`}
             aria-current={gameState.yourTurn ? "true" : undefined}
           >
-            <span>{gameState.you.name}</span>
+            <span className={styles.playerName}>{gameState.you.name}</span>
             <span className={styles.playerScore}>{gameState.you.score}</span>
           </div>
           <span className={styles.vs}>vs</span>
@@ -168,7 +168,7 @@ export default function GameScreen({
             aria-current={!gameState.yourTurn ? "true" : undefined}
           >
             <span className={styles.playerScore}>{gameState.opponent.score}</span>
-            <span>{gameState.opponent.name}</span>
+            <span className={styles.playerName}>{gameState.opponent.name}</span>
           </div>
         </div>
         <div className={styles.menuWrap}>
