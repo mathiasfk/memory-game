@@ -102,10 +102,10 @@ func Load() *Config {
 
 	// Try to load from config.json
 	if f, err := os.Open("config.json"); err == nil {
-		defer f.Close()
 		if err := json.NewDecoder(f).Decode(cfg); err != nil {
 			log.Printf("Warning: failed to parse config.json: %v", err)
 		}
+		f.Close()
 	}
 
 	// Environment variable overrides

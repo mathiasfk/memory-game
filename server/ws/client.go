@@ -2,13 +2,16 @@ package ws
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"memory-game-server/auth"
 	"memory-game-server/game"
+	"memory-game-server/matcherrors"
+	"memory-game-server/wsutil"
 )
 
 const (
@@ -179,7 +182,7 @@ func (c *Client) handleSetName(raw json.RawMessage) {
 
 	// Validate name length (c.Name was set from JWT in handleAuth)
 	if len(c.Name) < 1 || len(c.Name) > c.Hub.Config.MaxNameLength {
-		c.sendError("Name must be between 1 and " + intToStr(c.Hub.Config.MaxNameLength) + " characters.")
+		c.sendError("Name must be between 1 and " + strconv.Itoa(c.Hub.Config.MaxNameLength) + " characters.")
 		return
 	}
 
@@ -195,7 +198,7 @@ func (c *Client) handleSetName(raw json.RawMessage) {
 	// Send WaitingForMatch
 	waitMsg := WaitingForMatchMsg{Type: "waiting_for_match"}
 	data, _ := json.Marshal(waitMsg)
-	safeSend(c.Send, data)
+	wsutil.SafeSend(c.Send, data)
 }
 
 func (c *Client) handleRejoin(raw json.RawMessage) {
@@ -215,11 +218,11 @@ func (c *Client) handleRejoin(raw json.RawMessage) {
 	g, playerIdx, err := c.Hub.Matchmaker.Rejoin(msg.GameID, msg.RejoinToken, msg.Name)
 	if err != nil {
 		switch {
-		case strings.Contains(err.Error(), "not found"), strings.Contains(err.Error(), "finished"):
+		case errors.Is(err, matcherrors.ErrGameNotFound), errors.Is(err, matcherrors.ErrGameFinished):
 			c.sendError("Game not found or already ended.")
-		case strings.Contains(err.Error(), "token"):
+		case errors.Is(err, matcherrors.ErrInvalidToken):
 			c.sendError("Invalid rejoin token.")
-		case strings.Contains(err.Error(), "not disconnected"):
+		case errors.Is(err, matcherrors.ErrNotDisconnected):
 			c.sendError("Cannot rejoin: you are already connected.")
 		default:
 			c.sendError(err.Error())
@@ -260,12 +263,12 @@ func (c *Client) handleRejoin(raw json.RawMessage) {
 		YourTurn:     playerIdx == g.CurrentTurn,
 	}
 	matchData, _ := json.Marshal(matchMsg)
-	safeSend(c.Send, matchData)
+	wsutil.SafeSend(c.Send, matchData)
 
 	// Send current game state so client has it immediately (game loop will also broadcastState)
 	state := g.BuildStateForPlayer(playerIdx)
 	stateData, _ := json.Marshal(state)
-	safeSend(c.Send, stateData)
+	wsutil.SafeSend(c.Send, stateData)
 }
 
 func (c *Client) handleRejoinMyGame() {
@@ -276,11 +279,11 @@ func (c *Client) handleRejoinMyGame() {
 	g, playerIdx, rejoinToken, err := c.Hub.Matchmaker.RejoinByUser(c.UserID)
 	if err != nil {
 		switch {
-		case strings.Contains(err.Error(), "not found"), strings.Contains(err.Error(), "finished"):
+		case errors.Is(err, matcherrors.ErrGameNotFound), errors.Is(err, matcherrors.ErrGameFinished):
 			c.sendError("Game not found or already ended.")
-		case strings.Contains(err.Error(), "no active game"):
+		case errors.Is(err, matcherrors.ErrNoActiveGame):
 			c.sendError("No active game for this user.")
-		case strings.Contains(err.Error(), "not disconnected"):
+		case errors.Is(err, matcherrors.ErrNotDisconnected):
 			c.sendError("Cannot rejoin: you are already connected.")
 		default:
 			c.sendError(err.Error())
@@ -319,11 +322,11 @@ func (c *Client) handleRejoinMyGame() {
 		YourTurn:     playerIdx == g.CurrentTurn,
 	}
 	matchData, _ := json.Marshal(matchMsg)
-	safeSend(c.Send, matchData)
+	wsutil.SafeSend(c.Send, matchData)
 
 	state := g.BuildStateForPlayer(playerIdx)
 	stateData, _ := json.Marshal(state)
-	safeSend(c.Send, stateData)
+	wsutil.SafeSend(c.Send, stateData)
 }
 
 func (c *Client) handleFlipCard(raw json.RawMessage) {
@@ -385,7 +388,7 @@ func (c *Client) handlePlayAgain() {
 	// Send WaitingForMatch
 	waitMsg := WaitingForMatchMsg{Type: "waiting_for_match"}
 	data, _ := json.Marshal(waitMsg)
-	safeSend(c.Send, data)
+	wsutil.SafeSend(c.Send, data)
 }
 
 func (c *Client) handleLeaveQueue() {
@@ -423,31 +426,8 @@ func (c *Client) handleLeaveGame() {
 	}
 }
 
-// safeSend sends data to a channel without panicking if the channel is closed.
-func safeSend(ch chan []byte, data []byte) {
-	defer func() {
-		recover()
-	}()
-	select {
-	case ch <- data:
-	default:
-	}
-}
-
 func (c *Client) sendError(message string) {
 	msg := ErrorMsg{Type: "error", Message: message}
 	data, _ := json.Marshal(msg)
-	safeSend(c.Send, data)
-}
-
-func intToStr(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	s := ""
-	for n > 0 {
-		s = string(rune('0'+n%10)) + s
-		n /= 10
-	}
-	return s
+	wsutil.SafeSend(c.Send, data)
 }
