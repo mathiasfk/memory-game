@@ -1,8 +1,8 @@
 import type { PowerUpInHand } from "../types/game";
 import { POWER_UP_DISPLAY } from "../powerups/registry";
-import styles from "../styles/PowerUpShop.module.css";
+import styles from "../styles/PowerUpHand.module.css";
 
-interface PowerUpShopProps {
+interface PowerUpHandProps {
   hand: PowerUpInHand[];
   enabled: boolean;
   onUsePowerUp: (powerUpId: string) => void;
@@ -10,19 +10,19 @@ interface PowerUpShopProps {
   secondChanceRoundsRemaining?: number;
 }
 
-export default function PowerUpShop({
+export default function PowerUpHand({
   hand,
   enabled,
   onUsePowerUp,
   secondChanceRoundsRemaining = 0,
-}: PowerUpShopProps) {
+}: PowerUpHandProps) {
   const items = hand.filter((item) => item.count > 0);
 
   return (
-    <section className={styles.shop} aria-label="Power-up hand">
-      <h3>Power-Ups</h3>
+    <section className={styles.hand} aria-label="Power-up hand">
+      <h3>Power-up hand</h3>
       {items.length === 0 ? (
-        <p className={styles.empty}>No power-ups in hand. Match pairs to earn them.</p>
+        <p className={styles.empty}>No power-ups in hand. Match pairs to collect them.</p>
       ) : (
         <ul className={styles.list}>
           {items.map((item) => {
@@ -54,7 +54,7 @@ export default function PowerUpShop({
                 </div>
                 <button
                   type="button"
-                  className={styles.buyButton}
+                  className={styles.useButton}
                   disabled={buttonDisabled}
                   onClick={() => onUsePowerUp(item.powerUpId)}
                 >
@@ -65,7 +65,9 @@ export default function PowerUpShop({
           })}
         </ul>
       )}
-      {!enabled && <p className={styles.hint}>Use power-ups on your turn before first flip.</p>}
+      {!enabled && (
+        <p className={styles.hint}>Use power-ups on your turn before your first flip.</p>
+      )}
     </section>
   );
 }

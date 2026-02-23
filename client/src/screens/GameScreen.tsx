@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Board from "../components/Board";
 import ComboIndicator from "../components/ComboIndicator";
-import PowerUpShop from "../components/PowerUpShop";
+import PowerUpHand from "../components/PowerUpHand";
 import ScorePanel from "../components/ScorePanel";
 import TurnIndicator from "../components/TurnIndicator";
 import type { GameStateMsg, MatchFoundMsg } from "../types/messages";
@@ -116,7 +116,7 @@ export default function GameScreen({
   }
 
   const cardsClickable = connected && gameState.yourTurn && gameState.phase !== "resolve";
-  const powerUpsEnabled = connected && gameState.yourTurn && gameState.phase === "first_flip";
+  const handUseEnabled = connected && gameState.yourTurn && gameState.phase === "first_flip";
 
   const handleCardClick = (index: number): void => {
     if (pendingRadarTarget) {
@@ -226,9 +226,9 @@ export default function GameScreen({
             yourTurn={gameState.yourTurn}
           />
           <ComboIndicator comboStreak={gameState.you.comboStreak} label="Combo" />
-          <PowerUpShop
+          <PowerUpHand
             hand={gameState.hand}
-            enabled={powerUpsEnabled}
+            enabled={handUseEnabled}
             onUsePowerUp={handleUsePowerUpClick}
             secondChanceRoundsRemaining={gameState.you.secondChanceRoundsRemaining}
           />

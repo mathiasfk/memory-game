@@ -51,7 +51,7 @@ client/
       Board.tsx                    # Grid of Card components
       Card.tsx                     # Single card (flip animation, states)
       ScorePanel.tsx               # Player + opponent scores, combo streak
-      PowerUpShop.tsx              # List of purchasable power-ups
+      PowerUpHand.tsx              # Power-up hand (cards collected by matching pairs)
       TurnIndicator.tsx            # Whose turn it is
       ComboIndicator.tsx           # Visual combo streak feedback
     powerups/
@@ -65,7 +65,7 @@ client/
       Board.module.css
       Card.module.css
       ScorePanel.module.css
-      PowerUpShop.module.css
+      PowerUpHand.module.css
 ```
 
 ---
@@ -99,6 +99,12 @@ interface PowerUpView {
   canAfford: boolean;
 }
 
+/** One slot in the player's power-up hand (from server). */
+interface PowerUpInHand {
+  powerUpId: string;
+  count: number;
+}
+
 type TurnPhase = "first_flip" | "second_flip" | "resolve";
 
 interface GameState {
@@ -106,7 +112,7 @@ interface GameState {
   you: PlayerView;
   opponent: PlayerView;
   yourTurn: boolean;
-  availablePowerUps: PowerUpView[];
+  hand: PowerUpInHand[];
   flippedIndices: number[];
   phase: TurnPhase;
 }
@@ -171,7 +177,7 @@ The main gameplay view. Composed of:
 | `Card`            | Renders based on `CardState`. CSS flip animation for `hidden -> revealed` transition.            |
 | `ScorePanel`      | Shows both players' names, scores, and current combo streaks.                                    |
 | `TurnIndicator`   | Clear visual cue for whose turn it is. Disables card clicks when it is not the player's turn.   |
-| `PowerUpShop`     | Lists available power-ups. Each button shows name, cost, and is disabled if `canAfford` is false or it's not the player's turn or a card has already been flipped. Clicking sends `UsePowerUp`. |
+| `PowerUpHand`     | Lists power-up cards in the player's hand (collected by matching pairs). Each item shows name and count; button "Use" is disabled when it's not the player's turn or a card has already been flipped. Clicking sends `UsePowerUp`. |
 | `ComboIndicator`  | Animated feedback when the combo streak increases (e.g., "x2!", "x3!").                         |
 
 **Interaction rules (enforced visually but ultimately validated by the server):**
@@ -279,7 +285,7 @@ const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
 };
 ```
 
-To add a new power-up to the client, add an entry to this map. The `PowerUpShop` component uses this registry to render icons and labels alongside the dynamic data (`cost`, `canAfford`) from the server's `GameState`.
+To add a new power-up to the client, add an entry to this map. The `PowerUpHand` component uses this registry to render icons and labels for each power-up in the hand (from the server's `GameState.hand`).
 
 ---
 
@@ -300,7 +306,7 @@ All animations are purely cosmetic and do not block or delay user input. They ar
 ## 10. Responsive Design
 
 - The board uses CSS Grid with `auto-fit` / `minmax` for fluid card sizing.
-- On narrow screens (mobile), the score panel and power-up shop stack below the board.
+- On narrow screens (mobile), the score panel and power-up hand stack below the board.
 - Minimum supported viewport: 360px wide.
 - Cards maintain a square aspect ratio via `aspect-ratio: 1`.
 
@@ -322,4 +328,4 @@ Accessed in code via `import.meta.env.VITE_WS_URL`.
 
 1. Add an entry to `powerups/registry.ts` with the new power-up's `id`, `icon`, `label`, and `description`.
 2. If the power-up has a unique visual effect (e.g., a board animation), add the animation CSS and trigger it by detecting the relevant state change in `GameScreen`.
-3. No changes needed to `useGameSocket`, `types/`, or any screen logic -- the `PowerUpShop` component automatically renders all power-ups present in the server's `availablePowerUps` array.
+3. No changes needed to `useGameSocket`, `types/`, or any screen logic -- the `PowerUpHand` component renders the power-ups in the server's `hand` array (cards collected by matching pairs).
