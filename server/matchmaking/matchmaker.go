@@ -27,7 +27,10 @@ var gameCounter uint64
 type Matchmaker struct {
 	waiting      map[*ws.Client]chan struct{} // client -> cancel channel (closed when client leaves queue)
 	waitMu       sync.Mutex
-	notify       chan struct{} // buffered; signaled when a client is enqueued
+	notify       chan struct{}                // buffered; signaled when a client is enqueued
+	pendingClient *ws.Client                 // client currently waiting for pair (not in waiting map)
+	pendingCancel chan struct{}              // closed when pending client cancels
+	pendingMu    sync.Mutex
 	config       *config.Config
 	powerUps     game.PowerUpProvider
 	historyStore *storage.Store
@@ -65,6 +68,7 @@ func (m *Matchmaker) Enqueue(c *ws.Client) {
 		return // already in queue
 	}
 	m.waiting[c] = make(chan struct{})
+	log.Printf("[matchmaking] started for player %q (user=%s)", c.Name, c.UserID)
 	select {
 	case m.notify <- struct{}{}:
 	default:
@@ -72,15 +76,29 @@ func (m *Matchmaker) Enqueue(c *ws.Client) {
 }
 
 // LeaveQueue removes a client from the matchmaking queue. Idempotent.
+// The client may still be in waiting, or already be the "pending" client (taken by Run() and waiting for a second player or timeout).
 func (m *Matchmaker) LeaveQueue(c *ws.Client) {
 	m.waitMu.Lock()
-	defer m.waitMu.Unlock()
 	ch, ok := m.waiting[c]
-	if !ok {
+	if ok {
+		delete(m.waiting, c)
+		m.waitMu.Unlock()
+		close(ch)
+		log.Printf("[matchmaking] cancelled for player %q (user=%s)", c.Name, c.UserID)
 		return
 	}
-	delete(m.waiting, c)
-	close(ch)
+	m.waitMu.Unlock()
+
+	m.pendingMu.Lock()
+	if m.pendingClient == c && m.pendingCancel != nil {
+		close(m.pendingCancel)
+		m.pendingClient = nil
+		m.pendingCancel = nil
+		m.pendingMu.Unlock()
+		log.Printf("[matchmaking] cancelled for player %q (user=%s)", c.Name, c.UserID)
+		return
+	}
+	m.pendingMu.Unlock()
 }
 
 // Run is the matchmaker's main loop. It waits for a first player, then either
@@ -120,8 +138,18 @@ func (m *Matchmaker) Run() {
 			continue
 		}
 
+		// Register as pending so LeaveQueue can cancel us
+		m.pendingMu.Lock()
+		m.pendingClient = client1
+		m.pendingCancel = cancelCh1
+		m.pendingMu.Unlock()
+
 		select {
 		case <-m.notify:
+			m.pendingMu.Lock()
+			m.pendingClient = nil
+			m.pendingCancel = nil
+			m.pendingMu.Unlock()
 			m.waitMu.Lock()
 			client2 = nil
 			for c := range m.waiting {
@@ -136,9 +164,17 @@ func (m *Matchmaker) Run() {
 				m.createGameVsAI(client1)
 			}
 		case <-time.After(timeout):
+			m.pendingMu.Lock()
+			m.pendingClient = nil
+			m.pendingCancel = nil
+			m.pendingMu.Unlock()
 			m.createGameVsAI(client1)
 		case <-cancelCh1:
-			// client1 left queue, continue
+			// client1 left queue (LeaveQueue closed the channel and logged)
+			m.pendingMu.Lock()
+			m.pendingClient = nil
+			m.pendingCancel = nil
+			m.pendingMu.Unlock()
 		}
 	}
 }
