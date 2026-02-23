@@ -20,12 +20,11 @@ export default function PowerUpHand({
 
   return (
     <section className={styles.hand} aria-label="Power-up hand">
-      <h3>Power-up hand</h3>
       {items.length === 0 ? (
         <p className={styles.empty}>No power-ups in hand. Match pairs to collect them.</p>
       ) : (
         <ul className={styles.list}>
-          {items.map((item) => {
+          {items.map((item, index) => {
             const display = POWER_UP_DISPLAY[item.powerUpId];
             const isSecondChanceActive =
               item.powerUpId === "second_chance" && secondChanceRoundsRemaining > 0;
@@ -33,25 +32,23 @@ export default function PowerUpHand({
 
             return (
               <li key={item.powerUpId} className={styles.item}>
-                <div className={styles.info}>
-                  <span className={styles.icon}>{display?.icon ?? "PWR"}</span>
-                  <div>
-                    <p className={styles.name}>
-                      {display?.label ?? item.powerUpId}
-                      {item.count > 1 ? ` ×${item.count}` : ""}
-                    </p>
-                    <p className={styles.description}>
-                      {display?.description ?? ""}
-                    </p>
-                    {item.powerUpId === "second_chance" && (
-                      <p className={styles.status} aria-live="polite">
-                        {secondChanceRoundsRemaining > 0
-                          ? `Active (${secondChanceRoundsRemaining} rounds left)`
-                          : "Not active"}
-                      </p>
-                    )}
-                  </div>
+                <p className={styles.title}>
+                  {display?.label ?? item.powerUpId}
+                  {item.count > 1 ? ` ×${item.count}` : ""}
+                </p>
+                <div className={styles.symbol} aria-hidden>
+                  {index + 1}
                 </div>
+                <p className={styles.description}>
+                  {display?.description ?? ""}
+                </p>
+                {item.powerUpId === "second_chance" && (
+                  <p className={styles.status} aria-live="polite">
+                    {secondChanceRoundsRemaining > 0
+                      ? `Active (${secondChanceRoundsRemaining} rounds left)`
+                      : "Not active"}
+                  </p>
+                )}
                 <button
                   type="button"
                   className={styles.useButton}
@@ -64,9 +61,6 @@ export default function PowerUpHand({
             );
           })}
         </ul>
-      )}
-      {!enabled && (
-        <p className={styles.hint}>Use power-ups on your turn before your first flip.</p>
       )}
     </section>
   );
