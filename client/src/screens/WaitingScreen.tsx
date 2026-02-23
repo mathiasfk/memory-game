@@ -16,9 +16,9 @@ export default function WaitingScreen({ connected, onCancel }: WaitingScreenProp
           type="button"
           className={styles.cancelBtn}
           onClick={onCancel}
-          aria-label="Cancelar e voltar ao início"
+          aria-label="Cancel and return to home"
         >
-          Voltar
+          Back
         </button>
       )}
     </section>

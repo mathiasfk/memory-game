@@ -6,7 +6,11 @@ This document is the single source of truth for the competitive online memory ca
 
 ## 1. Game Overview
 
-Two players are matched online and compete on a shared board of face-down cards. Players take turns flipping two cards per turn. If the two cards match, the player scores points and the cards remain face-up. If they do not match, both cards are flipped back face-down and the turn passes to the opponent. The game ends when all pairs have been found. The player with the highest score wins.
+Two players are matched online and compete on a shared board of face-down cards.
+
+### 1.1 User interface language
+
+All user-facing text in the client (buttons, labels, messages, and accessibility attributes such as `aria-label`) must be in English. Players take turns flipping two cards per turn. If the two cards match, the player scores points and the cards remain face-up. If they do not match, both cards are flipped back face-down and the turn passes to the opponent. The game ends when all pairs have been found. The player with the highest score wins.
 
 ---
 
