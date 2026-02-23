@@ -266,6 +266,11 @@ export function GameShell() {
     setScreen("lobby");
   }, []);
 
+  const handleCancelMatchmaking = useCallback(() => {
+    send({ type: "leave_queue" });
+    handleBackToHome();
+  }, [send, handleBackToHome]);
+
   const handleAbandon = useCallback(() => {
     setErrorMessage(null);
     clearGameSession();
@@ -295,7 +300,9 @@ export function GameShell() {
           onSignOut={handleSignOut}
         />
       )}
-      {screen === "waiting" && <WaitingScreen connected={connected} />}
+      {screen === "waiting" && (
+        <WaitingScreen connected={connected} onCancel={handleCancelMatchmaking} />
+      )}
       {screen === "game" && (
         <GameScreen
           connected={connected}

@@ -25,7 +25,9 @@ var gameCounter uint64
 
 // Matchmaker manages the queue of players waiting for a match.
 type Matchmaker struct {
-	queue        chan *ws.Client
+	waiting      map[*ws.Client]chan struct{} // client -> cancel channel (closed when client leaves queue)
+	waitMu       sync.Mutex
+	notify       chan struct{} // buffered; signaled when a client is enqueued
 	config       *config.Config
 	powerUps     game.PowerUpProvider
 	historyStore *storage.Store
@@ -37,7 +39,8 @@ type Matchmaker struct {
 // NewMatchmaker creates a new Matchmaker. historyStore may be nil to disable game history persistence.
 func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider, historyStore *storage.Store) *Matchmaker {
 	return &Matchmaker{
-		queue:        make(chan *ws.Client, 100),
+		waiting:      make(map[*ws.Client]chan struct{}),
+		notify:       make(chan struct{}, 1),
 		config:       cfg,
 		powerUps:     pups,
 		historyStore: historyStore,
@@ -56,29 +59,86 @@ func generateRejoinToken() (string, error) {
 
 // Enqueue adds a client to the matchmaking queue.
 func (m *Matchmaker) Enqueue(c *ws.Client) {
-	m.queue <- c
+	m.waitMu.Lock()
+	defer m.waitMu.Unlock()
+	if _, ok := m.waiting[c]; ok {
+		return // already in queue
+	}
+	m.waiting[c] = make(chan struct{})
+	select {
+	case m.notify <- struct{}{}:
+	default:
+	}
+}
+
+// LeaveQueue removes a client from the matchmaking queue. Idempotent.
+func (m *Matchmaker) LeaveQueue(c *ws.Client) {
+	m.waitMu.Lock()
+	defer m.waitMu.Unlock()
+	ch, ok := m.waiting[c]
+	if !ok {
+		return
+	}
+	delete(m.waiting, c)
+	close(ch)
 }
 
 // Run is the matchmaker's main loop. It waits for a first player, then either
 // a second player within AIPairTimeoutSec or starts a game vs the AI.
 // Should be run as a goroutine.
 func (m *Matchmaker) Run() {
+	timeout := time.Duration(m.config.AIPairTimeoutSec) * time.Second
+	if timeout < 0 {
+		timeout = 0
+	}
 	for {
-		client1 := <-m.queue
+		<-m.notify
+		m.waitMu.Lock()
+		if len(m.waiting) == 0 {
+			m.waitMu.Unlock()
+			continue
+		}
+		var client1 *ws.Client
+		var cancelCh1 chan struct{}
+		for c, ch := range m.waiting {
+			client1 = c
+			cancelCh1 = ch
+			delete(m.waiting, c)
+			break
+		}
+		// If a second client is already waiting, pair immediately
+		var client2 *ws.Client
+		for c := range m.waiting {
+			client2 = c
+			delete(m.waiting, c)
+			break
+		}
+		m.waitMu.Unlock()
 
-		timeout := time.Duration(m.config.AIPairTimeoutSec) * time.Second
-		if timeout < 0 {
-			timeout = 0
+		if client2 != nil {
+			m.createGame(client1, client2)
+			continue
 		}
 
-		var client2 *ws.Client
 		select {
-		case client2 = <-m.queue:
-			// Two human players — create normal game
-			m.createGame(client1, client2)
+		case <-m.notify:
+			m.waitMu.Lock()
+			client2 = nil
+			for c := range m.waiting {
+				client2 = c
+				delete(m.waiting, c)
+				break
+			}
+			m.waitMu.Unlock()
+			if client2 != nil {
+				m.createGame(client1, client2)
+			} else {
+				m.createGameVsAI(client1)
+			}
 		case <-time.After(timeout):
-			// Timeout — create game vs AI
 			m.createGameVsAI(client1)
+		case <-cancelCh1:
+			// client1 left queue, continue
 		}
 	}
 }

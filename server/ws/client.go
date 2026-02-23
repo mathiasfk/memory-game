@@ -132,6 +132,8 @@ func (c *Client) handleMessage(data []byte) {
 		c.handlePlayAgain()
 	case "leave_game":
 		c.handleLeaveGame()
+	case "leave_queue":
+		c.handleLeaveQueue()
 	default:
 		c.sendError("Unknown message type: " + envelope.Type)
 	}
@@ -384,6 +386,14 @@ func (c *Client) handlePlayAgain() {
 	waitMsg := WaitingForMatchMsg{Type: "waiting_for_match"}
 	data, _ := json.Marshal(waitMsg)
 	safeSend(c.Send, data)
+}
+
+func (c *Client) handleLeaveQueue() {
+	if c.Game != nil {
+		c.sendError("Cannot leave queue while in a game.")
+		return
+	}
+	c.Hub.Matchmaker.LeaveQueue(c)
 }
 
 func (c *Client) handleLeaveGame() {
