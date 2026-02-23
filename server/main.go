@@ -34,18 +34,18 @@ func main() {
 		log.Printf("Auth: configured (base URL: %s)", cfg.NeonAuthBaseURL)
 	}
 
-	log.Printf("Configuration: BoardRows=%d, BoardCols=%d, ComboBasePoints=%d, RevealDurationMS=%d, ShuffleCost=%d, WSPort=%d",
-		cfg.BoardRows, cfg.BoardCols, cfg.ComboBasePoints, cfg.RevealDurationMS, cfg.PowerUps.Shuffle.Cost, cfg.WSPort)
+	log.Printf("Configuration: BoardRows=%d, BoardCols=%d, ComboBasePoints=%d, RevealDurationMS=%d, WSPort=%d",
+		cfg.BoardRows, cfg.BoardCols, cfg.ComboBasePoints, cfg.RevealDurationMS, cfg.WSPort)
 
-	// Set up power-up registry
+	// Set up power-up registry (power-ups are earned by matching pairs; use has no point cost)
 	registry := powerup.NewRegistry()
-	registry.Register(&powerup.ShufflePowerUp{CostValue: cfg.PowerUps.Shuffle.Cost})
-	registry.Register(&powerup.SecondChancePowerUp{CostValue: cfg.PowerUps.SecondChance.Cost, DurationRounds: cfg.PowerUps.SecondChance.DurationRounds})
+	registry.Register(&powerup.ShufflePowerUp{CostValue: 0})
+	registry.Register(&powerup.SecondChancePowerUp{CostValue: 0, DurationRounds: cfg.PowerUps.SecondChance.DurationRounds})
 	radarRevealSec := cfg.PowerUps.Radar.RevealDurationMS / 1000
 	if radarRevealSec < 1 {
 		radarRevealSec = 1
 	}
-	registry.Register(&powerup.RadarPowerUp{CostValue: cfg.PowerUps.Radar.Cost, RevealDuration: radarRevealSec})
+	registry.Register(&powerup.RadarPowerUp{CostValue: 0, RevealDuration: radarRevealSec})
 
 	// Game history storage (optional; DATABASE_URL empty = no persistence)
 	ctx := context.Background()

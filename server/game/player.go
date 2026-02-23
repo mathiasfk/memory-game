@@ -7,6 +7,9 @@ type Player struct {
 	ComboStreak int
 	Send        chan []byte // reference to the client's send channel
 
+	// Hand is the player's power-up hand: powerUpId -> count. Use is free; cards are gained by matching pairs.
+	Hand map[string]int
+
 	// SecondChanceActiveUntilRound is the round index until which Second Chance is active (0 = inactive).
 	SecondChanceActiveUntilRound int
 }
@@ -18,5 +21,6 @@ func NewPlayer(name string, send chan []byte) *Player {
 		Score:       0,
 		ComboStreak: 0,
 		Send:        send,
+		Hand:        make(map[string]int),
 	}
 }

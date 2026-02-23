@@ -227,7 +227,7 @@ export default function GameScreen({
           />
           <ComboIndicator comboStreak={gameState.you.comboStreak} label="Combo" />
           <PowerUpShop
-            powerUps={gameState.availablePowerUps}
+            hand={gameState.hand}
             enabled={powerUpsEnabled}
             onUsePowerUp={handleUsePowerUpClick}
             secondChanceRoundsRemaining={gameState.you.secondChanceRoundsRemaining}

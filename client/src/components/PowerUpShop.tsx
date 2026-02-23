@@ -1,9 +1,9 @@
-import type { PowerUpView } from "../types/game";
+import type { PowerUpInHand } from "../types/game";
 import { POWER_UP_DISPLAY } from "../powerups/registry";
 import styles from "../styles/PowerUpShop.module.css";
 
 interface PowerUpShopProps {
-  powerUps: PowerUpView[];
+  hand: PowerUpInHand[];
   enabled: boolean;
   onUsePowerUp: (powerUpId: string) => void;
   /** Rounds the Second Chance power-up is still active (0 or undefined = inactive). */
@@ -11,36 +11,39 @@ interface PowerUpShopProps {
 }
 
 export default function PowerUpShop({
-  powerUps,
+  hand,
   enabled,
   onUsePowerUp,
   secondChanceRoundsRemaining = 0,
 }: PowerUpShopProps) {
+  const items = hand.filter((item) => item.count > 0);
+
   return (
-    <section className={styles.shop} aria-label="Power-up shop">
+    <section className={styles.shop} aria-label="Power-up hand">
       <h3>Power-Ups</h3>
-      {powerUps.length === 0 ? (
-        <p className={styles.empty}>No power-ups available.</p>
+      {items.length === 0 ? (
+        <p className={styles.empty}>No power-ups in hand. Match pairs to earn them.</p>
       ) : (
         <ul className={styles.list}>
-          {powerUps.map((powerUp) => {
-            const display = POWER_UP_DISPLAY[powerUp.id];
-            const isSecondChanceActive = powerUp.id === "second_chance" && secondChanceRoundsRemaining > 0;
-            const buttonDisabled =
-              !enabled ||
-              !powerUp.canAfford ||
-              isSecondChanceActive;
+          {items.map((item) => {
+            const display = POWER_UP_DISPLAY[item.powerUpId];
+            const isSecondChanceActive =
+              item.powerUpId === "second_chance" && secondChanceRoundsRemaining > 0;
+            const buttonDisabled = !enabled || isSecondChanceActive;
 
             return (
-              <li key={powerUp.id} className={styles.item}>
+              <li key={item.powerUpId} className={styles.item}>
                 <div className={styles.info}>
                   <span className={styles.icon}>{display?.icon ?? "PWR"}</span>
                   <div>
-                    <p className={styles.name}>{display?.label ?? powerUp.name}</p>
-                    <p className={styles.description}>
-                      {display?.description ?? powerUp.description}
+                    <p className={styles.name}>
+                      {display?.label ?? item.powerUpId}
+                      {item.count > 1 ? ` ×${item.count}` : ""}
                     </p>
-                    {powerUp.id === "second_chance" && (
+                    <p className={styles.description}>
+                      {display?.description ?? ""}
+                    </p>
+                    {item.powerUpId === "second_chance" && (
                       <p className={styles.status} aria-live="polite">
                         {secondChanceRoundsRemaining > 0
                           ? `Active (${secondChanceRoundsRemaining} rounds left)`
@@ -53,9 +56,9 @@ export default function PowerUpShop({
                   type="button"
                   className={styles.buyButton}
                   disabled={buttonDisabled}
-                  onClick={() => onUsePowerUp(powerUp.id)}
+                  onClick={() => onUsePowerUp(item.powerUpId)}
                 >
-                  Use ({powerUp.cost})
+                  Use
                 </button>
               </li>
             );

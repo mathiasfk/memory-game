@@ -18,7 +18,7 @@ type PlayerView struct {
 	SecondChanceRoundsRemaining int `json:"secondChanceRoundsRemaining"`
 }
 
-// PowerUpView is the client-facing representation of an available power-up.
+// PowerUpView is the client-facing representation of an available power-up (legacy; hand used instead).
 type PowerUpView struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -27,18 +27,24 @@ type PowerUpView struct {
 	CanAfford   bool   `json:"canAfford"`
 }
 
+// PowerUpInHand is one slot in the player's power-up hand sent to the client.
+type PowerUpInHand struct {
+	PowerUpID string `json:"powerUpId"`
+	Count     int    `json:"count"`
+}
+
 // GameStateMsg is the full game state broadcast to a specific player.
 type GameStateMsg struct {
-	Type                  string        `json:"type"`
-	Cards                 []CardView    `json:"cards"`
-	You                   PlayerView    `json:"you"`
-	Opponent              PlayerView    `json:"opponent"`
-	YourTurn              bool          `json:"yourTurn"`
-	AvailablePowerUps     []PowerUpView `json:"availablePowerUps"`
-	FlippedIndices        []int         `json:"flippedIndices"`
-	Phase                 string        `json:"phase"`
-	TurnEndsAtUnixMs      int64         `json:"turnEndsAtUnixMs,omitempty"`
-	TurnCountdownShowSec  int           `json:"turnCountdownShowSec,omitempty"`
+	Type                 string          `json:"type"`
+	Cards                []CardView      `json:"cards"`
+	You                  PlayerView      `json:"you"`
+	Opponent             PlayerView      `json:"opponent"`
+	YourTurn             bool            `json:"yourTurn"`
+	Hand                 []PowerUpInHand `json:"hand"`
+	FlippedIndices       []int           `json:"flippedIndices"`
+	Phase                string          `json:"phase"`
+	TurnEndsAtUnixMs     int64           `json:"turnEndsAtUnixMs,omitempty"`
+	TurnCountdownShowSec int             `json:"turnCountdownShowSec,omitempty"`
 }
 
 // BuildCardViews constructs the client-facing card list.
