@@ -136,6 +136,11 @@
   font-weight: 500;
 }
 
+.abandoned {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
 .botTag {
   display: inline-block;
   margin-left: 0.25rem;
