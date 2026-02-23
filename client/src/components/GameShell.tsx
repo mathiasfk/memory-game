@@ -266,6 +266,22 @@ export function GameShell() {
     setScreen("lobby");
   }, []);
 
+  const handleCancelMatchmaking = useCallback(() => {
+    send({ type: "leave_queue" });
+    handleBackToHome();
+  }, [send, handleBackToHome]);
+
+  const handleAbandon = useCallback(() => {
+    setErrorMessage(null);
+    clearGameSession();
+    send({ type: "leave_game" });
+    setMatchInfo(null);
+    setGameState(null);
+    setOpponentDisconnected(false);
+    setOpponentReconnecting(null);
+    setScreen("lobby");
+  }, [send]);
+
   const handleSignOut = useCallback(async () => {
     await authClient.signOut();
     navigate("/auth/sign-in", { replace: true });
@@ -284,7 +300,9 @@ export function GameShell() {
           onSignOut={handleSignOut}
         />
       )}
-      {screen === "waiting" && <WaitingScreen connected={connected} />}
+      {screen === "waiting" && (
+        <WaitingScreen connected={connected} onCancel={handleCancelMatchmaking} />
+      )}
       {screen === "game" && (
         <GameScreen
           connected={connected}
@@ -293,6 +311,7 @@ export function GameShell() {
           opponentReconnectingDeadlineMs={opponentReconnecting}
           onFlipCard={handleFlipCard}
           onUsePowerUp={handleUsePowerUp}
+          onAbandon={handleAbandon}
         />
       )}
       {screen === "gameover" && (

@@ -25,6 +25,14 @@ export interface PlayAgainMsg {
   type: "play_again";
 }
 
+export interface LeaveGameMsg {
+  type: "leave_game";
+}
+
+export interface LeaveQueueMsg {
+  type: "leave_queue";
+}
+
 export interface RejoinMsg {
   type: "rejoin";
   gameId: string;
@@ -43,7 +51,9 @@ export type ClientMessage =
   | RejoinMyGameMsg
   | FlipCardMsg
   | UsePowerUpMsg
-  | PlayAgainMsg;
+  | PlayAgainMsg
+  | LeaveGameMsg
+  | LeaveQueueMsg;
 
 export interface ErrorMsg {
   type: "error";

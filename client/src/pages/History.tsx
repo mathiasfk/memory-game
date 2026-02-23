@@ -137,9 +137,10 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
   const yourEloAfter = yourIdx === 0 ? record.player0_elo_after : record.player1_elo_after;
   const oppEloBefore = yourIdx === 0 ? record.player1_elo_before : record.player0_elo_before;
   const winnerIdx = record.winner_index;
-  const youWon = winnerIdx !== null && winnerIdx === yourIdx;
-  const youLost = winnerIdx !== null && winnerIdx !== yourIdx;
-  const draw = winnerIdx === null;
+  const isAbandoned = record.end_reason === "opponent_disconnected";
+  const youWon = !isAbandoned && winnerIdx !== null && winnerIdx === yourIdx;
+  const youLost = !isAbandoned && winnerIdx !== null && winnerIdx !== yourIdx;
+  const draw = !isAbandoned && winnerIdx === null;
 
   const dateStr = (() => {
     try {
@@ -158,31 +159,32 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
       <div className={styles.playersRow}>
         <div className={styles.playerBlock}>
           <div className={styles.playerNameRow}>
-            <span className={[styles.playerName, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>
+            <span className={[styles.playerName, isAbandoned && styles.abandoned, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>
               You
             </span>
             {yourEloBefore != null && <span className={styles.playerElo}>({yourEloBefore})</span>}
           </div>
-          <span className={[styles.playerScore, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>{yourScore}</span>
+          <span className={[styles.playerScore, isAbandoned && styles.abandoned, youWon && styles.winner, youLost && styles.loser].filter(Boolean).join(" ")}>{yourScore}</span>
         </div>
         <span className={styles.vs}>vs</span>
         <div className={styles.playerBlock}>
           <div className={styles.playerNameRow}>
-            <span className={[styles.playerName, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>
+            <span className={[styles.playerName, isAbandoned && styles.abandoned, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>
               {oppName}
             </span>
             {oppEloBefore != null && <span className={styles.playerElo}>({oppEloBefore})</span>}
             {oppIsBot && <span className={styles.botTag}>Bot</span>}
           </div>
-          <span className={[styles.playerScore, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>{oppScore}</span>
+          <span className={[styles.playerScore, isAbandoned && styles.abandoned, youLost && styles.winner, youWon && styles.loser].filter(Boolean).join(" ")}>{oppScore}</span>
         </div>
       </div>
       <p className={styles.date}>{dateStr}</p>
       <p className={styles.result}>
-        {draw && "Draw"}
-        {youWon && "Victory!"}
-        {youLost && "Defeat!"}
-        {yourEloBefore != null && yourEloAfter != null && (
+        {isAbandoned && "Abandoned"}
+        {!isAbandoned && draw && "Draw"}
+        {!isAbandoned && youWon && "Victory!"}
+        {!isAbandoned && youLost && "Defeat!"}
+        {!isAbandoned && yourEloBefore != null && yourEloAfter != null && (
           <>
             {'  Rating: '}
             <span className={yourEloAfter >= yourEloBefore ? styles.resultRatingUp : styles.resultRatingDown}>
@@ -190,7 +192,6 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
             </span>
           </>
         )}
-        {record.end_reason === "opponent_disconnected" && " (opponent left)"}
       </p>
     </li>
   );

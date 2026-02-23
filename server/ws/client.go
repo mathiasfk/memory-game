@@ -130,6 +130,10 @@ func (c *Client) handleMessage(data []byte) {
 		c.handleUsePowerUp(envelope.Raw)
 	case "play_again":
 		c.handlePlayAgain()
+	case "leave_game":
+		c.handleLeaveGame()
+	case "leave_queue":
+		c.handleLeaveQueue()
 	default:
 		c.sendError("Unknown message type: " + envelope.Type)
 	}
@@ -382,6 +386,41 @@ func (c *Client) handlePlayAgain() {
 	waitMsg := WaitingForMatchMsg{Type: "waiting_for_match"}
 	data, _ := json.Marshal(waitMsg)
 	safeSend(c.Send, data)
+}
+
+func (c *Client) handleLeaveQueue() {
+	if c.Game != nil {
+		c.sendError("Cannot leave queue while in a game.")
+		return
+	}
+	c.Hub.Matchmaker.LeaveQueue(c)
+}
+
+func (c *Client) handleLeaveGame() {
+	if c.Game == nil {
+		c.sendError("You are not in a game.")
+		return
+	}
+	if c.Game.Finished {
+		c.sendError("Game already ended.")
+		return
+	}
+
+	g := c.Game
+	playerIdx := c.PlayerID
+	c.Game = nil
+	c.PlayerID = 0
+
+	select {
+	case g.Actions <- game.Action{
+		Type:      game.ActionDisconnect,
+		PlayerIdx: playerIdx,
+	}:
+	default:
+		c.sendError("Could not leave game. Try again.")
+		c.Game = g
+		c.PlayerID = playerIdx
+	}
 }
 
 // safeSend sends data to a channel without panicking if the channel is closed.

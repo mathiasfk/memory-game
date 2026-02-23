@@ -18,3 +18,21 @@
     transform: rotate(360deg);
   }
 }
+
+.cancelBtn {
+  margin-top: 2rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-muted, #94a3b8);
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.cancelBtn:hover {
+  color: var(--color-text, #e2e8f0);
+  border-color: rgba(148, 163, 184, 0.6);
+  background: rgba(148, 163, 184, 0.08);
+}

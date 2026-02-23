@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Board from "../components/Board";
 import ComboIndicator from "../components/ComboIndicator";
 import PowerUpShop from "../components/PowerUpShop";
@@ -15,6 +15,7 @@ interface GameScreenProps {
   opponentReconnectingDeadlineMs: number | null;
   onFlipCard: (index: number) => void;
   onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
+  onAbandon: () => void;
 }
 
 function getSecondsRemaining(turnEndsAtUnixMs: number): number {
@@ -38,10 +39,26 @@ export default function GameScreen({
   opponentReconnectingDeadlineMs,
   onFlipCard,
   onUsePowerUp,
+  onAbandon,
 }: GameScreenProps) {
   const [pendingRadarTarget, setPendingRadarTarget] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [reconnectSecondsRemaining, setReconnectSecondsRemaining] = useState<number | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeMenu();
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [menuOpen, closeMenu]);
 
   useEffect(() => {
     if (gameState && (!gameState.yourTurn || gameState.phase !== "first_flip")) {
@@ -140,7 +157,38 @@ export default function GameScreen({
         </div>
       )}
       <header className={styles.header}>
-        <h2>You vs {matchInfo.opponentName}</h2>
+        <div className={styles.titleRow} ref={menuRef}>
+          <h2>You vs {matchInfo.opponentName}</h2>
+          <div className={styles.menuWrap}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              className={styles.kebabTrigger}
+              title="Game options"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label="Open game menu"
+            >
+              <span className={styles.kebabDots} aria-hidden>⋮</span>
+            </button>
+            {menuOpen && (
+              <div className={styles.contextMenu} role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.contextMenuItem}
+                  onClick={() => {
+                    closeMenu();
+                    onAbandon();
+                  }}
+                  title="Leave game and return to lobby"
+                >
+                  Leave game
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
         <div className={styles.countdownRow}>
           {showCountdown && (
             <div className={countdownStyles.countdownWrap} aria-live="polite" aria-atomic="true">

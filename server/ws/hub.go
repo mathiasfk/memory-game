@@ -19,6 +19,7 @@ var upgrader = websocket.Upgrader{
 // MatchmakerInterface defines what the Hub needs from the Matchmaker.
 type MatchmakerInterface interface {
 	Enqueue(c *Client)
+	LeaveQueue(c *Client)
 	Rejoin(gameID, rejoinToken, name string) (*game.Game, int, error)
 	RejoinByUser(userID string) (*game.Game, int, string, error)
 }

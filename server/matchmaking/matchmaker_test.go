@@ -146,3 +146,47 @@ func TestMatchmakerPairsWithAIAfterTimeout(t *testing.T) {
 		t.Error("client should have a game assigned (vs AI)")
 	}
 }
+
+func TestMatchmakerLeaveQueue(t *testing.T) {
+	cfg := &config.Config{
+		BoardRows:          2,
+		BoardCols:          2,
+		ComboBasePoints:    1,
+		RevealDurationMS:   100,
+		MaxNameLength:      24,
+		WSPort:             8080,
+		AIPairTimeoutSec:   2, // give time to leave before AI pairs
+		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 50, UseKnownPairChance: 85}},
+	}
+
+	pups := &mockPowerUpProvider{}
+	mm := NewMatchmaker(cfg, pups, nil)
+	go mm.Run()
+
+	send1 := make(chan []byte, 100)
+	c1 := &ws.Client{Send: send1, Name: "Alice"}
+
+	mm.Enqueue(c1)
+	time.Sleep(50 * time.Millisecond)
+
+	// Cancel before timeout: leave queue
+	mm.LeaveQueue(c1)
+	time.Sleep(100 * time.Millisecond)
+
+	// c1 should not have a game (they left the queue)
+	if c1.Game != nil {
+		t.Error("client should not have a game after leaving queue")
+	}
+
+	// No match_found should arrive
+	select {
+	case msg := <-send1:
+		var mf ws.MatchFoundMsg
+		if err := json.Unmarshal(msg, &mf); err == nil && mf.Type == "match_found" {
+			t.Error("client who left queue should not receive match_found")
+		}
+	case <-time.After(100 * time.Millisecond):
+		// expected: no match
+	}
+}
