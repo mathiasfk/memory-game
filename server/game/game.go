@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"memory-game-server/config"
+	"memory-game-server/wsutil"
 )
 
 // TurnPhase represents the current phase within a turn.
@@ -456,7 +457,7 @@ func (g *Game) broadcastTurnTimeout() {
 	data, _ := json.Marshal(msg)
 	for i := 0; i < 2; i++ {
 		if g.Players[i] != nil && g.Players[i].Send != nil {
-			safeSend(g.Players[i].Send, data)
+			wsutil.SafeSend(g.Players[i].Send, data)
 		}
 	}
 }
@@ -498,7 +499,7 @@ func (g *Game) handleDisconnect(playerIdx int) {
 	if opponent != nil && opponent.Send != nil {
 		msg := map[string]string{"type": "opponent_disconnected"}
 		data, _ := json.Marshal(msg)
-		safeSend(opponent.Send, data)
+		wsutil.SafeSend(opponent.Send, data)
 	}
 }
 
@@ -529,7 +530,7 @@ func (g *Game) handlePlayerDisconnected(playerIdx int) {
 			"reconnectionDeadlineUnixMs": g.ReconnectionDeadline.UnixMilli(),
 		}
 		data, _ := json.Marshal(msg)
-		safeSend(opponent.Send, data)
+		wsutil.SafeSend(opponent.Send, data)
 	}
 	g.reconnectionTimerCancel = make(chan struct{})
 	cancel := g.reconnectionTimerCancel
@@ -561,21 +562,10 @@ func (g *Game) handleRejoinCompleted(playerIdx int, newSend chan []byte) {
 	if opponent != nil && opponent.Send != nil {
 		msg := map[string]string{"type": "opponent_reconnected"}
 		data, _ := json.Marshal(msg)
-		safeSend(opponent.Send, data)
+		wsutil.SafeSend(opponent.Send, data)
 	}
 	g.startTurnTimer()
 	g.broadcastState()
-}
-
-// safeSend sends data to a channel without panicking if the channel is closed.
-func safeSend(ch chan []byte, data []byte) {
-	defer func() {
-		recover() // swallow panic from send on closed channel
-	}()
-	select {
-	case ch <- data:
-	default:
-	}
 }
 
 func (g *Game) sendError(playerIdx int, message string) {
@@ -588,7 +578,7 @@ func (g *Game) sendError(playerIdx int, message string) {
 		"message": message,
 	}
 	data, _ := json.Marshal(msg)
-	safeSend(player.Send, data)
+	wsutil.SafeSend(player.Send, data)
 }
 
 func (g *Game) broadcastState() {
@@ -600,7 +590,7 @@ func (g *Game) broadcastState() {
 			continue
 		}
 		if g.Players[i] != nil && g.Players[i].Send != nil {
-			safeSend(g.Players[i].Send, data)
+			wsutil.SafeSend(g.Players[i].Send, data)
 		}
 	}
 }
@@ -673,7 +663,7 @@ func (g *Game) broadcastGameOver() {
 		}
 		data, _ := json.Marshal(msg)
 		if g.Players[i] != nil && g.Players[i].Send != nil {
-			safeSend(g.Players[i].Send, data)
+			wsutil.SafeSend(g.Players[i].Send, data)
 		}
 	}
 	// Persist once for history (winnerIndex: 0, 1, or -1 for draw)

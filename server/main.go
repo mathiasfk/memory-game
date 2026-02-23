@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
-	"memory-game-server/auth"
+	"memory-game-server/api"
 	"memory-game-server/config"
 	"memory-game-server/matchmaking"
 	"memory-game-server/powerup"
@@ -69,125 +70,29 @@ func main() {
 		hub.ServeWS(w, r)
 	})
 
-	// GET /api/history — returns game history for the authenticated user (JWT required)
-	http.HandleFunc("/api/history", func(w http.ResponseWriter, r *http.Request) {
-		// CORS
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		// JWT
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "authorization required", http.StatusUnauthorized)
-			return
-		}
-		const prefix = "Bearer "
-		if !strings.HasPrefix(authHeader, prefix) {
-			http.Error(w, "invalid authorization", http.StatusUnauthorized)
-			return
-		}
-		token := strings.TrimSpace(authHeader[len(prefix):])
-		claims, err := auth.ValidateNeonToken(cfg.NeonAuthBaseURL, token)
-		if err != nil {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
-			return
-		}
-		userID := auth.UserIDFromClaims(claims)
-		if userID == "" {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
-			return
-		}
-		// Return list (empty if no DB)
-		list := []storage.GameRecord{}
-		if historyStore != nil {
-			list, err = historyStore.ListByUserID(r.Context(), userID)
-			if err != nil {
-				log.Printf("ListByUserID: %v", err)
-				http.Error(w, "failed to load history", http.StatusInternalServerError)
-				return
-			}
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(list)
-	})
-
-	// GET /api/leaderboard — returns global leaderboard ordered by ELO; optional JWT to include current_user_entry when not in top N
-	http.HandleFunc("/api/leaderboard", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-		if limit <= 0 {
-			limit = 20
-		}
-		offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-		if offset < 0 {
-			offset = 0
-		}
-		entries := []storage.LeaderboardEntry{}
-		if historyStore != nil {
-			var err error
-			entries, err = historyStore.ListLeaderboard(r.Context(), limit, offset)
-			if err != nil {
-				log.Printf("ListLeaderboard: %v", err)
-				http.Error(w, "failed to load leaderboard", http.StatusInternalServerError)
-				return
-			}
-		}
-		var currentUserEntry *storage.LeaderboardEntry
-		var authUserID string
-		authHeader := r.Header.Get("Authorization")
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			token := strings.TrimSpace(authHeader[len("Bearer "):])
-			claims, err := auth.ValidateNeonToken(cfg.NeonAuthBaseURL, token)
-			if err == nil {
-				authUserID = auth.UserIDFromClaims(claims)
-				if authUserID != "" && historyStore != nil {
-					cur, err := historyStore.GetLeaderboardEntryByUserID(r.Context(), authUserID)
-					if err != nil {
-						log.Printf("GetLeaderboardEntryByUserID: %v", err)
-					} else if cur != nil {
-						inTop := false
-						for i := range entries {
-							if entries[i].UserID == authUserID {
-								entries[i].IsCurrentUser = true
-								inTop = true
-								break
-							}
-						}
-						if !inTop {
-							cur.IsCurrentUser = true
-							currentUserEntry = cur
-						}
-					}
-				}
-			}
-		}
-		type response struct {
-			Entries          []storage.LeaderboardEntry  `json:"entries"`
-			CurrentUserEntry *storage.LeaderboardEntry   `json:"current_user_entry"`
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(response{Entries: entries, CurrentUserEntry: currentUserEntry})
-	})
+	// REST API handlers
+	apiHandler := api.NewHandler(cfg, historyStore)
+	http.HandleFunc("/api/history", apiHandler.History)
+	http.HandleFunc("/api/leaderboard", apiHandler.Leaderboard)
 
 	addr := fmt.Sprintf(":%d", cfg.WSPort)
-	log.Printf("Memory Game server listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	srv := &http.Server{Addr: addr}
+	go func() {
+		log.Printf("Memory Game server listening on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server: %v", err)
+		}
+	}()
+
+	// Graceful shutdown on SIGINT/SIGTERM
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Print("Shutting down server...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server shutdown: %v", err)
+	}
+	log.Print("Server stopped")
 }

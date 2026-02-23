@@ -16,8 +16,10 @@ import (
 	"memory-game-server/ai"
 	"memory-game-server/config"
 	"memory-game-server/game"
+	"memory-game-server/matcherrors"
 	"memory-game-server/storage"
 	"memory-game-server/ws"
+	"memory-game-server/wsutil"
 )
 
 // gameCounter provides unique game IDs.
@@ -301,7 +303,7 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 		YourTurn:     yourTurn,
 	}
 	data, _ := json.Marshal(msg)
-	safeSend(client.Send, data)
+	wsutil.SafeSend(client.Send, data)
 }
 
 func (m *Matchmaker) removeGame(gameID string) {
@@ -318,14 +320,6 @@ func (m *Matchmaker) removeGame(gameID string) {
 	m.mu.Unlock()
 }
 
-var (
-	ErrGameNotFound    = errors.New("game not found")
-	ErrGameFinished    = errors.New("game finished")
-	ErrInvalidToken    = errors.New("invalid rejoin token")
-	ErrNotDisconnected = errors.New("this player is not disconnected")
-	ErrNoActiveGame    = errors.New("no active game for this user")
-)
-
 // Rejoin looks up a game by ID and rejoin token, and returns the game and player index if the token
 // matches the disconnected player. Caller must then attach the client and send ActionRejoinCompleted.
 func (m *Matchmaker) Rejoin(gameID, rejoinToken, name string) (*game.Game, int, error) {
@@ -333,10 +327,10 @@ func (m *Matchmaker) Rejoin(gameID, rejoinToken, name string) (*game.Game, int, 
 	g, ok := m.activeGames[gameID]
 	m.mu.RUnlock()
 	if !ok || g == nil {
-		return nil, -1, ErrGameNotFound
+		return nil, -1, matcherrors.ErrGameNotFound
 	}
 	if g.Finished {
-		return nil, -1, ErrGameFinished
+		return nil, -1, matcherrors.ErrGameFinished
 	}
 	playerIdx := -1
 	for i := 0; i < 2; i++ {
@@ -346,10 +340,10 @@ func (m *Matchmaker) Rejoin(gameID, rejoinToken, name string) (*game.Game, int, 
 		}
 	}
 	if playerIdx < 0 {
-		return nil, -1, ErrInvalidToken
+		return nil, -1, matcherrors.ErrInvalidToken
 	}
 	if g.DisconnectedPlayerIdx != playerIdx {
-		return nil, -1, ErrNotDisconnected
+		return nil, -1, matcherrors.ErrNotDisconnected
 	}
 	if len(name) < 1 || len(name) > m.config.MaxNameLength {
 		return nil, -1, errors.New("invalid name length")
@@ -364,16 +358,16 @@ func (m *Matchmaker) RejoinByUser(userID string) (*game.Game, int, string, error
 	gameID, ok := m.userIDToGame[userID]
 	m.mu.RUnlock()
 	if !ok || gameID == "" {
-		return nil, -1, "", ErrNoActiveGame
+		return nil, -1, "", matcherrors.ErrNoActiveGame
 	}
 	m.mu.RLock()
 	g := m.activeGames[gameID]
 	m.mu.RUnlock()
 	if g == nil {
-		return nil, -1, "", ErrGameNotFound
+		return nil, -1, "", matcherrors.ErrGameNotFound
 	}
 	if g.Finished {
-		return nil, -1, "", ErrGameFinished
+		return nil, -1, "", matcherrors.ErrGameFinished
 	}
 	playerIdx := -1
 	for i := 0; i < 2; i++ {
@@ -383,22 +377,12 @@ func (m *Matchmaker) RejoinByUser(userID string) (*game.Game, int, string, error
 		}
 	}
 	if playerIdx < 0 {
-		return nil, -1, "", ErrNoActiveGame
+		return nil, -1, "", matcherrors.ErrNoActiveGame
 	}
 	if g.DisconnectedPlayerIdx != playerIdx {
-		return nil, -1, "", ErrNotDisconnected
+		return nil, -1, "", matcherrors.ErrNotDisconnected
 	}
 	token := g.RejoinTokens[playerIdx]
 	return g, playerIdx, token, nil
 }
 
-// safeSend sends data to a channel without panicking if the channel is closed.
-func safeSend(ch chan []byte, data []byte) {
-	defer func() {
-		recover()
-	}()
-	select {
-	case ch <- data:
-	default:
-	}
-}
