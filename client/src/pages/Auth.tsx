@@ -28,11 +28,11 @@ export function Auth() {
           <span className={styles.googleIcon} aria-hidden>
             G
           </span>
-          Entrar com Google
+          Sign in with Google
         </button>
       </div>
       <div className={styles.divider}>
-        <span>ou</span>
+        <span>or</span>
       </div>
       <AuthView pathname={pathname ?? "sign-in"} />
     </div>
