@@ -69,6 +69,7 @@ export interface MatchFoundMsg {
   gameId: string;
   rejoinToken: string;
   opponentName: string;
+  opponentUserId?: string;
   boardRows: number;
   boardCols: number;
   yourTurn: boolean;

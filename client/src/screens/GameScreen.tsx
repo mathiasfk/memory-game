@@ -112,6 +112,8 @@ export default function GameScreen({
     );
   }
 
+  const opponentIsBot =
+    matchInfo.opponentUserId === "ai" || (matchInfo.opponentUserId?.startsWith("ai:") ?? false);
   const cardsClickable = connected && gameState.yourTurn && gameState.phase !== "resolve";
   const handUseEnabled = connected && gameState.yourTurn && gameState.phase === "first_flip";
 
@@ -169,6 +171,7 @@ export default function GameScreen({
           >
             <span className={styles.playerScore}>{gameState.opponent.score}</span>
             <span className={styles.playerName}>{gameState.opponent.name}</span>
+            {opponentIsBot && <span className={styles.botTag}>Bot</span>}
           </div>
         </div>
         <div className={styles.menuWrap}>

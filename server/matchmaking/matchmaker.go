@@ -294,13 +294,14 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 		token = g.RejoinTokens[playerIdx]
 	}
 	msg := ws.MatchFoundMsg{
-		Type:         "match_found",
-		GameID:       g.ID,
-		RejoinToken:  token,
-		OpponentName: opponentName,
-		BoardRows:    m.config.BoardRows,
-		BoardCols:    m.config.BoardCols,
-		YourTurn:     yourTurn,
+		Type:           "match_found",
+		GameID:         g.ID,
+		RejoinToken:    token,
+		OpponentName:   opponentName,
+		OpponentUserID: g.PlayerUserIDs[1-playerIdx],
+		BoardRows:      m.config.BoardRows,
+		BoardCols:      m.config.BoardCols,
+		YourTurn:       yourTurn,
 	}
 	data, _ := json.Marshal(msg)
 	wsutil.SafeSend(client.Send, data)

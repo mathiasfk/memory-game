@@ -254,13 +254,14 @@ func (c *Client) handleRejoin(raw json.RawMessage) {
 		opponentName = g.Players[opponentIdx].Name
 	}
 	matchMsg := MatchFoundMsg{
-		Type:         "match_found",
-		GameID:       g.ID,
-		RejoinToken:  msg.RejoinToken,
-		OpponentName: opponentName,
-		BoardRows:    c.Hub.Config.BoardRows,
-		BoardCols:    c.Hub.Config.BoardCols,
-		YourTurn:     playerIdx == g.CurrentTurn,
+		Type:           "match_found",
+		GameID:         g.ID,
+		RejoinToken:    msg.RejoinToken,
+		OpponentName:   opponentName,
+		OpponentUserID: g.PlayerUserIDs[opponentIdx],
+		BoardRows:      c.Hub.Config.BoardRows,
+		BoardCols:      c.Hub.Config.BoardCols,
+		YourTurn:       playerIdx == g.CurrentTurn,
 	}
 	matchData, _ := json.Marshal(matchMsg)
 	wsutil.SafeSend(c.Send, matchData)
@@ -313,13 +314,14 @@ func (c *Client) handleRejoinMyGame() {
 		opponentName = g.Players[opponentIdx].Name
 	}
 	matchMsg := MatchFoundMsg{
-		Type:         "match_found",
-		GameID:       g.ID,
-		RejoinToken:  rejoinToken,
-		OpponentName: opponentName,
-		BoardRows:    c.Hub.Config.BoardRows,
-		BoardCols:    c.Hub.Config.BoardCols,
-		YourTurn:     playerIdx == g.CurrentTurn,
+		Type:           "match_found",
+		GameID:         g.ID,
+		RejoinToken:    rejoinToken,
+		OpponentName:   opponentName,
+		OpponentUserID: g.PlayerUserIDs[opponentIdx],
+		BoardRows:      c.Hub.Config.BoardRows,
+		BoardCols:      c.Hub.Config.BoardCols,
+		YourTurn:       playerIdx == g.CurrentTurn,
 	}
 	matchData, _ := json.Marshal(matchMsg)
 	wsutil.SafeSend(c.Send, matchData)

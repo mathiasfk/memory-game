@@ -80,11 +80,12 @@ type WaitingForMatchMsg struct {
 
 // MatchFoundMsg is sent when two players are paired.
 type MatchFoundMsg struct {
-	Type         string `json:"type"`
-	GameID       string `json:"gameId"`
-	RejoinToken  string `json:"rejoinToken"`
-	OpponentName string `json:"opponentName"`
-	BoardRows    int    `json:"boardRows"`
-	BoardCols    int    `json:"boardCols"`
-	YourTurn     bool   `json:"yourTurn"`
+	Type           string `json:"type"`
+	GameID         string `json:"gameId"`
+	RejoinToken    string `json:"rejoinToken"`
+	OpponentName   string `json:"opponentName"`
+	OpponentUserID string `json:"opponentUserId,omitempty"`
+	BoardRows      int    `json:"boardRows"`
+	BoardCols      int    `json:"boardCols"`
+	YourTurn       bool   `json:"yourTurn"`
 }
