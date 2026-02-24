@@ -17,7 +17,8 @@
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.55rem;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
 }
 
 .cardInner.faceUp {
@@ -45,7 +46,7 @@
 
 .cardFront {
   background: #0b1220;
-  border: 1px solid #38bdf8;
+  border: 1px solid #475569;
   color: #f8fafc;
   transform: rotateY(180deg);
   overflow: hidden;
@@ -62,17 +63,6 @@
   font-size: clamp(1.5rem, 4vw, 2.5rem);
   font-weight: 700;
   line-height: 1;
-}
-
-.cardFront.matched {
-  background: #14532d;
-  border-color: #22c55e;
-  box-shadow: 0 0 0.7rem rgba(34, 197, 94, 0.45);
-}
-
-.cardWrapper:not(:disabled):hover .cardBack {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
 }
 
 /* Radar targeting: center card (the one that will be clicked) */
@@ -99,11 +89,13 @@
 }
 
 .cardWrapper:not(:disabled):hover .cardInner {
-  transform: rotateY(0deg) translateY(-1px);
+  transform: rotateY(0deg) translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .cardWrapper:not(:disabled):hover .cardInner.faceUp {
-  transform: rotateY(180deg) translateY(-1px);
+  transform: rotateY(180deg) translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .inner {

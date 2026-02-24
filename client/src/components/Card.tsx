@@ -86,9 +86,7 @@ export default function Card({
         <div className={styles.cardBack}>
           <span className={styles.inner}>?</span>
         </div>
-        <div
-          className={`${styles.cardFront} ${card.state === "matched" ? styles.matched : ""}`}
-        >
+        <div className={styles.cardFront}>
           {faceContent}
         </div>
       </div>
