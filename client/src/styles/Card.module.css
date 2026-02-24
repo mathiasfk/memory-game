@@ -19,6 +19,7 @@
   transform-style: preserve-3d;
   border-radius: 0.55rem;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .cardInner.faceUp {
@@ -39,14 +40,22 @@
 
 .cardBack {
   background: #1f2937;
-  border: 1px solid #475569;
+  border: none;
   color: #f8fafc;
   transform: rotateY(0deg);
+  overflow: hidden;
+}
+
+.cardBack .cardBackImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .cardFront {
   background: #0b1220;
-  border: 1px solid #475569;
+  border: none;
   color: #f8fafc;
   transform: rotateY(180deg);
   overflow: hidden;
@@ -67,24 +76,20 @@
 
 /* Radar targeting: center card (the one that will be clicked) */
 .radarCenter .cardBack {
-  border-color: #f59e0b;
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6);
 }
 
 .radarCenter:not(:disabled):hover .cardBack {
-  border-color: #fbbf24;
   box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
 }
 
 /* Radar targeting: affected cards (3x3 region) */
 .radarAffected .cardBack {
-  border-color: rgba(56, 189, 248, 0.7);
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
 }
 
 /* Unveiling: tiles that have never been revealed */
 .unknownHighlight .cardBack {
-  border-color: rgba(168, 85, 247, 0.8);
   box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.5);
 }
 
