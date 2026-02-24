@@ -44,8 +44,14 @@
   transition: background-color 0.15s;
 }
 
-.primaryButton:hover:not(:disabled) {
-  background: #16a34a;
+@media (hover: hover) {
+  .primaryButton:hover:not(:disabled) {
+    background: #16a34a;
+  }
+
+  .secondaryButton:hover {
+    background: #64748b;
+  }
 }
 
 .primaryButton:disabled {
@@ -63,10 +69,6 @@
   color: #e2e8f0;
   cursor: pointer;
   transition: background-color 0.15s;
-}
-
-.secondaryButton:hover {
-  background: #64748b;
 }
 
 .connection {

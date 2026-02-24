@@ -31,8 +31,10 @@
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
-.cancelBtn:hover {
-  color: #f8fafc;
-  border-color: rgba(226, 232, 240, 0.7);
-  background: rgba(148, 163, 184, 0.08);
+@media (hover: hover) {
+  .cancelBtn:hover {
+    color: #f8fafc;
+    border-color: rgba(226, 232, 240, 0.7);
+    background: rgba(148, 163, 184, 0.08);
+  }
 }

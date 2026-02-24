@@ -47,10 +47,6 @@
   transition: background-color 0.15s;
 }
 
-.primaryButton:hover:not(:disabled) {
-  background: #16a34a;
-}
-
 .primaryButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -68,8 +64,18 @@
   transition: background-color 0.15s;
 }
 
-.historyButton:hover {
-  background: #475569;
+@media (hover: hover) {
+  .primaryButton:hover:not(:disabled) {
+    background: #16a34a;
+  }
+
+  .historyButton:hover {
+    background: #475569;
+  }
+
+  .signOut:hover {
+    background: #64748b;
+  }
 }
 
 .signOut {
@@ -82,10 +88,6 @@
   color: #e2e8f0;
   cursor: pointer;
   transition: background-color 0.15s;
-}
-
-.signOut:hover {
-  background: #64748b;
 }
 
 .connection {

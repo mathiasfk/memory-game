@@ -24,8 +24,10 @@
   text-decoration: none;
 }
 
-.backLink:hover {
-  color: #cbd5e1;
+@media (hover: hover) {
+  .backLink:hover {
+    color: #cbd5e1;
+  }
 }
 
 .status,

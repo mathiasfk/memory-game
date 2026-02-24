@@ -98,10 +98,16 @@
   border: 1px solid rgba(226, 232, 240, 0.25);
 }
 
-.kebabTrigger:hover {
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(226, 232, 240, 0.4);
+@media (hover: hover) {
+  .kebabTrigger:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(226, 232, 240, 0.4);
+  }
+
+  .contextMenuItem:hover {
+    background: rgba(239, 68, 68, 0.15);
+  }
 }
 
 .kebabTrigger[aria-expanded="true"] {
@@ -141,10 +147,6 @@
   text-align: left;
   cursor: pointer;
   transition: background-color 0.15s;
-}
-
-.contextMenuItem:hover {
-  background: rgba(239, 68, 68, 0.15);
 }
 
 .contextualRow {

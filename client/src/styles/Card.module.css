@@ -79,8 +79,10 @@
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6);
 }
 
-.radarCenter:not(:disabled):hover .cardBack {
-  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
+@media (hover: hover) {
+  .radarCenter:not(:disabled):hover .cardBack {
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
+  }
 }
 
 /* Radar targeting: affected cards (3x3 region) */
@@ -93,14 +95,16 @@
   box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.5);
 }
 
-.cardWrapper:not(:disabled):hover .cardInner {
-  transform: rotateY(0deg) translateY(-5px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
-}
+@media (hover: hover) {
+  .cardWrapper:not(:disabled):hover .cardInner {
+    transform: rotateY(0deg) translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
 
-.cardWrapper:not(:disabled):hover .cardInner.faceUp {
-  transform: rotateY(180deg) translateY(-5px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  .cardWrapper:not(:disabled):hover .cardInner.faceUp {
+    transform: rotateY(180deg) translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
 }
 
 .inner {
