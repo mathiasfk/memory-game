@@ -645,18 +645,13 @@ func (g *Game) broadcastState() {
 func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 	opponentIdx := 1 - playerIdx
 
-	// Build hand from player's power-up hand
-	var hand []PowerUpInHand
-	if h := g.Players[playerIdx].Hand; h != nil {
-		hand = make([]PowerUpInHand, 0, len(h))
-		for id, count := range h {
-			if count > 0 {
-				hand = append(hand, PowerUpInHand{PowerUpID: id, Count: count})
-			}
+	// Build hand from player's power-up hand, in registry order so it stays stable across turn changes.
+	h := g.Players[playerIdx].Hand
+	hand := make([]PowerUpInHand, 0, len(h))
+	for _, def := range g.PowerUps.AllPowerUps() {
+		if count := h[def.ID]; count > 0 {
+			hand = append(hand, PowerUpInHand{PowerUpID: def.ID, Count: count})
 		}
-	}
-	if hand == nil {
-		hand = []PowerUpInHand{}
 	}
 
 	flipped := g.FlippedIndices
@@ -665,7 +660,7 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 	}
 
 	var knownIndices []int
-	if g.KnownIndices != nil && len(g.KnownIndices) > 0 {
+	if len(g.KnownIndices) > 0 {
 		knownIndices = make([]int, 0, len(g.KnownIndices))
 		for idx := range g.KnownIndices {
 			knownIndices = append(knownIndices, idx)
