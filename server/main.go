@@ -39,13 +39,14 @@ func main() {
 
 	// Set up power-up registry (power-ups are earned by matching pairs; use has no point cost)
 	registry := powerup.NewRegistry()
-	registry.Register(&powerup.ShufflePowerUp{CostValue: 0})
-	registry.Register(&powerup.SecondChancePowerUp{CostValue: 0, DurationRounds: cfg.PowerUps.SecondChance.DurationRounds})
-	radarRevealSec := cfg.PowerUps.Radar.RevealDurationMS / 1000
-	if radarRevealSec < 1 {
-		radarRevealSec = 1
+	registry.Register(&powerup.ChaosPowerUp{CostValue: 0})
+	clairvoyanceRevealSec := cfg.PowerUps.Clairvoyance.RevealDurationMS / 1000
+	if clairvoyanceRevealSec < 1 {
+		clairvoyanceRevealSec = 1
 	}
-	registry.Register(&powerup.RadarPowerUp{CostValue: 0, RevealDuration: radarRevealSec})
+	registry.Register(&powerup.ClairvoyancePowerUp{CostValue: 0, RevealDuration: clairvoyanceRevealSec})
+	registry.Register(&powerup.NecromancyPowerUp{CostValue: 0})
+	registry.Register(&powerup.DiscernmentPowerUp{CostValue: 0})
 
 	// Game history storage (optional; DATABASE_URL empty = no persistence)
 	ctx := context.Background()

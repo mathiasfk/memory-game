@@ -21,8 +21,8 @@ func setupTestServerWithConfig(t *testing.T, cfg *config.Config) (*httptest.Serv
 	t.Helper()
 
 	registry := powerup.NewRegistry()
-	registry.Register(&powerup.ShufflePowerUp{CostValue: cfg.PowerUps.Shuffle.Cost})
-	registry.Register(&powerup.SecondChancePowerUp{CostValue: cfg.PowerUps.SecondChance.Cost, DurationRounds: cfg.PowerUps.SecondChance.DurationRounds})
+	registry.Register(&powerup.ChaosPowerUp{CostValue: cfg.PowerUps.Chaos.Cost})
+	registry.Register(&powerup.ClairvoyancePowerUp{CostValue: cfg.PowerUps.Clairvoyance.Cost, RevealDuration: 1})
 
 	mm := matchmaking.NewMatchmaker(cfg, registry, nil)
 	go mm.Run()
@@ -54,7 +54,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 		MaxNameLength:      24,
 		WSPort:             0, // not used when using httptest
 		AIPairTimeoutSec:   10,
-		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
 		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseKnownPairChance: 85}},
 	}
 	return setupTestServerWithConfig(t, cfg)
@@ -222,7 +222,7 @@ func TestIntegration_OpponentDisconnect(t *testing.T) {
 		WSPort:               0,
 		AIPairTimeoutSec:     10,
 		ReconnectTimeoutSec:  1, // 1 second so the test finishes quickly
-		PowerUps:             config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		PowerUps:             config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
 		AIProfiles:           []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseKnownPairChance: 85}},
 	}
 	server, cleanup := setupTestServerWithConfig(t, cfg)
@@ -344,7 +344,7 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 		MaxNameLength:      24,
 		WSPort:             0,
 		AIPairTimeoutSec:   1,
-		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
 		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 20, DelayMaxMS: 80, UseKnownPairChance: 85}},
 	}
 	server, cleanup := setupTestServerWithConfig(t, cfg)

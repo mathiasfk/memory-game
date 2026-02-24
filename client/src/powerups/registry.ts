@@ -5,19 +5,24 @@ export interface PowerUpDisplayInfo {
 }
 
 export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
-  shuffle: {
-    icon: "SHF",
-    label: "Shuffle",
-    description: "Reshuffles all unmatched cards on the board.",
+  chaos: {
+    icon: "CHS",
+    label: "Chaos",
+    description: "Reshuffles the positions of all cards that are not yet matched.",
   },
-  second_chance: {
-    icon: "2ND",
-    label: "Second chance",
-    description: "+1 point per mismatch while active. Lasts 5 rounds.",
-  },
-  radar: {
-    icon: "RDR",
-    label: "Radar",
+  clairvoyance: {
+    icon: "CLV",
+    label: "Clairvoyance",
     description: "Reveals a 3x3 area around the card you choose for 2 seconds, then hides it again.",
+  },
+  necromancy: {
+    icon: "NEC",
+    label: "Necromancy",
+    description: "Returns all collected tiles back to the board in new random positions.",
+  },
+  discernment: {
+    icon: "DSC",
+    label: "Discernment",
+    description: "Highlights all tiles that have never been revealed.",
   },
 };

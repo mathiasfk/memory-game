@@ -44,7 +44,7 @@ const (
 	ActionReconnectionTimeout // reconnection window expired; end game
 	ActionRejoinCompleted      // player rejoined; restore Send and clear disconnect state
 	ActionResolveMismatch      // internal: fired after reveal timer expires
-	ActionHideRadarReveal       // internal: hide cards that were temporarily revealed by Radar
+	ActionHideClairvoyanceReveal  // internal: hide cards that were temporarily revealed by Clairvoyance
 	ActionTurnTimeout          // internal: fired when turn time limit is reached
 )
 
@@ -54,8 +54,8 @@ type Action struct {
 	PlayerIdx          int       // 0 or 1
 	Index              int       // card index (for FlipCard)
 	PowerUpID          string    // power-up ID (for UsePowerUp)
-	CardIndex          int       // card index for power-ups that need a target (e.g. Radar); -1 when not used
-	RadarRevealIndices []int     // indices to hide (for ActionHideRadarReveal)
+	CardIndex             int       // card index for power-ups that need a target (e.g. Clairvoyance); -1 when not used
+	ClairvoyanceRevealIndices []int // indices to hide (for ActionHideClairvoyanceReveal)
 	NewSend            chan []byte // for ActionRejoinCompleted: new send channel for the reconnected player
 }
 
@@ -89,6 +89,9 @@ type Game struct {
 
 	// PairIDToPowerUp maps board pairId (0, 1, 2, ...) to power-up ID for this match. Filled in NewGame from registry order.
 	PairIDToPowerUp map[int]string
+
+	// KnownIndices are card indices that have been revealed at some point (by any player). Cleared when Chaos is used.
+	KnownIndices map[int]struct{}
 
 	// Round increments each time the turn passes after a mismatch (used for Second Chance duration).
 	Round int
@@ -128,6 +131,8 @@ func NewGame(id string, cfg *config.Config, p0, p1 *Player, pups PowerUpProvider
 		}
 	}
 
+	knownIndices := make(map[int]struct{})
+
 	return &Game{
 		ID:                id,
 		Board:             board,
@@ -139,6 +144,7 @@ func NewGame(id string, cfg *config.Config, p0, p1 *Player, pups PowerUpProvider
 		PowerUps:          pups,
 		Finished:          false,
 		PairIDToPowerUp:   pairIDToPowerUp,
+		KnownIndices:      knownIndices,
 		DisconnectedPlayerIdx: -1,
 		Actions:           make(chan Action, 16),
 		Done:              make(chan struct{}),
@@ -182,8 +188,8 @@ func (g *Game) Run() {
 			g.handleRejoinCompleted(action.PlayerIdx, action.NewSend)
 		case ActionResolveMismatch:
 			g.handleResolveMismatch(action.PlayerIdx)
-		case ActionHideRadarReveal:
-			g.handleHideRadarReveal(action.RadarRevealIndices)
+		case ActionHideClairvoyanceReveal:
+			g.handleHideClairvoyanceReveal(action.ClairvoyanceRevealIndices)
 		case ActionTurnTimeout:
 			g.handleTurnTimeout()
 		}
@@ -230,6 +236,9 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 
 	// Flip the card
 	card.State = Revealed
+	if g.KnownIndices != nil {
+		g.KnownIndices[cardIndex] = struct{}{}
+	}
 	g.FlippedIndices = append(g.FlippedIndices, cardIndex)
 
 	if g.TurnPhase == FirstFlip {
@@ -303,11 +312,6 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	}
 	player := g.Players[playerIdx]
 
-	// Second Chance: +1 point per error while active
-	if player.SecondChanceActiveUntilRound > 0 && g.Round <= player.SecondChanceActiveUntilRound {
-		player.Score += 1
-	}
-
 	// Hide the two flipped cards
 	for _, idx := range g.FlippedIndices {
 		g.Board.Cards[idx].State = Hidden
@@ -354,14 +358,14 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 
 	totalCards := g.Config.BoardRows * g.Config.BoardCols
 
-	// Radar: require a valid card target (hidden card)
-	if powerUpID == "radar" {
+	// Clairvoyance: require a valid card target (hidden card)
+	if powerUpID == "clairvoyance" {
 		if cardIndex < 0 || cardIndex >= totalCards {
-			g.sendError(playerIdx, "Radar requires a valid card target.")
+			g.sendError(playerIdx, "Clairvoyance requires a valid card target.")
 			return
 		}
 		if g.Board.Cards[cardIndex].State != Hidden {
-			g.sendError(playerIdx, "Radar target card must be hidden.")
+			g.sendError(playerIdx, "Clairvoyance target card must be hidden.")
 			return
 		}
 	}
@@ -372,59 +376,72 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		delete(player.Hand, powerUpID)
 	}
 
-	// Radar: reveal 3x3 region and schedule hiding after duration
-	var radarRevealIndices []int
-	if powerUpID == "radar" {
+	// Clairvoyance: reveal 3x3 region and schedule hiding after duration
+	var clairvoyanceRevealIndices []int
+	if powerUpID == "clairvoyance" {
 		region := RadarRegionIndices(g.Board, cardIndex)
 		for _, idx := range region {
 			c := &g.Board.Cards[idx]
 			if c.State == Hidden {
 				c.State = Revealed
-				radarRevealIndices = append(radarRevealIndices, idx)
+				clairvoyanceRevealIndices = append(clairvoyanceRevealIndices, idx)
+				if g.KnownIndices != nil {
+					g.KnownIndices[idx] = struct{}{}
+				}
 			}
 		}
 	}
 
-	// Apply effect (Radar has no-op Apply; logic is above)
+	// Apply effect (Clairvoyance has no-op Apply; logic is above)
 	opponent := g.Players[1-playerIdx]
 	if err := pup.Apply(g.Board, player, opponent); err != nil {
-		// Revert Radar reveals if any; power-up already consumed
-		for _, idx := range radarRevealIndices {
+		// Revert Clairvoyance reveals if any; power-up already consumed
+		for _, idx := range clairvoyanceRevealIndices {
 			g.Board.Cards[idx].State = Hidden
 		}
 		g.sendError(playerIdx, "Power-up failed: "+err.Error())
 		return
 	}
 
-	// Second Chance: activate for the next N rounds (game state, not board effect)
-	if powerUpID == "second_chance" && g.Config.PowerUps.SecondChance.DurationRounds > 0 {
-		player.SecondChanceActiveUntilRound = g.Round + g.Config.PowerUps.SecondChance.DurationRounds
+	// Chaos: clear known indices and discernment highlight for both players
+	if powerUpID == "chaos" {
+		g.KnownIndices = make(map[int]struct{})
+		for i := 0; i < 2; i++ {
+			if g.Players[i] != nil {
+				g.Players[i].DiscernmentHighlightActive = false
+			}
+		}
+	}
+
+	// Discernment: activate highlight for this player
+	if powerUpID == "discernment" {
+		player.DiscernmentHighlightActive = true
 	}
 
 	// Broadcast updated state (turn does not end)
 	g.broadcastState()
 
-	// Radar: schedule hiding the revealed cards after duration
-	if powerUpID == "radar" && len(radarRevealIndices) > 0 {
-		durationMS := g.Config.PowerUps.Radar.RevealDurationMS
+	// Clairvoyance: schedule hiding the revealed cards after duration
+	if powerUpID == "clairvoyance" && len(clairvoyanceRevealIndices) > 0 {
+		durationMS := g.Config.PowerUps.Clairvoyance.RevealDurationMS
 		if durationMS <= 0 {
 			durationMS = 1000
 		}
-		indices := make([]int, len(radarRevealIndices))
-		copy(indices, radarRevealIndices)
+		indices := make([]int, len(clairvoyanceRevealIndices))
+		copy(indices, clairvoyanceRevealIndices)
 		go func() {
 			time.Sleep(time.Duration(durationMS) * time.Millisecond)
 			select {
-			case g.Actions <- Action{Type: ActionHideRadarReveal, RadarRevealIndices: indices}:
+			case g.Actions <- Action{Type: ActionHideClairvoyanceReveal, ClairvoyanceRevealIndices: indices}:
 			case <-g.Done:
 			}
 		}()
 	}
 }
 
-// handleHideRadarReveal hides cards that were temporarily revealed by Radar.
+// handleHideClairvoyanceReveal hides cards that were temporarily revealed by Clairvoyance.
 // Only cards still Revealed and not in FlippedIndices are hidden.
-func (g *Game) handleHideRadarReveal(indices []int) {
+func (g *Game) handleHideClairvoyanceReveal(indices []int) {
 	flippedSet := make(map[int]bool)
 	for _, idx := range g.FlippedIndices {
 		flippedSet[idx] = true
@@ -639,15 +656,25 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		flipped = []int{}
 	}
 
+	var knownIndices []int
+	if g.KnownIndices != nil && len(g.KnownIndices) > 0 {
+		knownIndices = make([]int, 0, len(g.KnownIndices))
+		for idx := range g.KnownIndices {
+			knownIndices = append(knownIndices, idx)
+		}
+	}
+
 	state := GameStateMsg{
-		Type:              "game_state",
-		Cards:             BuildCardViews(g.Board),
-		You:               BuildPlayerView(g.Players[playerIdx], g.Round),
-		Opponent:          BuildPlayerView(g.Players[opponentIdx], g.Round),
-		YourTurn:          playerIdx == g.CurrentTurn,
-		Hand:              hand,
-		FlippedIndices:    flipped,
-		Phase:             g.TurnPhase.String(),
+		Type:                        "game_state",
+		Cards:                       BuildCardViews(g.Board),
+		You:                         BuildPlayerView(g.Players[playerIdx], g.Round),
+		Opponent:                    BuildPlayerView(g.Players[opponentIdx], g.Round),
+		YourTurn:                    playerIdx == g.CurrentTurn,
+		Hand:                        hand,
+		FlippedIndices:              flipped,
+		Phase:                       g.TurnPhase.String(),
+		KnownIndices:                knownIndices,
+		DiscernmentHighlightActive:  g.Players[playerIdx].DiscernmentHighlightActive,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
 		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()

@@ -31,6 +31,9 @@ interface BoardProps {
   onCardClick: (index: number) => void;
   /** When true, player is choosing a card as Radar target; hover shows 3x3 preview. */
   radarTargetingMode?: boolean;
+  /** When true, highlight hidden tiles that have never been revealed (Discernment). */
+  knownIndices?: number[];
+  discernmentHighlightActive?: boolean;
 }
 
 export default function Board({
@@ -40,6 +43,8 @@ export default function Board({
   cardsClickable,
   onCardClick,
   radarTargetingMode = false,
+  knownIndices = [],
+  discernmentHighlightActive = false,
 }: BoardProps) {
   const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(new Set());
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -87,6 +92,9 @@ export default function Board({
   const showAsEmpty = (index: number, state: CardView["state"]) =>
     state === "matched" && removedMatchedIndices.has(index);
 
+  const isUnknownHighlight = (index: number, state: CardView["state"]) =>
+    discernmentHighlightActive && state === "hidden" && !knownIndices.includes(index);
+
   const isDisabled = (card: CardView) =>
     radarTargetingMode ? card.state !== "hidden" : !cardsClickable || card.state !== "hidden";
 
@@ -110,6 +118,7 @@ export default function Board({
             onClick={onCardClick}
             isRadarCenter={radarPreview?.center === card.index}
             isRadarAffected={radarPreview?.affected.includes(card.index) ?? false}
+            isUnknownHighlight={isUnknownHighlight(card.index, card.state)}
             onMouseEnter={() => setHoveredIndex(card.index)}
             onMouseLeave={() => setHoveredIndex(null)}
           />

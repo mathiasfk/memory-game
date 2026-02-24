@@ -10,8 +10,6 @@ export interface PlayerView {
   name: string;
   score: number;
   comboStreak: number;
-  /** Rounds the Second Chance power-up is still active (0 = inactive). */
-  secondChanceRoundsRemaining?: number;
 }
 
 export interface PowerUpView {
@@ -42,4 +40,8 @@ export interface GameState {
   turnEndsAtUnixMs?: number;
   /** How many seconds before turn end to show the countdown. */
   turnCountdownShowSec?: number;
+  /** Card indices that have been revealed at some point (for Discernment: highlight tiles NOT in this list). */
+  knownIndices?: number[];
+  /** When true, highlight tiles that have never been revealed (hidden and not in knownIndices). */
+  discernmentHighlightActive?: boolean;
 }

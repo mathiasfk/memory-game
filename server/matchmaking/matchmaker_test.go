@@ -33,7 +33,7 @@ func TestMatchmakerPairsPlayers(t *testing.T) {
 		MaxNameLength:      24,
 		WSPort:             8080,
 		AIPairTimeoutSec:   60,
-		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
 		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 100, DelayMaxMS: 500, UseKnownPairChance: 85}},
 	}
 
@@ -110,7 +110,7 @@ func TestMatchmakerPairsWithAIAfterTimeout(t *testing.T) {
 		MaxNameLength:      24,
 		WSPort:             8080,
 		AIPairTimeoutSec:   0, // very short: 0s, so AI pairs almost immediately
-		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
 		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 50, UseKnownPairChance: 85}},
 	}
 
@@ -156,7 +156,7 @@ func TestMatchmakerLeaveQueue(t *testing.T) {
 		MaxNameLength:      24,
 		WSPort:             8080,
 		AIPairTimeoutSec:   2, // give time to leave before AI pairs
-		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
 		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 50, UseKnownPairChance: 85}},
 	}
 

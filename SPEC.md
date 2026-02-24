@@ -101,7 +101,7 @@ Power-ups are special actions a player can use from their **hand**. They are **e
 
 ### 6.2 Pair-to-power-up mapping
 
-Each power-up is associated with **exactly one** board pairId (1:1). This allows consistent art or symbols on the board and in the hand. **Current rule**: the first power-ups in registry order are assigned to the first pair IDs in order. For example, if the registry lists shuffle, second_chance, radar in that order, then pairId 0 → shuffle, pairId 1 → second_chance, pairId 2 → radar. All other pairIds (3, 4, …) grant no power-up.
+Each power-up is associated with **exactly one** board pairId (1:1). This allows consistent art or symbols on the board and in the hand. **Current rule**: the first power-ups in registry order are assigned to the first pair IDs in order. For example, if the registry lists chaos, clairvoyance, necromancy, discernment in that order, then pairId 0 → chaos, pairId 1 → clairvoyance, pairId 2 → necromancy, pairId 3 → discernment. All other pairIds (4, 5, …) grant no power-up.
 
 ### 6.3 When and how to use power-ups
 
@@ -115,9 +115,10 @@ Every power-up has an `id`, `name`, and `description` for display. The server do
 
 | `id`            | Effect |
 |-----------------|--------|
-| `shuffle`       | Reshuffles the positions of all cards that are not yet matched. |
-| `second_chance` | For the next N rounds (configurable), the player earns +1 point per mismatch. |
-| `radar`         | Reveals a 3×3 area around a chosen card for a short duration, then hides it again. Requires a card target. |
+| `chaos`         | Reshuffles the positions of all cards that are not yet matched. When used, all "known" tile tracking is cleared (affects Discernment). |
+| `clairvoyance`  | Reveals a 3×3 area around a chosen card for a short duration, then hides it again. Requires a card target. |
+| `necromancy`    | Returns all collected (matched) tiles back to the board in new random positions; tiles that were never revealed stay in place. |
+| `discernment`   | Highlights (without revealing) all tiles that have **never** been revealed. When Chaos is used, known state is cleared and the highlight resets. |
 
 ### 6.6 Adding new power-ups
 
@@ -170,7 +171,7 @@ Sent during the player's turn, before any card is flipped, to activate a power-u
 ```json
 {
   "type": "use_power_up",
-  "powerUpId": "<string, e.g. 'shuffle'>"
+  "powerUpId": "<string, e.g. 'chaos'>"
 }
 ```
 
@@ -305,7 +306,7 @@ sequenceDiagram
     S-->>C: GameState (one card revealed)
     C->>S: FlipCard (2nd)
     S-->>C: GameState (match or mismatch resolved)
-    C->>S: UsePowerUp (optional, before flipping; cardIndex for Radar)
+    C->>S: UsePowerUp (optional, before flipping; cardIndex for Clairvoyance)
     S-->>C: GameState (power-up applied)
     end
 
@@ -434,14 +435,16 @@ This section documents architectural decisions that extend the base specificatio
 
 ### 11.8 Additional Power-Ups
 
-Beyond the base Shuffle power-up, the following are implemented:
+Beyond the base Chaos power-up, the following are implemented:
 
-| Power-Up       | ID             | Effect                                                                 | Config                          |
-|----------------|----------------|-----------------------------------------------------------------------|---------------------------------|
-| Second Chance  | `second_chance`| +1 point per mismatch while active. Lasts N rounds.                   | `cost`, `duration_rounds`       |
-| Radar          | `radar`        | Reveals a 3x3 region around a chosen card for a short duration, then hides again. | `cost`, `reveal_duration_ms`    |
+| Power-Up      | ID             | Effect                                                                 | Config                |
+|---------------|----------------|-----------------------------------------------------------------------|------------------------|
+| Chaos         | `chaos`        | Reshuffles all unmatched cards. Clears known-tile tracking (resets Discernment). | `cost`                 |
+| Clairvoyance  | `clairvoyance` | Reveals a 3x3 region around a chosen card for a short duration, then hides again. | `cost`, `reveal_duration_ms` |
+| Necromancy    | `necromancy`   | Returns all collected tiles back to the board in new random positions. | —                      |
+| Discernment   | `discernment`  | Highlights (without revealing) all tiles that have never been revealed. | —                      |
 
-Power-ups that target a card (e.g., Radar) use `cardIndex` in the `use_power_up` message.
+Power-ups that target a card (e.g., Clairvoyance) use `cardIndex` in the `use_power_up` message.
 
 ### 11.9 Protocol Extensions
 
@@ -467,7 +470,5 @@ Power-ups that target a card (e.g., Radar) use `cardIndex` in the `use_power_up`
 | `TurnLimitSec`              | int   | `60`    | Max seconds per turn; 0 = disabled.                  |
 | `TurnCountdownShowSec`      | int   | `30`    | Seconds before turn end to show countdown.           |
 | `ReconnectTimeoutSec`       | int   | `120`   | Seconds to wait for disconnected player to rejoin.   |
-| `POWERUP_SECOND_CHANCE_COST`| int   | `2`     | Cost of Second Chance power-up.                      |
-| `POWERUP_SECOND_CHANCE_DURATION_ROUNDS` | int | `5` | Rounds Second Chance stays active.                  |
-| `POWERUP_RADAR_COST`        | int   | `2`     | Cost of Radar power-up.                              |
-| `POWERUP_RADAR_REVEAL_MS`   | int   | `2000`  | How long Radar reveals the 3x3 area (ms).            |
+| `ReconnectTimeoutSec`       | int   | `120`   | Seconds to wait for disconnected player to rejoin.   |
+| `POWERUP_CLAIRVOYANCE_REVEAL_MS` | int | `2000`  | How long Clairvoyance reveals the 3x3 area (ms).    |

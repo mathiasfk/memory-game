@@ -277,11 +277,14 @@ interface PowerUpDisplayInfo {
 }
 
 const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
-  shuffle: {
-    icon: "🔀",
-    label: "Shuffle",
-    description: "Reshuffles all unmatched cards on the board.",
+  chaos: {
+    icon: "CHS",
+    label: "Chaos",
+    description: "Reshuffles the positions of all cards that are not yet matched.",
   },
+  clairvoyance: { icon: "CLV", label: "Clairvoyance", description: "Reveals a 3x3 area..." },
+  necromancy: { icon: "NEC", label: "Necromancy", description: "Returns collected tiles to board." },
+  discernment: { icon: "DSC", label: "Discernment", description: "Highlights never-revealed tiles." },
 };
 ```
 
@@ -296,7 +299,7 @@ To add a new power-up to the client, add an entry to this map. The `PowerUpHand`
 | Card flip         | Card state changes (`hidden` <-> `revealed`)    | CSS 3D transform (`rotateY`) with `transition`. Two faces (front/back).       |
 | Card match        | Card state becomes `matched`                    | Brief scale pulse + glow effect via CSS `@keyframes`.                         |
 | Combo streak      | `comboStreak` increases                         | Floating "+N" text animation near the score panel.                            |
-| Shuffle           | All card positions change (detected via diff)   | Cards briefly fade out and fade back in at new positions.                     |
+| Chaos           | Card positions change (Chaos power-up)          | Cards briefly fade out and fade back in at new positions.                    |
 | Waiting spinner   | On Waiting screen                               | CSS `@keyframes` rotating animation.                                          |
 
 All animations are purely cosmetic and do not block or delay user input. They are driven by diffing the previous and current `GameState`.

@@ -13,9 +13,6 @@ type PlayerView struct {
 	Name        string `json:"name"`
 	Score       int    `json:"score"`
 	ComboStreak int    `json:"comboStreak"`
-
-	// SecondChanceRoundsRemaining is how many rounds the Second Chance power-up is still active (0 = inactive).
-	SecondChanceRoundsRemaining int `json:"secondChanceRoundsRemaining"`
 }
 
 // PowerUpView is the client-facing representation of an available power-up (legacy; hand used instead).
@@ -45,6 +42,10 @@ type GameStateMsg struct {
 	Phase                string          `json:"phase"`
 	TurnEndsAtUnixMs     int64           `json:"turnEndsAtUnixMs,omitempty"`
 	TurnCountdownShowSec int             `json:"turnCountdownShowSec,omitempty"`
+	// KnownIndices are card indices that have been revealed at some point (used by Discernment highlight).
+	KnownIndices []int `json:"knownIndices,omitempty"`
+	// DiscernmentHighlightActive is true when the player has used Discernment and should see unknown tiles highlighted.
+	DiscernmentHighlightActive bool `json:"discernmentHighlightActive,omitempty"`
 }
 
 // BuildCardViews constructs the client-facing card list.
@@ -65,16 +66,11 @@ func BuildCardViews(board *Board) []CardView {
 	return views
 }
 
-// BuildPlayerView creates a PlayerView from a Player. currentRound is used to compute SecondChanceRoundsRemaining.
+// BuildPlayerView creates a PlayerView from a Player.
 func BuildPlayerView(p *Player, currentRound int) PlayerView {
-	remaining := 0
-	if p.SecondChanceActiveUntilRound > 0 && currentRound <= p.SecondChanceActiveUntilRound {
-		remaining = p.SecondChanceActiveUntilRound - currentRound
-	}
 	return PlayerView{
-		Name:                        p.Name,
-		Score:                       p.Score,
-		ComboStreak:                 p.ComboStreak,
-		SecondChanceRoundsRemaining: remaining,
+		Name:        p.Name,
+		Score:       p.Score,
+		ComboStreak: p.ComboStreak,
 	}
 }

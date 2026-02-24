@@ -38,7 +38,7 @@ export default function GameScreen({
   onUsePowerUp,
   onAbandon,
 }: GameScreenProps) {
-  const [pendingRadarTarget, setPendingRadarTarget] = useState(false);
+  const [pendingClairvoyanceTarget, setPendingClairvoyanceTarget] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [reconnectSecondsRemaining, setReconnectSecondsRemaining] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function GameScreen({
 
   useEffect(() => {
     if (gameState && (!gameState.yourTurn || gameState.phase !== "first_flip")) {
-      setPendingRadarTarget(false);
+      setPendingClairvoyanceTarget(false);
     }
   }, [gameState?.yourTurn, gameState?.phase]);
 
@@ -116,17 +116,17 @@ export default function GameScreen({
   const handUseEnabled = connected && gameState.yourTurn && gameState.phase === "first_flip";
 
   const handleCardClick = (index: number): void => {
-    if (pendingRadarTarget) {
-      onUsePowerUp("radar", index);
-      setPendingRadarTarget(false);
+    if (pendingClairvoyanceTarget) {
+      onUsePowerUp("clairvoyance", index);
+      setPendingClairvoyanceTarget(false);
     } else {
       onFlipCard(index);
     }
   };
 
   const handleUsePowerUpClick = (powerUpId: string): void => {
-    if (powerUpId === "radar") {
-      setPendingRadarTarget(true);
+    if (powerUpId === "clairvoyance") {
+      setPendingClairvoyanceTarget(true);
     } else {
       onUsePowerUp(powerUpId);
     }
@@ -227,7 +227,9 @@ export default function GameScreen({
             cols={matchInfo.boardCols}
             cardsClickable={cardsClickable}
             onCardClick={handleCardClick}
-            radarTargetingMode={pendingRadarTarget}
+            radarTargetingMode={pendingClairvoyanceTarget}
+            knownIndices={gameState.knownIndices ?? []}
+            discernmentHighlightActive={gameState.discernmentHighlightActive ?? false}
           />
           </div>
         </div>
@@ -238,7 +240,6 @@ export default function GameScreen({
           hand={gameState.hand}
           enabled={handUseEnabled}
           onUsePowerUp={handleUsePowerUpClick}
-          secondChanceRoundsRemaining={gameState.you.secondChanceRoundsRemaining}
         />
       </div>
     </section>

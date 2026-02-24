@@ -20,9 +20,11 @@ func TestDefaults(t *testing.T) {
 	if cfg.RevealDurationMS != 1000 {
 		t.Errorf("expected RevealDurationMS=1000, got %d", cfg.RevealDurationMS)
 	}
-	// Power-up Cost is deprecated (power-ups earned by matching pairs, use is free)
-	if cfg.PowerUps.SecondChance.DurationRounds != 5 {
-		t.Errorf("expected PowerUps.SecondChance.DurationRounds=5, got %d", cfg.PowerUps.SecondChance.DurationRounds)
+	if cfg.RevealDurationMS != 1000 {
+		t.Errorf("expected RevealDurationMS=1000, got %d", cfg.RevealDurationMS)
+	}
+	if cfg.PowerUps.Clairvoyance.RevealDurationMS != 2000 {
+		t.Errorf("expected PowerUps.Clairvoyance.RevealDurationMS=2000, got %d", cfg.PowerUps.Clairvoyance.RevealDurationMS)
 	}
 	if cfg.MaxNameLength != 24 {
 		t.Errorf("expected MaxNameLength=24, got %d", cfg.MaxNameLength)
@@ -146,12 +148,12 @@ func TestLoadWithInvalidEnv(t *testing.T) {
 }
 
 func TestLoadWithPowerUpEnvOverrides(t *testing.T) {
-	os.Setenv("POWERUP_SECOND_CHANCE_DURATION_ROUNDS", "7")
-	defer os.Unsetenv("POWERUP_SECOND_CHANCE_DURATION_ROUNDS")
+	os.Setenv("POWERUP_CLAIRVOYANCE_REVEAL_MS", "3000")
+	defer os.Unsetenv("POWERUP_CLAIRVOYANCE_REVEAL_MS")
 
 	cfg := Load()
 
-	if cfg.PowerUps.SecondChance.DurationRounds != 7 {
-		t.Errorf("expected PowerUps.SecondChance.DurationRounds=7 after env override, got %d", cfg.PowerUps.SecondChance.DurationRounds)
+	if cfg.PowerUps.Clairvoyance.RevealDurationMS != 3000 {
+		t.Errorf("expected PowerUps.Clairvoyance.RevealDurationMS=3000 after env override, got %d", cfg.PowerUps.Clairvoyance.RevealDurationMS)
 	}
 }

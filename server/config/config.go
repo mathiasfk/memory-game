@@ -16,28 +16,21 @@ type AIParams struct {
 	ForgetChance       int    `json:"forget_chance"`         // 0-100, probability to forget (delete from memory) a known card each turn
 }
 
-// ShufflePowerUpConfig holds configuration for the Shuffle power-up.
-type ShufflePowerUpConfig struct {
+// ChaosPowerUpConfig holds configuration for the Chaos power-up.
+type ChaosPowerUpConfig struct {
 	Cost int `json:"cost"`
 }
 
-// SecondChancePowerUpConfig holds configuration for the Second Chance power-up.
-type SecondChancePowerUpConfig struct {
-	Cost           int `json:"cost"`
-	DurationRounds int `json:"duration_rounds"`
-}
-
-// RadarPowerUpConfig holds configuration for the Radar power-up.
-type RadarPowerUpConfig struct {
+// ClairvoyancePowerUpConfig holds configuration for the Clairvoyance power-up.
+type ClairvoyancePowerUpConfig struct {
 	Cost             int `json:"cost"`
 	RevealDurationMS int `json:"reveal_duration_ms"`
 }
 
 // PowerUpsConfig holds per-power-up configuration sections.
 type PowerUpsConfig struct {
-	Shuffle      ShufflePowerUpConfig      `json:"shuffle"`
-	SecondChance SecondChancePowerUpConfig `json:"second_chance"`
-	Radar        RadarPowerUpConfig        `json:"radar"`
+	Chaos        ChaosPowerUpConfig        `json:"chaos"`
+	Clairvoyance ClairvoyancePowerUpConfig `json:"clairvoyance"`
 }
 
 // Config holds all configurable game parameters.
@@ -82,9 +75,8 @@ func Defaults() *Config {
 		TurnCountdownShowSec: 30,
 		ReconnectTimeoutSec:  120,
 		PowerUps: PowerUpsConfig{
-			Shuffle:      ShufflePowerUpConfig{},
-			SecondChance: SecondChancePowerUpConfig{DurationRounds: 5},
-			Radar:        RadarPowerUpConfig{RevealDurationMS: 2000},
+			Chaos:        ChaosPowerUpConfig{},
+			Clairvoyance: ClairvoyancePowerUpConfig{RevealDurationMS: 2000},
 		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
@@ -113,8 +105,7 @@ func Load() *Config {
 	overrideInt(&cfg.BoardCols, "BOARD_COLS")
 	overrideInt(&cfg.ComboBasePoints, "COMBO_BASE_POINTS")
 	overrideInt(&cfg.RevealDurationMS, "REVEAL_DURATION_MS")
-	overrideInt(&cfg.PowerUps.SecondChance.DurationRounds, "POWERUP_SECOND_CHANCE_DURATION_ROUNDS")
-	overrideInt(&cfg.PowerUps.Radar.RevealDurationMS, "POWERUP_RADAR_REVEAL_MS")
+	overrideInt(&cfg.PowerUps.Clairvoyance.RevealDurationMS, "POWERUP_CLAIRVOYANCE_REVEAL_MS")
 	overrideInt(&cfg.MaxNameLength, "MAX_NAME_LENGTH")
 	overrideInt(&cfg.WSPort, "WS_PORT")
 	overrideInt(&cfg.MaxLatencyMS, "MAX_LATENCY_MS")

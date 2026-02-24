@@ -10,8 +10,8 @@ type Player struct {
 	// Hand is the player's power-up hand: powerUpId -> count. Use is free; cards are gained by matching pairs.
 	Hand map[string]int
 
-	// SecondChanceActiveUntilRound is the round index until which Second Chance is active (0 = inactive).
-	SecondChanceActiveUntilRound int
+	// DiscernmentHighlightActive is true after the player uses Discernment; cleared when Chaos is used.
+	DiscernmentHighlightActive bool
 }
 
 // NewPlayer creates a new Player with the given name and send channel.

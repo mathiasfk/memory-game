@@ -35,7 +35,10 @@ server/
     matchmaker.go          # Thread-safe queue, pairing logic
   powerup/
     registry.go            # PowerUp interface, global registry map
-    shuffle.go             # Shuffle power-up implementation
+    chaos.go               # Chaos power-up implementation
+    clairvoyance.go        # Clairvoyance power-up (3x3 reveal)
+    necromancy.go          # Necromancy power-up (return matched to board)
+    discernment.go         # Discernment power-up (highlight unknown tiles)
 ```
 
 ---
@@ -174,7 +177,7 @@ type Card struct {
 
 **Functions:**
 - `NewBoard(rows, cols int) *Board` -- creates a board with randomly shuffled pairs.
-- `ShuffleUnmatched(board *Board)` -- re-randomizes positions of all `Hidden` cards (used by Shuffle power-up).
+- `ShuffleUnmatched(board *Board)` -- re-randomizes positions of all `Hidden` cards (used by Chaos and Necromancy power-ups).
 
 ### 3.7 Player (`game/player.go`)
 
@@ -229,24 +232,15 @@ func (r *Registry) Get(id string) (PowerUp, bool) { ... }
 func (r *Registry) All() []PowerUp              { ... }
 ```
 
-### 3.10 Shuffle Power-Up (`powerup/shuffle.go`)
+### 3.10 Chaos Power-Up (`powerup/chaos.go`)
 
-```go
-type ShufflePowerUp struct {
-    cost int
-}
+Reshuffles all unmatched cards. When applied, the game layer clears `KnownIndices` and `DiscernmentHighlightActive` for both players.
 
-func (s *ShufflePowerUp) ID() string          { return "shuffle" }
-func (s *ShufflePowerUp) Name() string        { return "Shuffle" }
-func (s *ShufflePowerUp) Description() string { return "Reshuffles all unmatched cards." }
-func (s *ShufflePowerUp) Cost() int           { return s.cost }
-func (s *ShufflePowerUp) Apply(ctx *GameContext) error {
-    game.ShuffleUnmatched(ctx.Board)
-    return nil
-}
-```
+### 3.11 Clairvoyance, Necromancy, Discernment
 
-Registered at startup: `registry.Register(&ShufflePowerUp{cost: cfg.PowerUpShuffleCost})`.
+- **Clairvoyance**: Reveals a 3×3 region around a chosen card for a short duration, then hides again (same behavior as former Radar).
+- **Necromancy**: Returns all matched tiles to the board as hidden and shuffles their positions.
+- **Discernment**: Highlights tiles that have never been revealed; server tracks `KnownIndices`, cleared when Chaos is used.
 
 ---
 
@@ -341,7 +335,10 @@ func main() {
     cfg := config.Load()
 
     registry := powerup.NewRegistry()
-    registry.Register(&powerup.ShufflePowerUp{Cost: cfg.PowerUpShuffleCost})
+    registry.Register(&powerup.ChaosPowerUp{CostValue: 0})
+    registry.Register(&powerup.ClairvoyancePowerUp{CostValue: 0, RevealDuration: ...})
+    registry.Register(&powerup.NecromancyPowerUp{CostValue: 0})
+    registry.Register(&powerup.DiscernmentPowerUp{CostValue: 0})
 
     mm := matchmaking.NewMatchmaker(cfg, registry)
     go mm.Run()

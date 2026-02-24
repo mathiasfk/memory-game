@@ -9,6 +9,8 @@ interface CardProps {
   isRadarCenter?: boolean;
   /** When true, this card is in the Radar 3x3 area but not the center. */
   isRadarAffected?: boolean;
+  /** When true (Discernment), this hidden card has never been revealed. */
+  isUnknownHighlight?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }
@@ -19,6 +21,7 @@ export default function Card({
   onClick,
   isRadarCenter = false,
   isRadarAffected = false,
+  isUnknownHighlight = false,
   onMouseEnter,
   onMouseLeave,
 }: CardProps) {
@@ -28,6 +31,7 @@ export default function Card({
     styles.cardWrapper,
     isRadarCenter ? styles.radarCenter : "",
     isRadarAffected ? styles.radarAffected : "",
+    isUnknownHighlight ? styles.unknownHighlight : "",
   ]
     .filter(Boolean)
     .join(" ");
