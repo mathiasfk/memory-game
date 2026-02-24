@@ -9,14 +9,28 @@ import (
 )
 
 // mockPowerUpProvider is a test double for PowerUpProvider.
+// Register power-ups with Register() so AllPowerUps() returns them in deterministic order.
 type mockPowerUpProvider struct {
 	powerUps map[string]PowerUpDef
+	order    []string
 }
 
 func newMockPowerUpProvider() *mockPowerUpProvider {
 	return &mockPowerUpProvider{
 		powerUps: make(map[string]PowerUpDef),
+		order:    nil,
 	}
+}
+
+// Register adds a power-up so it appears in AllPowerUps() in registration order.
+func (m *mockPowerUpProvider) Register(id string, def PowerUpDef) {
+	m.powerUps[id] = def
+	for _, o := range m.order {
+		if o == id {
+			return
+		}
+	}
+	m.order = append(m.order, id)
 }
 
 func (m *mockPowerUpProvider) GetPowerUp(id string) (PowerUpDef, bool) {
@@ -25,22 +39,26 @@ func (m *mockPowerUpProvider) GetPowerUp(id string) (PowerUpDef, bool) {
 }
 
 func (m *mockPowerUpProvider) AllPowerUps() []PowerUpDef {
-	defs := make([]PowerUpDef, 0, len(m.powerUps))
-	for _, p := range m.powerUps {
-		defs = append(defs, p)
+	defs := make([]PowerUpDef, 0, len(m.order))
+	for _, id := range m.order {
+		defs = append(defs, m.powerUps[id])
 	}
 	return defs
 }
 
 func testConfig() *config.Config {
 	return &config.Config{
-		BoardRows:          4,
-		BoardCols:          4,
-		ComboBasePoints:    1,
-		RevealDurationMS:   100, // Short for testing
-		MaxNameLength:      24,
-		WSPort:             8080,
-		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		BoardRows:        4,
+		BoardCols:        4,
+		ComboBasePoints:  1,
+		RevealDurationMS: 100, // Short for testing
+		MaxNameLength:    24,
+		WSPort:           8080,
+		PowerUps: config.PowerUpsConfig{
+			Shuffle:      config.ShufflePowerUpConfig{},
+			SecondChance: config.SecondChancePowerUpConfig{DurationRounds: 5},
+			Radar:        config.RadarPowerUpConfig{},
+		},
 	}
 }
 
@@ -409,17 +427,16 @@ func TestUsePowerUp_Shuffle(t *testing.T) {
 	cfg := testConfig()
 	g, send0, send1, pups := createTestGame(cfg)
 
-	// Register shuffle power-up
-	pups.powerUps["shuffle"] = PowerUpDef{
+	pups.Register("shuffle", PowerUpDef{
 		ID:          "shuffle",
 		Name:        "Shuffle",
 		Description: "Reshuffles all unmatched cards.",
-		Cost:        3,
+		Cost:        0,
 		Apply: func(board *Board, active *Player, opponent *Player) error {
 			ShuffleUnmatched(board)
 			return nil
 		},
-	}
+	})
 
 	go g.Run()
 	defer func() {
@@ -435,16 +452,16 @@ func TestUsePowerUp_Shuffle(t *testing.T) {
 
 	currentPlayer := g.CurrentTurn
 
-	// Give the player enough points
-	g.Players[currentPlayer].Score = 5
+	// Give the player one shuffle in hand
+	g.Players[currentPlayer].Hand["shuffle"] = 1
 
 	// Use the power-up
 	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "shuffle"}
 	time.Sleep(50 * time.Millisecond)
 
-	// Score should be deducted
-	if g.Players[currentPlayer].Score != 2 {
-		t.Errorf("expected Score=2 after shuffle (5-3), got %d", g.Players[currentPlayer].Score)
+	// Hand should have consumed the power-up
+	if g.Players[currentPlayer].Hand["shuffle"] != 0 {
+		t.Errorf("expected Hand[shuffle]=0 after use, got %d", g.Players[currentPlayer].Hand["shuffle"])
 	}
 
 	// Turn phase should still be FirstFlip (power-up doesn't end turn)
@@ -458,17 +475,17 @@ func TestUsePowerUp_Shuffle(t *testing.T) {
 	}
 }
 
-func TestUsePowerUp_CannotAfford(t *testing.T) {
+func TestUsePowerUp_NotInHand(t *testing.T) {
 	cfg := testConfig()
 	g, send0, send1, pups := createTestGame(cfg)
 
-	pups.powerUps["shuffle"] = PowerUpDef{
+	pups.Register("shuffle", PowerUpDef{
 		ID:   "shuffle",
-		Cost: 3,
+		Cost: 0,
 		Apply: func(board *Board, active *Player, opponent *Player) error {
 			return nil
 		},
-	}
+	})
 
 	go g.Run()
 	defer func() {
@@ -484,7 +501,7 @@ func TestUsePowerUp_CannotAfford(t *testing.T) {
 
 	currentPlayer := g.CurrentTurn
 
-	// Player has 0 score, cannot afford
+	// Player has empty hand; try to use shuffle
 	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "shuffle"}
 	time.Sleep(50 * time.Millisecond)
 
@@ -507,7 +524,7 @@ func TestUsePowerUp_CannotAfford(t *testing.T) {
 	}
 
 	if !foundError {
-		t.Error("expected error when using power-up with insufficient points")
+		t.Error("expected error when using power-up not in hand")
 	}
 }
 
@@ -515,13 +532,13 @@ func TestUsePowerUp_WrongPhase(t *testing.T) {
 	cfg := testConfig()
 	g, send0, send1, pups := createTestGame(cfg)
 
-	pups.powerUps["shuffle"] = PowerUpDef{
+	pups.Register("shuffle", PowerUpDef{
 		ID:   "shuffle",
-		Cost: 1,
+		Cost: 0,
 		Apply: func(board *Board, active *Player, opponent *Player) error {
 			return nil
 		},
-	}
+	})
 
 	go g.Run()
 	defer func() {
@@ -536,7 +553,7 @@ func TestUsePowerUp_WrongPhase(t *testing.T) {
 	drainChannel(send1)
 
 	currentPlayer := g.CurrentTurn
-	g.Players[currentPlayer].Score = 10
+	g.Players[currentPlayer].Hand["shuffle"] = 1
 
 	// Flip first card to move to SecondFlip phase
 	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: 0}
@@ -574,13 +591,13 @@ func TestUsePowerUp_SecondChance(t *testing.T) {
 	cfg := testConfig()
 	g, send0, send1, pups := createTestGame(cfg)
 
-	pups.powerUps["second_chance"] = PowerUpDef{
+	pups.Register("second_chance", PowerUpDef{
 		ID:          "second_chance",
 		Name:        "Second chance",
 		Description: "+1 point per mismatch. Lasts 5 rounds.",
-		Cost:        2,
+		Cost:        0,
 		Apply:       func(board *Board, active *Player, opponent *Player) error { return nil },
-	}
+	})
 
 	go g.Run()
 	defer func() {
@@ -596,17 +613,17 @@ func TestUsePowerUp_SecondChance(t *testing.T) {
 
 	currentPlayer := g.CurrentTurn
 	player := g.Players[currentPlayer]
-	player.Score = 5
+	player.Hand["second_chance"] = 1
 
-	// Use Second Chance
+	// Use Second Chance (no point cost)
 	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "second_chance"}
 	time.Sleep(50 * time.Millisecond)
 
-	if player.Score != 3 {
-		t.Errorf("expected Score=3 after using second_chance (5-2), got %d", player.Score)
-	}
 	if player.SecondChanceActiveUntilRound != 5 {
 		t.Errorf("expected SecondChanceActiveUntilRound=5, got %d", player.SecondChanceActiveUntilRound)
+	}
+	if player.Hand["second_chance"] != 0 {
+		t.Errorf("expected Hand[second_chance]=0 after use, got %d", player.Hand["second_chance"])
 	}
 
 	// Cause a mismatch: flip two cards with different PairID
@@ -628,8 +645,9 @@ func TestUsePowerUp_SecondChance(t *testing.T) {
 	// Wait for resolve (RevealDurationMS=100 in testConfig)
 	time.Sleep(150 * time.Millisecond)
 
-	if player.Score != 4 {
-		t.Errorf("expected Score=4 after mismatch with Second Chance (3+1), got %d", player.Score)
+	// Second Chance: +1 point per mismatch while active
+	if player.Score != 1 {
+		t.Errorf("expected Score=1 after mismatch with Second Chance (0+1), got %d", player.Score)
 	}
 	if g.Round != 1 {
 		t.Errorf("expected Round=1 after one mismatch, got %d", g.Round)
@@ -773,6 +791,62 @@ func TestFlipCard_AlreadyRevealed(t *testing.T) {
 	}
 }
 
+func TestMatchGrantsPowerUp(t *testing.T) {
+	cfg := testConfig()
+	send0 := make(chan []byte, 100)
+	send1 := make(chan []byte, 100)
+	p0 := NewPlayer("Alice", send0)
+	p1 := NewPlayer("Bob", send1)
+	pups := newMockPowerUpProvider()
+	pups.Register("shuffle", PowerUpDef{
+		ID:   "shuffle",
+		Apply: func(board *Board, active *Player, opponent *Player) error { return nil },
+	})
+	g := NewGame("match-grants-test", cfg, p0, p1, pups)
+
+	go g.Run()
+	defer func() {
+		select {
+		case g.Actions <- Action{Type: ActionDisconnect, PlayerIdx: 0}:
+		default:
+		}
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	drainChannel(send0)
+	drainChannel(send1)
+
+	currentPlayer := g.CurrentTurn
+
+	// Find the two cards with pairId 0
+	var pair0Indices []int
+	for _, card := range g.Board.Cards {
+		if card.PairID == 0 {
+			pair0Indices = append(pair0Indices, card.Index)
+		}
+	}
+	if len(pair0Indices) < 2 {
+		t.Fatal("board has no pair with pairId 0 (need at least 4 cards)")
+	}
+	idx0, idx1 := pair0Indices[0], pair0Indices[1]
+
+	if g.Players[currentPlayer].Hand == nil {
+		g.Players[currentPlayer].Hand = make(map[string]int)
+	}
+	if g.Players[currentPlayer].Hand["shuffle"] != 0 {
+		t.Fatalf("expected initial Hand[shuffle]=0, got %d", g.Players[currentPlayer].Hand["shuffle"])
+	}
+
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: idx0}
+	time.Sleep(30 * time.Millisecond)
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: idx1}
+	time.Sleep(50 * time.Millisecond)
+
+	if g.Players[currentPlayer].Hand["shuffle"] != 1 {
+		t.Errorf("expected Hand[shuffle]=1 after matching pairId 0, got %d", g.Players[currentPlayer].Hand["shuffle"])
+	}
+}
+
 func TestFullGame(t *testing.T) {
 	// Use a small 2x2 board for a quick full game
 	cfg := &config.Config{
@@ -782,7 +856,11 @@ func TestFullGame(t *testing.T) {
 		RevealDurationMS:   50,
 		MaxNameLength:      24,
 		WSPort:             8080,
-		PowerUps:           config.PowerUpsConfig{Shuffle: config.ShufflePowerUpConfig{Cost: 3}, SecondChance: config.SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5}},
+		PowerUps: config.PowerUpsConfig{
+			Shuffle:      config.ShufflePowerUpConfig{},
+			SecondChance: config.SecondChancePowerUpConfig{DurationRounds: 5},
+			Radar:        config.RadarPowerUpConfig{},
+		},
 	}
 
 	send0 := make(chan []byte, 100)

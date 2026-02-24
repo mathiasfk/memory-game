@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Board from "../components/Board";
-import ComboIndicator from "../components/ComboIndicator";
-import PowerUpShop from "../components/PowerUpShop";
-import ScorePanel from "../components/ScorePanel";
-import TurnIndicator from "../components/TurnIndicator";
+import PowerUpHand from "../components/PowerUpHand";
 import type { GameStateMsg, MatchFoundMsg } from "../types/messages";
 import styles from "../styles/GameScreen.module.css";
 import countdownStyles from "../styles/TurnCountdown.module.css";
@@ -116,7 +113,7 @@ export default function GameScreen({
   }
 
   const cardsClickable = connected && gameState.yourTurn && gameState.phase !== "resolve";
-  const powerUpsEnabled = connected && gameState.yourTurn && gameState.phase === "first_flip";
+  const handUseEnabled = connected && gameState.yourTurn && gameState.phase === "first_flip";
 
   const handleCardClick = (index: number): void => {
     if (pendingRadarTarget) {
@@ -156,39 +153,56 @@ export default function GameScreen({
           </span>
         </div>
       )}
-      <header className={styles.header}>
-        <div className={styles.titleRow} ref={menuRef}>
-          <h2>You vs {matchInfo.opponentName}</h2>
-          <div className={styles.menuWrap}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((o) => !o)}
-              className={styles.kebabTrigger}
-              title="Game options"
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              aria-label="Open game menu"
-            >
-              <span className={styles.kebabDots} aria-hidden>⋮</span>
-            </button>
-            {menuOpen && (
-              <div className={styles.contextMenu} role="menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={styles.contextMenuItem}
-                  onClick={() => {
-                    closeMenu();
-                    onAbandon();
-                  }}
-                  title="Leave game and return to lobby"
-                >
-                  Leave game
-                </button>
-              </div>
-            )}
+      <header className={styles.header} ref={menuRef}>
+        <div className={styles.headerCenter}>
+          <div
+            className={`${styles.playerBlock} ${gameState.yourTurn ? styles.playerBlockActive : ""}`}
+            aria-current={gameState.yourTurn ? "true" : undefined}
+          >
+            <span className={styles.playerName}>{gameState.you.name}</span>
+            <span className={styles.playerScore}>{gameState.you.score}</span>
+          </div>
+          <span className={styles.vs}>vs</span>
+          <div
+            className={`${styles.playerBlock} ${!gameState.yourTurn ? styles.playerBlockOpponentActive : ""}`}
+            aria-current={!gameState.yourTurn ? "true" : undefined}
+          >
+            <span className={styles.playerScore}>{gameState.opponent.score}</span>
+            <span className={styles.playerName}>{gameState.opponent.name}</span>
           </div>
         </div>
+        <div className={styles.menuWrap}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((o) => !o)}
+            className={styles.kebabTrigger}
+            title="Game options"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            aria-label="Open game menu"
+          >
+            <span className={styles.kebabDots} aria-hidden>⋮</span>
+          </button>
+          {menuOpen && (
+            <div className={styles.contextMenu} role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.contextMenuItem}
+                onClick={() => {
+                  closeMenu();
+                  onAbandon();
+                }}
+                title="Leave game and return to lobby"
+              >
+                Leave game
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <div className={styles.contextualRow}>
         <div className={styles.countdownRow}>
           {showCountdown && (
             <div className={countdownStyles.countdownWrap} aria-live="polite" aria-atomic="true">
@@ -202,14 +216,12 @@ export default function GameScreen({
             </div>
           )}
         </div>
-        <div className={styles.turnIndicatorWrap}>
-          <TurnIndicator yourTurn={gameState.yourTurn} phase={gameState.phase} />
-        </div>
-      </header>
+      </div>
 
       <div className={styles.main}>
         <div className={styles.leftColumn}>
-          <Board
+          <div className={styles.boardWrapper}>
+            <Board
             cards={gameState.cards}
             rows={matchInfo.boardRows}
             cols={matchInfo.boardCols}
@@ -217,22 +229,17 @@ export default function GameScreen({
             onCardClick={handleCardClick}
             radarTargetingMode={pendingRadarTarget}
           />
+          </div>
         </div>
+      </div>
 
-        <aside className={styles.rightColumn}>
-          <ScorePanel
-            you={gameState.you}
-            opponent={gameState.opponent}
-            yourTurn={gameState.yourTurn}
-          />
-          <ComboIndicator comboStreak={gameState.you.comboStreak} label="Combo" />
-          <PowerUpShop
-            powerUps={gameState.availablePowerUps}
-            enabled={powerUpsEnabled}
-            onUsePowerUp={handleUsePowerUpClick}
-            secondChanceRoundsRemaining={gameState.you.secondChanceRoundsRemaining}
-          />
-        </aside>
+      <div className={styles.handWrap}>
+        <PowerUpHand
+          hand={gameState.hand}
+          enabled={handUseEnabled}
+          onUsePowerUp={handleUsePowerUpClick}
+          secondChanceRoundsRemaining={gameState.you.secondChanceRoundsRemaining}
+        />
       </div>
     </section>
   );

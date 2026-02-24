@@ -22,6 +22,12 @@ export interface PowerUpView {
   canAfford: boolean;
 }
 
+/** One slot in the player's power-up hand (from server). */
+export interface PowerUpInHand {
+  powerUpId: string;
+  count: number;
+}
+
 export type TurnPhase = "first_flip" | "second_flip" | "resolve";
 
 export interface GameState {
@@ -29,7 +35,7 @@ export interface GameState {
   you: PlayerView;
   opponent: PlayerView;
   yourTurn: boolean;
-  availablePowerUps: PowerUpView[];
+  hand: PowerUpInHand[];
   flippedIndices: number[];
   phase: TurnPhase;
   /** When the current turn ends (Unix ms). Only set when it's your turn and timer is active. */

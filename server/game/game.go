@@ -87,6 +87,9 @@ type Game struct {
 	PowerUps       PowerUpProvider
 	Finished       bool
 
+	// PairIDToPowerUp maps board pairId (0, 1, 2, ...) to power-up ID for this match. Filled in NewGame from registry order.
+	PairIDToPowerUp map[int]string
+
 	// Round increments each time the turn passes after a mismatch (used for Second Chance duration).
 	Round int
 
@@ -117,19 +120,28 @@ func NewGame(id string, cfg *config.Config, p0, p1 *Player, pups PowerUpProvider
 	board := NewBoard(cfg.BoardRows, cfg.BoardCols)
 	firstTurn := rand.Intn(2)
 
+	pairIDToPowerUp := make(map[int]string)
+	if pups != nil {
+		allPups := pups.AllPowerUps()
+		for i, pup := range allPups {
+			pairIDToPowerUp[i] = pup.ID
+		}
+	}
+
 	return &Game{
-		ID:                    id,
-		Board:                 board,
-		Players:               [2]*Player{p0, p1},
-		CurrentTurn:           firstTurn,
-		TurnPhase:             FirstFlip,
-		FlippedIndices:        make([]int, 0, 2),
-		Config:                cfg,
-		PowerUps:              pups,
-		Finished:              false,
+		ID:                id,
+		Board:             board,
+		Players:           [2]*Player{p0, p1},
+		CurrentTurn:       firstTurn,
+		TurnPhase:         FirstFlip,
+		FlippedIndices:    make([]int, 0, 2),
+		Config:            cfg,
+		PowerUps:          pups,
+		Finished:          false,
+		PairIDToPowerUp:   pairIDToPowerUp,
 		DisconnectedPlayerIdx: -1,
-		Actions:               make(chan Action, 16),
-		Done:                  make(chan struct{}),
+		Actions:           make(chan Action, 16),
+		Done:              make(chan struct{}),
 	}
 }
 
@@ -240,6 +252,14 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		player.ComboStreak++
 		player.Score += g.Config.ComboBasePoints * player.ComboStreak
 
+		// Grant power-up for this pair if mapped (pairId 0, 1, 2 -> first power-ups in registry order)
+		if powerUpID, ok := g.PairIDToPowerUp[card1.PairID]; ok {
+			if player.Hand == nil {
+				player.Hand = make(map[string]int)
+			}
+			player.Hand[powerUpID]++
+		}
+
 		g.FlippedIndices = g.FlippedIndices[:0]
 		g.TurnPhase = FirstFlip
 
@@ -326,10 +346,9 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		return
 	}
 
-	// Validate the player can afford it
 	player := g.Players[playerIdx]
-	if player.Score < pup.Cost {
-		g.sendError(playerIdx, "Not enough points to use this power-up.")
+	if player.Hand[powerUpID] < 1 {
+		g.sendError(playerIdx, "You don't have this power-up in hand.")
 		return
 	}
 
@@ -347,8 +366,11 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		}
 	}
 
-	// Deduct cost
-	player.Score -= pup.Cost
+	// Consume one from hand
+	player.Hand[powerUpID]--
+	if player.Hand[powerUpID] == 0 {
+		delete(player.Hand, powerUpID)
+	}
 
 	// Radar: reveal 3x3 region and schedule hiding after duration
 	var radarRevealIndices []int
@@ -366,8 +388,7 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 	// Apply effect (Radar has no-op Apply; logic is above)
 	opponent := g.Players[1-playerIdx]
 	if err := pup.Apply(g.Board, player, opponent); err != nil {
-		// Refund on error and revert Radar reveals if any
-		player.Score += pup.Cost
+		// Revert Radar reveals if any; power-up already consumed
 		for _, idx := range radarRevealIndices {
 			g.Board.Cards[idx].State = Hidden
 		}
@@ -599,20 +620,18 @@ func (g *Game) broadcastState() {
 func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 	opponentIdx := 1 - playerIdx
 
-	// Build available power-ups list
-	var powerUpViews []PowerUpView
-	if g.PowerUps != nil {
-		allPups := g.PowerUps.AllPowerUps()
-		powerUpViews = make([]PowerUpView, len(allPups))
-		for i, pup := range allPups {
-			powerUpViews[i] = PowerUpView{
-				ID:          pup.ID,
-				Name:        pup.Name,
-				Description: pup.Description,
-				Cost:        pup.Cost,
-				CanAfford:   g.Players[playerIdx].Score >= pup.Cost,
+	// Build hand from player's power-up hand
+	var hand []PowerUpInHand
+	if h := g.Players[playerIdx].Hand; h != nil {
+		hand = make([]PowerUpInHand, 0, len(h))
+		for id, count := range h {
+			if count > 0 {
+				hand = append(hand, PowerUpInHand{PowerUpID: id, Count: count})
 			}
 		}
+	}
+	if hand == nil {
+		hand = []PowerUpInHand{}
 	}
 
 	flipped := g.FlippedIndices
@@ -626,7 +645,7 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		You:               BuildPlayerView(g.Players[playerIdx], g.Round),
 		Opponent:          BuildPlayerView(g.Players[opponentIdx], g.Round),
 		YourTurn:          playerIdx == g.CurrentTurn,
-		AvailablePowerUps: powerUpViews,
+		Hand:              hand,
 		FlippedIndices:    flipped,
 		Phase:             g.TurnPhase.String(),
 	}

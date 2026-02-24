@@ -82,9 +82,9 @@ func Defaults() *Config {
 		TurnCountdownShowSec: 30,
 		ReconnectTimeoutSec:  120,
 		PowerUps: PowerUpsConfig{
-			Shuffle:      ShufflePowerUpConfig{Cost: 2},
-			SecondChance: SecondChancePowerUpConfig{Cost: 2, DurationRounds: 5},
-			Radar:        RadarPowerUpConfig{Cost: 2, RevealDurationMS: 2000},
+			Shuffle:      ShufflePowerUpConfig{},
+			SecondChance: SecondChancePowerUpConfig{DurationRounds: 5},
+			Radar:        RadarPowerUpConfig{RevealDurationMS: 2000},
 		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
@@ -113,10 +113,7 @@ func Load() *Config {
 	overrideInt(&cfg.BoardCols, "BOARD_COLS")
 	overrideInt(&cfg.ComboBasePoints, "COMBO_BASE_POINTS")
 	overrideInt(&cfg.RevealDurationMS, "REVEAL_DURATION_MS")
-	overrideInt(&cfg.PowerUps.Shuffle.Cost, "POWERUP_SHUFFLE_COST")
-	overrideInt(&cfg.PowerUps.SecondChance.Cost, "POWERUP_SECOND_CHANCE_COST")
 	overrideInt(&cfg.PowerUps.SecondChance.DurationRounds, "POWERUP_SECOND_CHANCE_DURATION_ROUNDS")
-	overrideInt(&cfg.PowerUps.Radar.Cost, "POWERUP_RADAR_COST")
 	overrideInt(&cfg.PowerUps.Radar.RevealDurationMS, "POWERUP_RADAR_REVEAL_MS")
 	overrideInt(&cfg.MaxNameLength, "MAX_NAME_LENGTH")
 	overrideInt(&cfg.WSPort, "WS_PORT")

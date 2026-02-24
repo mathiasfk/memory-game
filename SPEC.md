@@ -97,37 +97,31 @@ Each matched pair awards points based on the player's current **combo streak**.
 
 ### 6.1 Overview
 
-Power-ups are special actions a player can purchase by spending their accumulated points. The system is designed to be **extensible**: new power-ups can be added without modifying existing game logic.
+Power-ups are special actions a player can use from their **hand**. They are **earned by matching pairs**: when a player matches a pair whose board **pairId** is associated with a power-up, one copy of that power-up is added to their hand. Using a power-up costs **no points**; it consumes one copy from the hand. The system is **extensible**: new power-ups can be added without modifying existing game logic.
 
-### 6.2 Power-Up Contract
+### 6.2 Pair-to-power-up mapping
 
-Every power-up has:
+Each power-up is associated with **exactly one** board pairId (1:1). This allows consistent art or symbols on the board and in the hand. **Current rule**: the first power-ups in registry order are assigned to the first pair IDs in order. For example, if the registry lists shuffle, second_chance, radar in that order, then pairId 0 → shuffle, pairId 1 → second_chance, pairId 2 → radar. All other pairIds (3, 4, …) grant no power-up.
 
-| Field         | Type     | Description                                        |
-|---------------|----------|----------------------------------------------------|
-| `id`          | `string` | Unique identifier (e.g., `"shuffle"`).             |
-| `name`        | `string` | Human-readable name.                               |
-| `description` | `string` | Brief explanation of the effect.                   |
-| `cost`        | `int`    | Point cost to activate. Deducted from the player's score. |
+### 6.3 When and how to use power-ups
 
-A player may use a power-up **only during their own turn** and **before flipping any card** in that turn. Using a power-up does **not** end the turn.
+A player may use a power-up **only during their own turn** and **before flipping any card** in that turn. Using a power-up does **not** end the turn. The player must have at least one copy of that power-up in their hand; using it consumes one copy. No points are deducted.
 
-A player's score cannot go below zero; a power-up can only be used if the player has enough points.
+### 6.4 Power-up contract (metadata)
 
-### 6.3 Initial Power-Up: Shuffle
+Every power-up has an `id`, `name`, and `description` for display. The server does not send these in every game state; the client can use a local registry keyed by `id` for tooltips and labels.
 
-| Field         | Value                                                         |
-|---------------|---------------------------------------------------------------|
-| `id`          | `"shuffle"`                                                   |
-| `name`        | `Shuffle`                                                     |
-| `description` | `Reshuffles the positions of all cards that are not yet matched.` |
-| `cost`        | `POWERUP_SHUFFLE_COST` (configurable, default `3`)            |
+### 6.5 Initial power-ups
 
-**Effect**: All cards with state `hidden` have their positions randomly reassigned by the server. Cards that are already `matched` remain in place. Both players see the new layout.
+| `id`            | Effect |
+|-----------------|--------|
+| `shuffle`       | Reshuffles the positions of all cards that are not yet matched. |
+| `second_chance` | For the next N rounds (configurable), the player earns +1 point per mismatch. |
+| `radar`         | Reveals a 3×3 area around a chosen card for a short duration, then hides it again. Requires a card target. |
 
-### 6.4 Adding New Power-Ups
+### 6.6 Adding new power-ups
 
-- **Server**: implement the `PowerUp` interface (see server plan) and register it in the power-up registry.
+- **Server**: implement the `PowerUp` interface and register it in the power-up registry (registration order defines pairId mapping).
 - **Client**: add a visual entry (icon, label, description) in the client-side power-up registry keyed by the power-up `id`.
 
 ---
@@ -252,14 +246,8 @@ Broadcast to both players after every state-changing event (card flip, power-up 
     "comboStreak": "<int>"
   },
   "yourTurn": "<bool>",
-  "availablePowerUps": [
-    {
-      "id": "<string>",
-      "name": "<string>",
-      "description": "<string>",
-      "cost": "<int>",
-      "canAfford": "<bool>"
-    }
+  "hand": [
+    { "powerUpId": "<string>", "count": "<int>" }
   ],
   "flippedIndices": ["<int, indices of currently revealed (not yet resolved) cards>"],
   "phase": "<'first_flip' | 'second_flip' | 'resolve'>"

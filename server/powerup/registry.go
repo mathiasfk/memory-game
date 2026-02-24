@@ -16,18 +16,24 @@ type PowerUp interface {
 // Registry holds all registered power-ups indexed by their ID.
 type Registry struct {
 	powerUps map[string]PowerUp
+	order    []string // registration order for deterministic AllPowerUps()
 }
 
 // NewRegistry creates a new empty power-up registry.
 func NewRegistry() *Registry {
 	return &Registry{
 		powerUps: make(map[string]PowerUp),
+		order:    nil,
 	}
 }
 
 // Register adds a power-up to the registry.
 func (r *Registry) Register(p PowerUp) {
-	r.powerUps[p.ID()] = p
+	id := p.ID()
+	if _, exists := r.powerUps[id]; !exists {
+		r.order = append(r.order, id)
+	}
+	r.powerUps[id] = p
 }
 
 // GetPowerUp returns the power-up definition for the game package.
@@ -46,11 +52,12 @@ func (r *Registry) GetPowerUp(id string) (game.PowerUpDef, bool) {
 	}, true
 }
 
-// AllPowerUps returns all registered power-ups as game.PowerUpDef slices.
+// AllPowerUps returns all registered power-ups as game.PowerUpDef slices, in registration order.
 // It satisfies the game.PowerUpProvider interface.
 func (r *Registry) AllPowerUps() []game.PowerUpDef {
-	defs := make([]game.PowerUpDef, 0, len(r.powerUps))
-	for _, p := range r.powerUps {
+	defs := make([]game.PowerUpDef, 0, len(r.order))
+	for _, id := range r.order {
+		p := r.powerUps[id]
 		defs = append(defs, game.PowerUpDef{
 			ID:          p.ID(),
 			Name:        p.Name(),
