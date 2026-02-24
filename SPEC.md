@@ -101,7 +101,7 @@ Power-ups are special actions a player can use from their **hand**. They are **e
 
 ### 6.2 Pair-to-power-up mapping
 
-Each power-up is associated with **exactly one** board pairId (1:1). This allows consistent art or symbols on the board and in the hand. **Current rule**: the first power-ups in registry order are assigned to the first pair IDs in order. For example, if the registry lists chaos, clairvoyance, necromancy, discernment in that order, then pairId 0 → chaos, pairId 1 → clairvoyance, pairId 2 → necromancy, pairId 3 → discernment. All other pairIds (4, 5, …) grant no power-up.
+Each power-up is associated with **exactly one** board pairId (1:1). This allows consistent art or symbols on the board and in the hand. **Current rule**: the first power-ups in registry order are assigned to the first pair IDs in order. For example, if the registry lists chaos, clairvoyance, necromancy, unveiling in that order, then pairId 0 → chaos, pairId 1 → clairvoyance, pairId 2 → necromancy, pairId 3 → unveiling. All other pairIds (4, 5, …) grant no power-up.
 
 ### 6.3 When and how to use power-ups
 
@@ -115,10 +115,10 @@ Every power-up has an `id`, `name`, and `description` for display. The server do
 
 | `id`            | Effect |
 |-----------------|--------|
-| `chaos`         | Reshuffles the positions of all cards that are not yet matched. When used, all "known" tile tracking is cleared (affects Discernment). |
+| `chaos`         | Reshuffles the positions of all cards that are not yet matched. When used, all "known" tile tracking is cleared (affects Unveiling). |
 | `clairvoyance`  | Reveals a 3×3 area around a chosen card for a short duration, then hides it again. Requires a card target. |
 | `necromancy`    | Returns all collected (matched) tiles back to the board in new random positions; tiles that were never revealed stay in place. |
-| `discernment`   | Highlights (without revealing) all tiles that have **never** been revealed. When Chaos is used, known state is cleared and the highlight resets. |
+| `unveiling`   | Highlights (without revealing) all tiles that have **never** been revealed. Effect lasts only the current turn. When Chaos is used, known state is cleared and the highlight resets. |
 
 ### 6.6 Adding new power-ups
 
@@ -439,10 +439,10 @@ Beyond the base Chaos power-up, the following are implemented:
 
 | Power-Up      | ID             | Effect                                                                 | Config                |
 |---------------|----------------|-----------------------------------------------------------------------|------------------------|
-| Chaos         | `chaos`        | Reshuffles all unmatched cards. Clears known-tile tracking (resets Discernment). | `cost`                 |
+| Chaos         | `chaos`        | Reshuffles all unmatched cards. Clears known-tile tracking (resets Unveiling). | `cost`                 |
 | Clairvoyance  | `clairvoyance` | Reveals a 3x3 region around a chosen card for a short duration, then hides again. | `cost`, `reveal_duration_ms` |
 | Necromancy    | `necromancy`   | Returns all collected tiles back to the board in new random positions. | —                      |
-| Discernment   | `discernment`  | Highlights (without revealing) all tiles that have never been revealed. | —                      |
+| Unveiling   | `unveiling`  | Highlights (without revealing) all tiles that have never been revealed (current turn only). | —                      |
 
 Power-ups that target a card (e.g., Clairvoyance) use `cardIndex` in the `use_power_up` message.
 

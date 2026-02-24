@@ -10,8 +10,8 @@ type Player struct {
 	// Hand is the player's power-up hand: powerUpId -> count. Use is free; cards are gained by matching pairs.
 	Hand map[string]int
 
-	// DiscernmentHighlightActive is true after the player uses Discernment; cleared when Chaos is used.
-	DiscernmentHighlightActive bool
+	// UnveilingHighlightActive is true after the player uses Unveiling; cleared when turn ends or Chaos is used.
+	UnveilingHighlightActive bool
 }
 
 // NewPlayer creates a new Player with the given name and send channel.

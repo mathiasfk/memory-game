@@ -5,7 +5,7 @@ import (
 )
 
 // ChaosPowerUp reshuffles all unmatched cards on the board.
-// When applied, the game layer also clears KnownIndices and DiscernmentHighlightActive (see game.handleUsePowerUp).
+// When applied, the game layer also clears KnownIndices and UnveilingHighlightActive (see game.handleUsePowerUp).
 type ChaosPowerUp struct {
 	CostValue int
 }

@@ -284,7 +284,7 @@ const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
   },
   clairvoyance: { icon: "CLV", label: "Clairvoyance", description: "Reveals a 3x3 area..." },
   necromancy: { icon: "NEC", label: "Necromancy", description: "Returns collected tiles to board." },
-  discernment: { icon: "DSC", label: "Discernment", description: "Highlights never-revealed tiles." },
+  unveiling: { icon: "UNV", label: "Unveiling", description: "Highlights never-revealed tiles (this turn only)." },
 };
 ```
 

@@ -20,9 +20,9 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
     label: "Necromancy",
     description: "Returns all collected tiles back to the board in new random positions.",
   },
-  discernment: {
-    icon: "DSC",
-    label: "Discernment",
-    description: "Highlights all tiles that have never been revealed.",
+  unveiling: {
+    icon: "UNV",
+    label: "Unveiling",
+    description: "Highlights all tiles that have never been revealed (this turn only).",
   },
 };

@@ -9,7 +9,7 @@ interface CardProps {
   isRadarCenter?: boolean;
   /** When true, this card is in the Radar 3x3 area but not the center. */
   isRadarAffected?: boolean;
-  /** When true (Discernment), this hidden card has never been revealed. */
+  /** When true (Unveiling), this hidden card has never been revealed. */
   isUnknownHighlight?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;

@@ -229,7 +229,7 @@ export default function GameScreen({
             onCardClick={handleCardClick}
             radarTargetingMode={pendingClairvoyanceTarget}
             knownIndices={gameState.knownIndices ?? []}
-            discernmentHighlightActive={gameState.discernmentHighlightActive ?? false}
+            unveilingHighlightActive={gameState.unveilingHighlightActive ?? false}
           />
           </div>
         </div>

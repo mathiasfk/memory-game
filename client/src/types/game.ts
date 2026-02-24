@@ -40,8 +40,8 @@ export interface GameState {
   turnEndsAtUnixMs?: number;
   /** How many seconds before turn end to show the countdown. */
   turnCountdownShowSec?: number;
-  /** Card indices that have been revealed at some point (for Discernment: highlight tiles NOT in this list). */
+  /** Card indices that have been revealed at some point (for Unveiling: highlight tiles NOT in this list). */
   knownIndices?: number[];
-  /** When true, highlight tiles that have never been revealed (hidden and not in knownIndices). */
-  discernmentHighlightActive?: boolean;
+  /** When true, highlight tiles that have never been revealed (Unveiling, current turn only). */
+  unveilingHighlightActive?: boolean;
 }

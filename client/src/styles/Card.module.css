@@ -78,7 +78,7 @@
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
 }
 
-/* Discernment: tiles that have never been revealed */
+/* Unveiling: tiles that have never been revealed */
 .unknownHighlight .cardBack {
   border-color: rgba(168, 85, 247, 0.8);
   box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.5);

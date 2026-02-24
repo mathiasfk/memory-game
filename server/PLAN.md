@@ -38,7 +38,7 @@ server/
     chaos.go               # Chaos power-up implementation
     clairvoyance.go        # Clairvoyance power-up (3x3 reveal)
     necromancy.go          # Necromancy power-up (return matched to board)
-    discernment.go         # Discernment power-up (highlight unknown tiles)
+    unveiling.go         # Unveiling power-up (highlight unknown tiles, current turn only)
 ```
 
 ---
@@ -234,13 +234,13 @@ func (r *Registry) All() []PowerUp              { ... }
 
 ### 3.10 Chaos Power-Up (`powerup/chaos.go`)
 
-Reshuffles all unmatched cards. When applied, the game layer clears `KnownIndices` and `DiscernmentHighlightActive` for both players.
+Reshuffles all unmatched cards. When applied, the game layer clears `KnownIndices` and `UnveilingHighlightActive` for both players.
 
-### 3.11 Clairvoyance, Necromancy, Discernment
+### 3.11 Clairvoyance, Necromancy, Unveiling
 
 - **Clairvoyance**: Reveals a 3×3 region around a chosen card for a short duration, then hides again (same behavior as former Radar).
 - **Necromancy**: Returns all matched tiles to the board as hidden and shuffles their positions.
-- **Discernment**: Highlights tiles that have never been revealed; server tracks `KnownIndices`, cleared when Chaos is used.
+- **Unveiling**: Highlights tiles that have never been revealed; effect lasts only the current turn. Server tracks `KnownIndices`; cleared when Chaos is used.
 
 ---
 
@@ -338,7 +338,7 @@ func main() {
     registry.Register(&powerup.ChaosPowerUp{CostValue: 0})
     registry.Register(&powerup.ClairvoyancePowerUp{CostValue: 0, RevealDuration: ...})
     registry.Register(&powerup.NecromancyPowerUp{CostValue: 0})
-    registry.Register(&powerup.DiscernmentPowerUp{CostValue: 0})
+    registry.Register(&powerup.UnveilingPowerUp{CostValue: 0})
 
     mm := matchmaking.NewMatchmaker(cfg, registry)
     go mm.Run()

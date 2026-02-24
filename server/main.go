@@ -46,7 +46,7 @@ func main() {
 	}
 	registry.Register(&powerup.ClairvoyancePowerUp{CostValue: 0, RevealDuration: clairvoyanceRevealSec})
 	registry.Register(&powerup.NecromancyPowerUp{CostValue: 0})
-	registry.Register(&powerup.DiscernmentPowerUp{CostValue: 0})
+	registry.Register(&powerup.UnveilingPowerUp{CostValue: 0})
 
 	// Game history storage (optional; DATABASE_URL empty = no persistence)
 	ctx := context.Background()

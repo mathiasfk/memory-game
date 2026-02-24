@@ -272,6 +272,9 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		g.FlippedIndices = g.FlippedIndices[:0]
 		g.TurnPhase = FirstFlip
 
+		// End of turn: clear Unveiling highlight for current player (effect lasts only this turn)
+		player.UnveilingHighlightActive = false
+
 		// Check if game is over
 		if AllMatched(g.Board) {
 			g.cancelTurnTimer()
@@ -319,6 +322,9 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 
 	// Reset combo for current player
 	player.ComboStreak = 0
+
+	// End of turn: clear Unveiling highlight (effect lasts only this turn)
+	player.UnveilingHighlightActive = false
 
 	g.FlippedIndices = g.FlippedIndices[:0]
 	g.Round++
@@ -403,19 +409,19 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		return
 	}
 
-	// Chaos: clear known indices and discernment highlight for both players
+	// Chaos: clear known indices and unveiling highlight for both players
 	if powerUpID == "chaos" {
 		g.KnownIndices = make(map[int]struct{})
 		for i := 0; i < 2; i++ {
 			if g.Players[i] != nil {
-				g.Players[i].DiscernmentHighlightActive = false
+				g.Players[i].UnveilingHighlightActive = false
 			}
 		}
 	}
 
-	// Discernment: activate highlight for this player
-	if powerUpID == "discernment" {
-		player.DiscernmentHighlightActive = true
+	// Unveiling: activate highlight for this player (lasts until end of current turn)
+	if powerUpID == "unveiling" {
+		player.UnveilingHighlightActive = true
 	}
 
 	// Broadcast updated state (turn does not end)
@@ -516,6 +522,8 @@ func (g *Game) handleTurnTimeout() {
 	player := g.Players[g.CurrentTurn]
 	if player != nil {
 		player.ComboStreak = 0
+		// End of turn: clear Unveiling highlight (effect lasts only this turn)
+		player.UnveilingHighlightActive = false
 	}
 	g.FlippedIndices = g.FlippedIndices[:0]
 	g.Round++
@@ -674,7 +682,7 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		FlippedIndices:              flipped,
 		Phase:                       g.TurnPhase.String(),
 		KnownIndices:                knownIndices,
-		DiscernmentHighlightActive:  g.Players[playerIdx].DiscernmentHighlightActive,
+		UnveilingHighlightActive:  g.Players[playerIdx].UnveilingHighlightActive,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
 		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()

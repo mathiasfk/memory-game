@@ -42,10 +42,10 @@ type GameStateMsg struct {
 	Phase                string          `json:"phase"`
 	TurnEndsAtUnixMs     int64           `json:"turnEndsAtUnixMs,omitempty"`
 	TurnCountdownShowSec int             `json:"turnCountdownShowSec,omitempty"`
-	// KnownIndices are card indices that have been revealed at some point (used by Discernment highlight).
+	// KnownIndices are card indices that have been revealed at some point (used by Unveiling highlight).
 	KnownIndices []int `json:"knownIndices,omitempty"`
-	// DiscernmentHighlightActive is true when the player has used Discernment and should see unknown tiles highlighted.
-	DiscernmentHighlightActive bool `json:"discernmentHighlightActive,omitempty"`
+	// UnveilingHighlightActive is true when the player has used Unveiling and should see unknown tiles highlighted (current turn only).
+	UnveilingHighlightActive bool `json:"unveilingHighlightActive,omitempty"`
 }
 
 // BuildCardViews constructs the client-facing card list.
