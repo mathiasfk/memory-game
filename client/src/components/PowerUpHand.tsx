@@ -21,19 +21,24 @@ export default function PowerUpHand({
         <p className={styles.empty}>No power-ups in hand. Match pairs to collect them.</p>
       ) : (
         <ul className={styles.list}>
-          {items.map((item, index) => {
+          {items.map((item) => {
             const display = POWER_UP_DISPLAY[item.powerUpId];
             const buttonDisabled = !enabled;
 
             return (
               <li key={item.powerUpId} className={styles.item}>
+                {display?.imagePath ? (
+                  <img
+                    className={styles.cardArt}
+                    src={display.imagePath}
+                    alt=""
+                    aria-hidden
+                  />
+                ) : null}
                 <p className={styles.title}>
                   {display?.label ?? item.powerUpId}
                   {item.count > 1 ? ` ×${item.count}` : ""}
                 </p>
-                <div className={styles.symbol} aria-hidden>
-                  {index + 1}
-                </div>
                 <p className={styles.description}>
                   {display?.description ?? ""}
                 </p>

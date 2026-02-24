@@ -1,4 +1,6 @@
 import type { CardView } from "../types/game";
+import { getPowerUpDisplayByPairId, NUM_POWERUP_PAIRS } from "../powerups/registry";
+import { getNormalSymbolForPairId } from "../constants/symbols";
 import styles from "../styles/Card.module.css";
 
 interface CardProps {
@@ -26,6 +28,16 @@ export default function Card({
   onMouseLeave,
 }: CardProps) {
   const isFaceUp = card.state !== "hidden";
+  const pairId = card.pairId ?? null;
+  const powerUpDisplay = pairId != null && pairId < NUM_POWERUP_PAIRS ? getPowerUpDisplayByPairId(pairId) : null;
+  const normalSymbol = pairId != null && pairId >= NUM_POWERUP_PAIRS ? getNormalSymbolForPairId(pairId) : null;
+
+  const ariaLabel =
+    pairId != null
+      ? powerUpDisplay
+        ? `Card ${powerUpDisplay.label}`
+        : "Card symbol"
+      : `Card ${card.index}`;
 
   const wrapperClasses = [
     styles.cardWrapper,
@@ -36,6 +48,30 @@ export default function Card({
     .filter(Boolean)
     .join(" ");
 
+  const faceContent =
+    pairId != null && isFaceUp ? (
+      powerUpDisplay ? (
+        <img
+          className={styles.cardImage}
+          src={powerUpDisplay.imagePath}
+          alt=""
+          aria-hidden
+        />
+      ) : normalSymbol ? (
+        <span
+          className={styles.cardSymbol}
+          style={{ color: normalSymbol.color }}
+          aria-hidden
+        >
+          {normalSymbol.symbol}
+        </span>
+      ) : (
+        <span className={styles.inner}>{String(pairId)}</span>
+      )
+    ) : (
+      <span className={styles.inner}>{String(pairId ?? "")}</span>
+    );
+
   return (
     <button
       type="button"
@@ -44,7 +80,7 @@ export default function Card({
       disabled={disabled}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      aria-label={`Card ${card.index}`}
+      aria-label={ariaLabel}
     >
       <div className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""}`}>
         <div className={styles.cardBack}>
@@ -53,7 +89,7 @@ export default function Card({
         <div
           className={`${styles.cardFront} ${card.state === "matched" ? styles.matched : ""}`}
         >
-          <span className={styles.inner}>{String(card.pairId ?? "")}</span>
+          {faceContent}
         </div>
       </div>
     </button>
