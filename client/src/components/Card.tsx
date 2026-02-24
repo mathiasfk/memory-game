@@ -84,7 +84,12 @@ export default function Card({
     >
       <div className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""}`}>
         <div className={styles.cardBack}>
-          <span className={styles.inner}>?</span>
+          <img
+            className={styles.cardBackImage}
+            src="/cards/Verse.webp"
+            alt=""
+            aria-hidden
+          />
         </div>
         <div className={styles.cardFront}>
           {faceContent}
