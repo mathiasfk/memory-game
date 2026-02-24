@@ -220,7 +220,8 @@ export default function GameScreen({
 
       <div className={styles.main}>
         <div className={styles.leftColumn}>
-          <Board
+          <div className={styles.boardWrapper}>
+            <Board
             cards={gameState.cards}
             rows={matchInfo.boardRows}
             cols={matchInfo.boardCols}
@@ -228,6 +229,7 @@ export default function GameScreen({
             onCardClick={handleCardClick}
             radarTargetingMode={pendingRadarTarget}
           />
+          </div>
         </div>
       </div>
 

@@ -4,6 +4,7 @@
   padding: 1rem;
   min-height: 100dvh;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .error {
