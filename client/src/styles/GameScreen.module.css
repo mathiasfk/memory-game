@@ -198,6 +198,10 @@
     gap: 0.4rem 0.75rem;
   }
 
+  .main {
+    padding: 0.6rem 0.5rem;
+  }
+
   .playerBlock {
     padding: 0.3rem 0.5rem;
   }
