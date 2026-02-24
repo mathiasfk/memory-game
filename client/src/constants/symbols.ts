@@ -21,14 +21,19 @@ export const NORMAL_CARD_SYMBOLS: NormalCardSymbol[] = [
   { symbol: "\u{1F704}", color: SYMBOL_COLORS.water },  // 🜄 water
   { symbol: "\u{1F701}", color: SYMBOL_COLORS.air },    // 🜁 air
   { symbol: "\u{1F703}", color: SYMBOL_COLORS.earth },  // 🜃 earth
-  { symbol: "\u{1F70D}", color: SYMBOL_COLORS.fire },   // 🜍 sulfur
-  { symbol: "\u{1F714}", color: SYMBOL_COLORS.earth },  // 🜔 salt
-  { symbol: "\u{1F713}", color: SYMBOL_COLORS.water },  // 🜓 mercury (alch)
+
   { symbol: "\u2609", color: SYMBOL_COLORS.fire },      // ☉ sun
   { symbol: "\u263D", color: SYMBOL_COLORS.water },     // ☽ moon
   { symbol: "\u263F", color: SYMBOL_COLORS.air },        // ☿ mercury (planet)
   { symbol: "\u2644", color: SYMBOL_COLORS.earth },      // ♄ saturn
   { symbol: "\u2643", color: SYMBOL_COLORS.air },        // ♃ jupiter
+  { symbol: "\u16A0", color: SYMBOL_COLORS.fire },   // ᚠ Fehu
+  { symbol: "\u16B1", color: SYMBOL_COLORS.water },   // ᚱ Raidho
+  { symbol: "\u16B3", color: SYMBOL_COLORS.earth },   // ᚳ Cen 
+  { symbol: "\u16B4", color: SYMBOL_COLORS.fire },   // ᚴ Kaun 
+  { symbol: "\u16B7", color: SYMBOL_COLORS.earth },   // ᚷ Gyfu
+  { symbol: "\u16D7", color: SYMBOL_COLORS.water },  // ᛗ Mannaz
+  { symbol: "\u16DF", color: SYMBOL_COLORS.air },    // ᛟ Othala
 ];
 
 const NUM_POWERUPS = 4;

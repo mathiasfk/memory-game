@@ -76,7 +76,7 @@ func Defaults() *Config {
 		ReconnectTimeoutSec:  120,
 		PowerUps: PowerUpsConfig{
 			Chaos:        ChaosPowerUpConfig{},
-			Clairvoyance: ClairvoyancePowerUpConfig{RevealDurationMS: 2000},
+			Clairvoyance: ClairvoyancePowerUpConfig{RevealDurationMS: 3000},
 		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},

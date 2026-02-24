@@ -23,8 +23,8 @@ func TestDefaults(t *testing.T) {
 	if cfg.RevealDurationMS != 1000 {
 		t.Errorf("expected RevealDurationMS=1000, got %d", cfg.RevealDurationMS)
 	}
-	if cfg.PowerUps.Clairvoyance.RevealDurationMS != 2000 {
-		t.Errorf("expected PowerUps.Clairvoyance.RevealDurationMS=2000, got %d", cfg.PowerUps.Clairvoyance.RevealDurationMS)
+	if cfg.PowerUps.Clairvoyance.RevealDurationMS != 3000 {
+		t.Errorf("expected PowerUps.Clairvoyance.RevealDurationMS=3000, got %d", cfg.PowerUps.Clairvoyance.RevealDurationMS)
 	}
 	if cfg.MaxNameLength != 24 {
 		t.Errorf("expected MaxNameLength=24, got %d", cfg.MaxNameLength)
