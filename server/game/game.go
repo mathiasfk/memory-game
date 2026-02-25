@@ -59,11 +59,15 @@ type Action struct {
 	NewSend            chan []byte // for ActionRejoinCompleted: new send channel for the reconnected player
 }
 
+// ArcanaPairsPerMatch is the number of board pairs that grant power-ups in each match.
+const ArcanaPairsPerMatch = 4
+
 // PowerUpProvider abstracts the power-up registry so the game package
 // does not import the powerup package directly (avoids circular deps).
 type PowerUpProvider interface {
 	GetPowerUp(id string) (PowerUpDef, bool)
 	AllPowerUps() []PowerUpDef
+	PickArcanaForMatch(n int) []PowerUpDef
 }
 
 // PowerUpContext is passed to power-up Apply when the game has context (e.g. which pairID is the power-up tile).
@@ -73,11 +77,13 @@ type PowerUpContext struct {
 }
 
 // PowerUpDef holds the definition of a power-up as seen by the game package.
+// Rarity is used for weighted selection when picking arcana for a match (higher = more likely).
 type PowerUpDef struct {
 	ID          string
 	Name        string
 	Description string
 	Cost        int
+	Rarity      int
 	Apply       func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error
 }
 
@@ -131,8 +137,8 @@ func NewGame(id string, cfg *config.Config, p0, p1 *Player, pups PowerUpProvider
 
 	pairIDToPowerUp := make(map[int]string)
 	if pups != nil {
-		allPups := pups.AllPowerUps()
-		for i, pup := range allPups {
+		arcana := pups.PickArcanaForMatch(ArcanaPairsPerMatch)
+		for i, pup := range arcana {
 			pairIDToPowerUp[i] = pup.ID
 		}
 	}
@@ -225,10 +231,10 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		return
 	}
 
-	// Validate card is hidden
+	// Validate card is hidden (not revealed, matched, or removed)
 	card := &g.Board.Cards[cardIndex]
 	if card.State != Hidden {
-		g.sendError(playerIdx, "That card is already revealed or matched.")
+		g.sendError(playerIdx, "That card is already revealed, matched, or removed.")
 		return
 	}
 
@@ -265,7 +271,25 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 
 		player := g.Players[playerIdx]
 		player.ComboStreak++
-		player.Score += g.Config.ComboBasePoints * player.ComboStreak
+		points := g.Config.ComboBasePoints * player.ComboStreak
+		player.Score += points
+		// Leech: subtract same amount from opponent (minimum 0)
+		if player.LeechActive {
+			opponent := g.Players[1-playerIdx]
+			opponent.Score -= points
+			if opponent.Score < 0 {
+				opponent.Score = 0
+			}
+		}
+		// Blood Pact: count consecutive matches; at 3 grant +5 and clear
+		if player.BloodPactActive {
+			player.BloodPactMatchesCount++
+			if player.BloodPactMatchesCount >= 3 {
+				player.Score += 5
+				player.BloodPactActive = false
+				player.BloodPactMatchesCount = 0
+			}
+		}
 
 		// Grant power-up for this pair if mapped (pairId 0, 1, 2 -> first power-ups in registry order)
 		if powerUpID, ok := g.PairIDToPowerUp[card1.PairID]; ok {
@@ -278,8 +302,10 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		g.FlippedIndices = g.FlippedIndices[:0]
 		g.TurnPhase = FirstFlip
 
-		// End of turn: clear Unveiling highlight for current player (effect lasts only this turn)
+		// End of turn: clear Unveiling highlight and Leech for current player (effects last only this turn)
 		player.UnveilingHighlightActive = false
+		player.LeechActive = false
+		// Blood Pact is not cleared on match; only on mismatch or timeout
 
 		// Check if game is over
 		if AllMatched(g.Board) {
@@ -329,8 +355,18 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	// Reset combo for current player
 	player.ComboStreak = 0
 
-	// End of turn: clear Unveiling highlight (effect lasts only this turn)
+	// End of turn: clear Unveiling highlight and Leech (effects last only this turn)
 	player.UnveilingHighlightActive = false
+	player.LeechActive = false
+	// Blood Pact: failed (mismatch); lose 3 points and clear pact
+	if player.BloodPactActive {
+		player.Score -= 3
+		if player.Score < 0 {
+			player.Score = 0
+		}
+		player.BloodPactActive = false
+		player.BloodPactMatchesCount = 0
+	}
 
 	g.FlippedIndices = g.FlippedIndices[:0]
 	g.Round++
@@ -381,6 +417,17 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 			return
 		}
 	}
+	// Oblivion: require a valid hidden card target
+	if powerUpID == "oblivion" {
+		if cardIndex < 0 || cardIndex >= totalCards {
+			g.sendError(playerIdx, "Oblivion requires a valid card target.")
+			return
+		}
+		if g.Board.Cards[cardIndex].State != Hidden {
+			g.sendError(playerIdx, "Oblivion target card must be hidden.")
+			return
+		}
+	}
 
 	// Consume one from hand
 	player.Hand[powerUpID]--
@@ -400,6 +447,15 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 				if g.KnownIndices != nil {
 					g.KnownIndices[idx] = struct{}{}
 				}
+			}
+		}
+	}
+	// Oblivion: remove target tile and its pair from the game (no points)
+	if powerUpID == "oblivion" {
+		targetPairID := g.Board.Cards[cardIndex].PairID
+		for i := range g.Board.Cards {
+			if g.Board.Cards[i].PairID == targetPairID {
+				g.Board.Cards[i].State = Removed
 			}
 		}
 	}
@@ -437,9 +493,26 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 	if powerUpID == "unveiling" {
 		player.UnveilingHighlightActive = true
 	}
+	// Leech: this turn, match points are subtracted from opponent
+	if powerUpID == "leech" {
+		player.LeechActive = true
+	}
+	// Blood Pact: next 3 matches grant +5; first mismatch or timeout loses 3
+	if powerUpID == "blood_pact" {
+		player.BloodPactActive = true
+		player.BloodPactMatchesCount = 0
+	}
 
 	// Broadcast updated state (turn does not end)
 	g.broadcastState()
+
+	// Oblivion may have removed the last pair(s); check for game over
+	if powerUpID == "oblivion" && AllMatched(g.Board) {
+		g.cancelTurnTimer()
+		g.broadcastGameOver()
+		g.Finished = true
+		return
+	}
 
 	// Clairvoyance: schedule hiding the revealed cards after duration
 	if powerUpID == "clairvoyance" && len(clairvoyanceRevealIndices) > 0 {
@@ -536,8 +609,18 @@ func (g *Game) handleTurnTimeout() {
 	player := g.Players[g.CurrentTurn]
 	if player != nil {
 		player.ComboStreak = 0
-		// End of turn: clear Unveiling highlight (effect lasts only this turn)
+		// End of turn: clear Unveiling highlight and Leech (effects last only this turn)
 		player.UnveilingHighlightActive = false
+		player.LeechActive = false
+		// Blood Pact: turn timeout counts as failure; lose 3 points and clear pact
+		if player.BloodPactActive {
+			player.Score -= 3
+			if player.Score < 0 {
+				player.Score = 0
+			}
+			player.BloodPactActive = false
+			player.BloodPactMatchesCount = 0
+		}
 	}
 	g.FlippedIndices = g.FlippedIndices[:0]
 	g.Round++
@@ -691,7 +774,8 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		FlippedIndices:              flipped,
 		Phase:                       g.TurnPhase.String(),
 		KnownIndices:                knownIndices,
-		UnveilingHighlightActive:  g.Players[playerIdx].UnveilingHighlightActive,
+		UnveilingHighlightActive:    g.Players[playerIdx].UnveilingHighlightActive,
+		PairIDToPowerUp:             g.PairIDToPowerUp,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
 		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()

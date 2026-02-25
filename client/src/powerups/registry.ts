@@ -37,9 +37,30 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
     shortDescription: "Highlights never-revealed tiles.",
     imagePath: "/cards/Unveiling.webp",
   },
+  blood_pact: {
+    icon: "BLP",
+    label: "Blood Pact",
+    description: "If you match 3 pairs in a row, you gain +5 points. If you fail (mismatch) before that, you lose 3 points.",
+    shortDescription: "Match 3 in a row: +5; fail: -3.",
+    imagePath: "/cards/BloodPact.webp",
+  },
+  leech: {
+    icon: "LCH",
+    label: "Leech",
+    description: "This turn, points you earn from matching are subtracted from the opponent.",
+    shortDescription: "Your match points drain from opponent.",
+    imagePath: "/cards/Leech.webp",
+  },
+  oblivion: {
+    icon: "OBL",
+    label: "Oblivion",
+    description: "Select a tile. It and its pair are removed from the game. No one gains or loses points.",
+    shortDescription: "Remove a tile and its pair from the game.",
+    imagePath: "/cards/Oblivion.webp",
+  },
 };
 
-/** Server maps pairId 0..3 to these power-up IDs (registry order). */
+/** Fallback when server does not send pairIdToPowerUp (e.g. old client). */
 const PAIR_ID_TO_POWER_UP_ID: Record<number, string> = {
   0: "chaos",
   1: "clairvoyance",
@@ -47,8 +68,18 @@ const PAIR_ID_TO_POWER_UP_ID: Record<number, string> = {
   3: "unveiling",
 };
 
-export function getPowerUpDisplayByPairId(pairId: number): PowerUpDisplayInfo | null {
-  const powerUpId = PAIR_ID_TO_POWER_UP_ID[pairId];
+/**
+ * Returns display info for the power-up at the given pair ID.
+ * Uses pairIdToPowerUp from game state when provided (per-match arcana); otherwise fallback.
+ */
+export function getPowerUpDisplayByPairId(
+  pairId: number,
+  pairIdToPowerUp?: Record<string, string> | null
+): PowerUpDisplayInfo | null {
+  const powerUpId =
+    pairIdToPowerUp != null && pairIdToPowerUp[String(pairId)] != null
+      ? pairIdToPowerUp[String(pairId)]
+      : PAIR_ID_TO_POWER_UP_ID[pairId];
   if (powerUpId == null) return null;
   return POWER_UP_DISPLAY[powerUpId] ?? null;
 }

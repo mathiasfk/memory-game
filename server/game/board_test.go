@@ -162,6 +162,7 @@ func TestCardStateString(t *testing.T) {
 		{Hidden, "hidden"},
 		{Revealed, "revealed"},
 		{Matched, "matched"},
+		{Removed, "removed"},
 	}
 
 	for _, test := range tests {

@@ -20,6 +20,10 @@ func (m *mockPowerUpProvider) AllPowerUps() []game.PowerUpDef {
 	return nil
 }
 
+func (m *mockPowerUpProvider) PickArcanaForMatch(n int) []game.PowerUpDef {
+	return nil
+}
+
 // mockClient creates a client-like struct for testing.
 // Since Client depends on websocket.Conn and Hub, we need to work around this.
 // We'll test the matchmaker's Enqueue behavior and pairing.

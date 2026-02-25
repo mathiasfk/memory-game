@@ -15,6 +15,7 @@ func (n *NecromancyPowerUp) ID() string          { return "necromancy" }
 func (n *NecromancyPowerUp) Name() string        { return "Necromancy" }
 func (n *NecromancyPowerUp) Description() string { return "Returns all collected tiles back to the board in new random positions." }
 func (n *NecromancyPowerUp) Cost() int           { return n.CostValue }
+func (n *NecromancyPowerUp) Rarity() int         { return RarityUncommon }
 
 func (n *NecromancyPowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player, ctx *game.PowerUpContext) error {
 	selfPairID := -1

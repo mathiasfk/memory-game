@@ -1,4 +1,4 @@
-export type CardState = "hidden" | "revealed" | "matched";
+export type CardState = "hidden" | "revealed" | "matched" | "removed";
 
 export interface CardView {
   index: number;
@@ -44,4 +44,6 @@ export interface GameState {
   knownIndices?: number[];
   /** When true, highlight tiles that have never been revealed (Unveiling, current turn only). */
   unveilingHighlightActive?: boolean;
+  /** Maps board pair IDs (0..3) to power-up IDs for this match (arcana pairs). */
+  pairIdToPowerUp?: Record<string, string>;
 }

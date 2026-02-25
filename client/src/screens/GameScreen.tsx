@@ -39,6 +39,7 @@ export default function GameScreen({
   onAbandon,
 }: GameScreenProps) {
   const [pendingClairvoyanceTarget, setPendingClairvoyanceTarget] = useState(false);
+  const [pendingOblivionTarget, setPendingOblivionTarget] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [reconnectSecondsRemaining, setReconnectSecondsRemaining] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -60,6 +61,7 @@ export default function GameScreen({
   useEffect(() => {
     if (gameState && (!gameState.yourTurn || gameState.phase !== "first_flip")) {
       setPendingClairvoyanceTarget(false);
+      setPendingOblivionTarget(false);
     }
   }, [gameState?.yourTurn, gameState?.phase]);
 
@@ -121,6 +123,9 @@ export default function GameScreen({
     if (pendingClairvoyanceTarget) {
       onUsePowerUp("clairvoyance", index);
       setPendingClairvoyanceTarget(false);
+    } else if (pendingOblivionTarget) {
+      onUsePowerUp("oblivion", index);
+      setPendingOblivionTarget(false);
     } else {
       onFlipCard(index);
     }
@@ -129,6 +134,8 @@ export default function GameScreen({
   const handleUsePowerUpClick = (powerUpId: string): void => {
     if (powerUpId === "clairvoyance") {
       setPendingClairvoyanceTarget(true);
+    } else if (powerUpId === "oblivion") {
+      setPendingOblivionTarget(true);
     } else {
       onUsePowerUp(powerUpId);
     }
@@ -231,8 +238,10 @@ export default function GameScreen({
             cardsClickable={cardsClickable}
             onCardClick={handleCardClick}
             radarTargetingMode={pendingClairvoyanceTarget}
+            oblivionTargetingMode={pendingOblivionTarget}
             knownIndices={gameState.knownIndices ?? []}
             unveilingHighlightActive={gameState.unveilingHighlightActive ?? false}
+            pairIdToPowerUp={gameState.pairIdToPowerUp ?? null}
           />
           </div>
         </div>

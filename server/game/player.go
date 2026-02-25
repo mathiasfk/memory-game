@@ -12,6 +12,14 @@ type Player struct {
 
 	// UnveilingHighlightActive is true after the player uses Unveiling; cleared when turn ends or Chaos is used.
 	UnveilingHighlightActive bool
+
+	// LeechActive is true after the player uses Leech; points from matching this turn are subtracted from the opponent. Cleared when turn ends.
+	LeechActive bool
+
+	// BloodPactActive is true after the player uses Blood Pact; they must match 3 pairs in a row for +5, or lose 3 on first mismatch.
+	BloodPactActive bool
+	// BloodPactMatchesCount is the number of consecutive matches since activating Blood Pact.
+	BloodPactMatchesCount int
 }
 
 // NewPlayer creates a new Player with the given name and send channel.

@@ -20,6 +20,10 @@ func (m *mockPowerUpProvider) AllPowerUps() []game.PowerUpDef {
 	return nil
 }
 
+func (m *mockPowerUpProvider) PickArcanaForMatch(n int) []game.PowerUpDef {
+	return nil
+}
+
 func TestRunExitsOnGameOver(t *testing.T) {
 	cfg := &config.Config{AIPairTimeoutSec: 60}
 	params := &config.AIParams{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 20, UseKnownPairChance: 85}

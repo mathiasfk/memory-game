@@ -31,9 +31,13 @@ interface BoardProps {
   onCardClick: (index: number) => void;
   /** When true, player is choosing a card as Radar target; hover shows 3x3 preview. */
   radarTargetingMode?: boolean;
+  /** When true, player is choosing a card to remove with Oblivion. */
+  oblivionTargetingMode?: boolean;
   /** When true, highlight hidden tiles that have never been revealed (Unveiling). */
   knownIndices?: number[];
   unveilingHighlightActive?: boolean;
+  /** Per-match arcana mapping (pairId -> powerUpId) for card display. */
+  pairIdToPowerUp?: Record<string, string> | null;
 }
 
 export default function Board({
@@ -43,8 +47,10 @@ export default function Board({
   cardsClickable,
   onCardClick,
   radarTargetingMode = false,
+  oblivionTargetingMode = false,
   knownIndices = [],
   unveilingHighlightActive = false,
+  pairIdToPowerUp = null,
 }: BoardProps) {
   const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(new Set());
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -90,13 +96,14 @@ export default function Board({
   }, []);
 
   const showAsEmpty = (index: number, state: CardView["state"]) =>
-    state === "matched" && removedMatchedIndices.has(index);
+    state === "removed" || (state === "matched" && removedMatchedIndices.has(index));
 
   const isUnknownHighlight = (index: number, state: CardView["state"]) =>
     unveilingHighlightActive && state === "hidden" && !knownIndices.includes(index);
 
   const isDisabled = (card: CardView) =>
-    radarTargetingMode ? card.state !== "hidden" : !cardsClickable || card.state !== "hidden";
+    card.state === "removed" ||
+    (radarTargetingMode || oblivionTargetingMode ? card.state !== "hidden" : !cardsClickable || card.state !== "hidden");
 
   return (
     <div
@@ -116,6 +123,7 @@ export default function Board({
             card={card}
             disabled={isDisabled(card)}
             onClick={onCardClick}
+            pairIdToPowerUp={pairIdToPowerUp}
             isRadarCenter={radarPreview?.center === card.index}
             isRadarAffected={radarPreview?.affected.includes(card.index) ?? false}
             isUnknownHighlight={isUnknownHighlight(card.index, card.state)}

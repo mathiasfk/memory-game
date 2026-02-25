@@ -46,6 +46,8 @@ type GameStateMsg struct {
 	KnownIndices []int `json:"knownIndices,omitempty"`
 	// UnveilingHighlightActive is true when the player has used Unveiling and should see unknown tiles highlighted (current turn only).
 	UnveilingHighlightActive bool `json:"unveilingHighlightActive,omitempty"`
+	// PairIDToPowerUp maps board pair IDs (0..3 for arcana pairs) to power-up IDs for this match; client uses for display.
+	PairIDToPowerUp map[int]string `json:"pairIdToPowerUp,omitempty"`
 }
 
 // BuildCardViews constructs the client-facing card list.

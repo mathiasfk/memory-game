@@ -7,6 +7,8 @@ interface CardProps {
   card: CardView;
   disabled: boolean;
   onClick: (index: number) => void;
+  /** Per-match arcana mapping (pairId -> powerUpId); when set, used for power-up display. */
+  pairIdToPowerUp?: Record<string, string> | null;
   /** When true, this card is the Radar target (center of 3x3). */
   isRadarCenter?: boolean;
   /** When true, this card is in the Radar 3x3 area but not the center. */
@@ -21,15 +23,17 @@ export default function Card({
   card,
   disabled,
   onClick,
+  pairIdToPowerUp = null,
   isRadarCenter = false,
   isRadarAffected = false,
   isUnknownHighlight = false,
   onMouseEnter,
   onMouseLeave,
 }: CardProps) {
-  const isFaceUp = card.state !== "hidden";
+  const isFaceUp = card.state !== "hidden" && card.state !== "removed";
   const pairId = card.pairId ?? null;
-  const powerUpDisplay = pairId != null && pairId < NUM_POWERUP_PAIRS ? getPowerUpDisplayByPairId(pairId) : null;
+  const powerUpDisplay =
+    pairId != null && pairId < NUM_POWERUP_PAIRS ? getPowerUpDisplayByPairId(pairId, pairIdToPowerUp) : null;
   const normalSymbol = pairId != null && pairId >= NUM_POWERUP_PAIRS ? getNormalSymbolForPairId(pairId) : null;
 
   const ariaLabel =

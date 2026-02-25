@@ -11,6 +11,7 @@ const (
 	Hidden   CardState = iota
 	Revealed
 	Matched
+	Removed
 )
 
 // String returns the string representation of a CardState.
@@ -22,6 +23,8 @@ func (cs CardState) String() string {
 		return "revealed"
 	case Matched:
 		return "matched"
+	case Removed:
+		return "removed"
 	default:
 		return "unknown"
 	}
@@ -113,10 +116,10 @@ func ShufflePairIDsAmongIndices(board *Board, indices []int) {
 	}
 }
 
-// AllMatched returns true if every card on the board is in the Matched state.
+// AllMatched returns true when no card is left to match (all are Matched or Removed).
 func AllMatched(board *Board) bool {
 	for _, card := range board.Cards {
-		if card.State != Matched {
+		if card.State != Matched && card.State != Removed {
 			return false
 		}
 	}

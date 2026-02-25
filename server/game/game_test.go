@@ -46,6 +46,17 @@ func (m *mockPowerUpProvider) AllPowerUps() []PowerUpDef {
 	return defs
 }
 
+func (m *mockPowerUpProvider) PickArcanaForMatch(n int) []PowerUpDef {
+	all := m.AllPowerUps()
+	if n <= 0 || len(all) == 0 {
+		return nil
+	}
+	if n >= len(all) {
+		return all
+	}
+	return all[:n]
+}
+
 func testConfig() *config.Config {
 	return &config.Config{
 		BoardRows:        4,
@@ -431,6 +442,7 @@ func TestUsePowerUp_Chaos(t *testing.T) {
 		Name:        "Chaos",
 		Description: "Reshuffles all unmatched cards.",
 		Cost:        0,
+		Rarity:      1,
 		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error {
 			ShuffleUnmatched(board)
 			return nil
@@ -479,8 +491,9 @@ func TestUsePowerUp_NotInHand(t *testing.T) {
 	g, send0, send1, pups := createTestGame(cfg)
 
 	pups.Register("chaos", PowerUpDef{
-		ID:   "chaos",
-		Cost: 0,
+		ID:     "chaos",
+		Cost:   0,
+		Rarity: 1,
 		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error {
 			return nil
 		},
@@ -532,8 +545,9 @@ func TestUsePowerUp_WrongPhase(t *testing.T) {
 	g, send0, send1, pups := createTestGame(cfg)
 
 	pups.Register("chaos", PowerUpDef{
-		ID:   "chaos",
-		Cost: 0,
+		ID:     "chaos",
+		Cost:   0,
+		Rarity: 1,
 		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error {
 			return nil
 		},
@@ -731,8 +745,9 @@ func TestMatchGrantsPowerUp(t *testing.T) {
 	p1 := NewPlayer("Bob", send1)
 	pups := newMockPowerUpProvider()
 	pups.Register("chaos", PowerUpDef{
-		ID:   "chaos",
-		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error { return nil },
+		ID:     "chaos",
+		Rarity: 1,
+		Apply:  func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error { return nil },
 	})
 	g := NewGame("match-grants-test", cfg, p0, p1, pups)
 
