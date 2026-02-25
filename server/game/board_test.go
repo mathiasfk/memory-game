@@ -98,6 +98,45 @@ func TestShuffleUnmatched(t *testing.T) {
 	}
 }
 
+func TestShufflePairIDsAmongIndices(t *testing.T) {
+	board := NewBoard(4, 4)
+
+	// Mark indices 2 and 5 as matched (they will be "revived" in necromancy terms)
+	board.Cards[2].State = Matched
+	board.Cards[5].State = Matched
+	revivedIndices := []int{2, 5}
+	pairID2 := board.Cards[2].PairID
+	pairID5 := board.Cards[5].PairID
+
+	// Record pairIDs outside revived indices (e.g. 0 and 1)
+	orig0 := board.Cards[0].PairID
+	orig1 := board.Cards[1].PairID
+
+	ShufflePairIDsAmongIndices(board, revivedIndices)
+
+	// Only indices 2 and 5 should have changed (their pairIDs swapped between them or stayed)
+	// The two values that were at 2 and 5 should still be at 2 and 5 (just possibly swapped)
+	got2 := board.Cards[2].PairID
+	got5 := board.Cards[5].PairID
+	if got2 != pairID2 && got2 != pairID5 {
+		t.Errorf("index 2 has pairID %d, expected one of {%d, %d}", got2, pairID2, pairID5)
+	}
+	if got5 != pairID2 && got5 != pairID5 {
+		t.Errorf("index 5 has pairID %d, expected one of {%d, %d}", got5, pairID2, pairID5)
+	}
+	if got2 == got5 {
+		t.Errorf("indices 2 and 5 have same pairID %d after shuffle", got2)
+	}
+
+	// Positions outside revivedIndices must be unchanged
+	if board.Cards[0].PairID != orig0 {
+		t.Errorf("index 0 pairID changed from %d to %d", orig0, board.Cards[0].PairID)
+	}
+	if board.Cards[1].PairID != orig1 {
+		t.Errorf("index 1 pairID changed from %d to %d", orig1, board.Cards[1].PairID)
+	}
+}
+
 func TestAllMatched(t *testing.T) {
 	board := NewBoard(2, 2)
 

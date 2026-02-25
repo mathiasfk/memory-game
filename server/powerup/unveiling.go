@@ -17,7 +17,7 @@ func (d *UnveilingPowerUp) Name() string        { return "Unveiling" }
 func (d *UnveilingPowerUp) Description() string { return "Highlights all tiles that have never been revealed (this turn only)." }
 func (d *UnveilingPowerUp) Cost() int           { return d.CostValue }
 
-func (d *UnveilingPowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player) error {
+func (d *UnveilingPowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player, ctx *game.PowerUpContext) error {
 	// No-op; highlight is activated in game.handleUsePowerUp (UnveilingHighlightActive).
 	return nil
 }

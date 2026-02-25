@@ -15,7 +15,7 @@ func (c *ChaosPowerUp) Name() string        { return "Chaos" }
 func (c *ChaosPowerUp) Description() string { return "Reshuffles the positions of all cards that are not yet matched." }
 func (c *ChaosPowerUp) Cost() int           { return c.CostValue }
 
-func (c *ChaosPowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player) error {
+func (c *ChaosPowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player, ctx *game.PowerUpContext) error {
 	game.ShuffleUnmatched(board)
 	return nil
 }

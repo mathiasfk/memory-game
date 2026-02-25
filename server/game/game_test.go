@@ -431,7 +431,7 @@ func TestUsePowerUp_Chaos(t *testing.T) {
 		Name:        "Chaos",
 		Description: "Reshuffles all unmatched cards.",
 		Cost:        0,
-		Apply: func(board *Board, active *Player, opponent *Player) error {
+		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error {
 			ShuffleUnmatched(board)
 			return nil
 		},
@@ -481,7 +481,7 @@ func TestUsePowerUp_NotInHand(t *testing.T) {
 	pups.Register("chaos", PowerUpDef{
 		ID:   "chaos",
 		Cost: 0,
-		Apply: func(board *Board, active *Player, opponent *Player) error {
+		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error {
 			return nil
 		},
 	})
@@ -534,7 +534,7 @@ func TestUsePowerUp_WrongPhase(t *testing.T) {
 	pups.Register("chaos", PowerUpDef{
 		ID:   "chaos",
 		Cost: 0,
-		Apply: func(board *Board, active *Player, opponent *Player) error {
+		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error {
 			return nil
 		},
 	})
@@ -732,7 +732,7 @@ func TestMatchGrantsPowerUp(t *testing.T) {
 	pups := newMockPowerUpProvider()
 	pups.Register("chaos", PowerUpDef{
 		ID:   "chaos",
-		Apply: func(board *Board, active *Player, opponent *Player) error { return nil },
+		Apply: func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error { return nil },
 	})
 	g := NewGame("match-grants-test", cfg, p0, p1, pups)
 

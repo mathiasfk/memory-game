@@ -66,7 +66,7 @@ func TestChaosPowerUpApply(t *testing.T) {
 	p1 := &game.Player{Name: "Alice", Score: 5}
 	p2 := &game.Player{Name: "Bob", Score: 0}
 
-	err := s.Apply(board, p1, p2)
+	err := s.Apply(board, p1, p2, &game.PowerUpContext{SelfPairID: -1})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

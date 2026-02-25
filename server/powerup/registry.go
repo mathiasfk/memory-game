@@ -10,7 +10,7 @@ type PowerUp interface {
 	Name() string
 	Description() string
 	Cost() int
-	Apply(board *game.Board, active *game.Player, opponent *game.Player) error
+	Apply(board *game.Board, active *game.Player, opponent *game.Player, ctx *game.PowerUpContext) error
 }
 
 // Registry holds all registered power-ups indexed by their ID.

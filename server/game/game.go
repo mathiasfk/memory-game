@@ -66,13 +66,19 @@ type PowerUpProvider interface {
 	AllPowerUps() []PowerUpDef
 }
 
+// PowerUpContext is passed to power-up Apply when the game has context (e.g. which pairID is the power-up tile).
+type PowerUpContext struct {
+	// SelfPairID is the pairID of the power-up tile on the board for the power-up being used; -1 if not applicable.
+	SelfPairID int
+}
+
 // PowerUpDef holds the definition of a power-up as seen by the game package.
 type PowerUpDef struct {
 	ID          string
 	Name        string
 	Description string
 	Cost        int
-	Apply       func(board *Board, active *Player, opponent *Player) error
+	Apply       func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error
 }
 
 // Game manages a single match between two players.
@@ -400,7 +406,15 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 
 	// Apply effect (Clairvoyance has no-op Apply; logic is above)
 	opponent := g.Players[1-playerIdx]
-	if err := pup.Apply(g.Board, player, opponent); err != nil {
+	selfPairID := -1
+	for pairID, id := range g.PairIDToPowerUp {
+		if id == powerUpID {
+			selfPairID = pairID
+			break
+		}
+	}
+	ctx := &PowerUpContext{SelfPairID: selfPairID}
+	if err := pup.Apply(g.Board, player, opponent, ctx); err != nil {
 		// Revert Clairvoyance reveals if any; power-up already consumed
 		for _, idx := range clairvoyanceRevealIndices {
 			g.Board.Cards[idx].State = Hidden

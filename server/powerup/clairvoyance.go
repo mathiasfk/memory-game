@@ -23,7 +23,7 @@ func (c *ClairvoyancePowerUp) Description() string {
 }
 func (c *ClairvoyancePowerUp) Cost() int { return c.CostValue }
 
-func (c *ClairvoyancePowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player) error {
+func (c *ClairvoyancePowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player, ctx *game.PowerUpContext) error {
 	// Effect is applied in game.handleUsePowerUp (reveal 3x3, schedule hide).
 	return nil
 }

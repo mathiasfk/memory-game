@@ -95,6 +95,24 @@ func ShuffleUnmatched(board *Board) {
 	}
 }
 
+// ShufflePairIDsAmongIndices shuffles the pairIDs of the cards at the given indices
+// and reassigns them to the same indices. Only these positions change; the rest of the board is unchanged.
+func ShufflePairIDsAmongIndices(board *Board, indices []int) {
+	if len(indices) == 0 {
+		return
+	}
+	pairIDs := make([]int, len(indices))
+	for i, idx := range indices {
+		pairIDs[i] = board.Cards[idx].PairID
+	}
+	rand.Shuffle(len(pairIDs), func(i, j int) {
+		pairIDs[i], pairIDs[j] = pairIDs[j], pairIDs[i]
+	})
+	for i, idx := range indices {
+		board.Cards[idx].PairID = pairIDs[i]
+	}
+}
+
 // AllMatched returns true if every card on the board is in the Matched state.
 func AllMatched(board *Board) bool {
 	for _, card := range board.Cards {
