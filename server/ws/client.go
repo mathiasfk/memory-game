@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -113,7 +114,9 @@ func (c *Client) handleMessage(data []byte) {
 		return
 	}
 
-	if !c.Authenticated && envelope.Type != "auth" {
+	// When auth is not configured, allow set_name without auth (tests, local dev).
+	allowedWithoutAuth := envelope.Type == "auth" || (envelope.Type == "set_name" && c.Hub.Config.NeonAuthBaseURL == "")
+	if !c.Authenticated && !allowedWithoutAuth {
 		c.sendError("Authentication required. Send an auth message first.")
 		return
 	}
@@ -173,14 +176,19 @@ func (c *Client) handleAuth(raw json.RawMessage) {
 }
 
 func (c *Client) handleSetName(raw json.RawMessage) {
-	// Name is taken from JWT at auth time; we ignore the client-sent name for security.
 	var msg SetNameMsg
 	if err := json.Unmarshal(raw, &msg); err != nil {
 		c.sendError("Invalid set_name message.")
 		return
 	}
 
-	// Validate name length (c.Name was set from JWT in handleAuth)
+	// When auth is configured, name comes from JWT (set in handleAuth). Otherwise use client-sent name (tests/local dev).
+	if c.Hub.Config.NeonAuthBaseURL == "" {
+		c.Name = strings.TrimSpace(msg.Name)
+		c.Authenticated = true // allow subsequent messages (flip_card, etc.) without JWT
+	}
+
+	// Validate name length
 	if len(c.Name) < 1 || len(c.Name) > c.Hub.Config.MaxNameLength {
 		c.sendError("Name must be between 1 and " + strconv.Itoa(c.Hub.Config.MaxNameLength) + " characters.")
 		return

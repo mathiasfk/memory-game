@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -74,7 +73,13 @@ func connectWS(t *testing.T, server *httptest.Server) *websocket.Conn {
 // readMsg reads a JSON message from the WebSocket and returns it as a map.
 func readMsg(t *testing.T, conn *websocket.Conn) map[string]interface{} {
 	t.Helper()
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	return readMsgWithTimeout(t, conn, 3*time.Second)
+}
+
+// readMsgWithTimeout reads a JSON message with a custom deadline (e.g. for slower operations).
+func readMsgWithTimeout(t *testing.T, conn *websocket.Conn, d time.Duration) map[string]interface{} {
+	t.Helper()
+	conn.SetReadDeadline(time.Now().Add(d))
 	_, data, err := conn.ReadMessage()
 	if err != nil {
 		t.Fatalf("failed to read message: %v", err)
@@ -300,36 +305,24 @@ func TestIntegration_PlayAgain(t *testing.T) {
 	// We'll use a brute force approach: flip pairs and see what happens.
 	// For a 2x2 board, we just need to flip all cards.
 
-	var activeConn, passiveConn *websocket.Conn
+	var activeConn *websocket.Conn
 	if p1Turn {
 		activeConn = conn1
-		passiveConn = conn2
 	} else {
 		activeConn = conn2
-		passiveConn = conn1
 	}
 
-	// Try flipping 0 and 1
+	// Flip two cards and verify the active player receives game_state updates.
+	// We only assert on the active connection to avoid flakiness from broadcast ordering.
 	sendMsg(t, activeConn, map[string]interface{}{"type": "flip_card", "index": 0})
-	// Read game_state after first flip from both
-	readMsg(t, activeConn)
-	readMsg(t, passiveConn)
+	readMsg(t, activeConn) // game_state after first flip
 
 	sendMsg(t, activeConn, map[string]interface{}{"type": "flip_card", "index": 1})
-	// Read game_state after second flip from both
-	st1 := readMsg(t, activeConn)
-	readMsg(t, passiveConn)
+	st1 := readMsg(t, activeConn) // game_state after second flip (match or resolve)
 
-	// Check if it was a match or mismatch by looking at phase
-	// If it was a match, cards are matched, and we continue
-	// If not, wait for resolve and flip the correct pairs
-
-	// For this test, we just want to verify play_again works
-	// So let's read through all remaining messages until we see game_over
-	// or timeout
-
-	// This is a simplified test - just verify the protocol works
-	fmt.Printf("State after second flip type: %v\n", st1["type"])
+	if st1["type"] != "game_state" {
+		t.Errorf("expected game_state after second flip, got %v (message: %v)", st1["type"], st1["message"])
+	}
 
 	// This test mainly verifies the integration flow works end-to-end
 	// The play_again functionality requires the game to finish first

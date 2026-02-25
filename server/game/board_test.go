@@ -124,8 +124,9 @@ func TestShufflePairIDsAmongIndices(t *testing.T) {
 	if got5 != pairID2 && got5 != pairID5 {
 		t.Errorf("index 5 has pairID %d, expected one of {%d, %d}", got5, pairID2, pairID5)
 	}
-	if got2 == got5 {
-		t.Errorf("indices 2 and 5 have same pairID %d after shuffle", got2)
+	// If the two indices originally had different pairIDs, they must still differ after shuffle.
+	if pairID2 != pairID5 && got2 == got5 {
+		t.Errorf("indices 2 and 5 had different pairIDs (%d, %d) but have same pairID %d after shuffle", pairID2, pairID5, got2)
 	}
 
 	// Positions outside revivedIndices must be unchanged
