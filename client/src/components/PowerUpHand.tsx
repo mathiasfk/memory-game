@@ -1,6 +1,14 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PowerUpInHand } from "../types/game";
 import { POWER_UP_DISPLAY } from "../powerups/registry";
 import styles from "../styles/PowerUpHand.module.css";
+
+function handDescription(
+  display: { shortDescription?: string; description: string } | undefined
+): string {
+  if (!display) return "";
+  return display.shortDescription ?? display.description;
+}
 
 interface PowerUpHandProps {
   hand: PowerUpInHand[];
@@ -14,47 +22,138 @@ export default function PowerUpHand({
   onUsePowerUp,
 }: PowerUpHandProps) {
   const items = hand.filter((item) => item.count > 0);
+  const [selectedPowerUpId, setSelectedPowerUpId] = useState<string | null>(null);
+  const modalPanelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const closeModal = useCallback(() => {
+    setSelectedPowerUpId(null);
+  }, []);
+
+  const handleUseFromModal = useCallback(
+    (powerUpId: string) => {
+      onUsePowerUp(powerUpId);
+      closeModal();
+    },
+    [onUsePowerUp, closeModal]
+  );
+
+  useEffect(() => {
+    if (selectedPowerUpId == null) return;
+    closeButtonRef.current?.focus();
+  }, [selectedPowerUpId]);
+
+  useEffect(() => {
+    if (selectedPowerUpId == null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeModal();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedPowerUpId, closeModal]);
 
   return (
-    <section className={styles.hand} aria-label="Power-up hand">
-      {items.length === 0 ? (
-        <p className={styles.empty}>No power-ups in hand. Match pairs to collect them.</p>
-      ) : (
-        <ul className={styles.list}>
-          {items.map((item) => {
-            const display = POWER_UP_DISPLAY[item.powerUpId];
-            const buttonDisabled = !enabled;
+    <>
+      <section className={styles.hand} aria-label="Power-up hand">
+        {items.length === 0 ? (
+          <p className={styles.empty}>No power-ups in hand. Match pairs to collect them.</p>
+        ) : (
+          <ul className={styles.list}>
+            {items.map((item) => {
+              const display = POWER_UP_DISPLAY[item.powerUpId];
 
-            return (
-              <li key={item.powerUpId} className={styles.item}>
-                {display?.imagePath ? (
-                  <img
-                    className={styles.cardArt}
-                    src={display.imagePath}
-                    alt=""
-                    aria-hidden
-                  />
-                ) : null}
-                <p className={styles.title}>
-                  {display?.label ?? item.powerUpId}
-                  {item.count > 1 ? ` ×${item.count}` : ""}
-                </p>
-                <p className={styles.description}>
-                  {display?.description ?? ""}
-                </p>
+              return (
+                <li key={item.powerUpId}>
+                  <button
+                    type="button"
+                    className={styles.item}
+                    onClick={() => setSelectedPowerUpId(item.powerUpId)}
+                    aria-label={`${display?.label ?? item.powerUpId}${item.count > 1 ? `, ${item.count} in hand` : ""}. Click to view details and use.`}
+                  >
+                    {display?.imagePath ? (
+                      <img
+                        className={styles.cardArt}
+                        src={display.imagePath}
+                        alt=""
+                        aria-hidden
+                      />
+                    ) : null}
+                    <span className={styles.title}>
+                      {display?.label ?? item.powerUpId}
+                      {item.count > 1 ? ` ×${item.count}` : ""}
+                    </span>
+                    <span className={styles.description}>
+                      {handDescription(display)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {selectedPowerUpId != null && (() => {
+        const display = POWER_UP_DISPLAY[selectedPowerUpId];
+        const item = items.find((i) => i.powerUpId === selectedPowerUpId);
+        const buttonDisabled = !enabled;
+
+        return (
+          <div
+            className={styles.modalOverlay}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="powerup-modal-title"
+            aria-describedby="powerup-modal-desc"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeModal();
+            }}
+          >
+            <div
+              ref={modalPanelRef}
+              className={styles.modalPanel}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {display?.imagePath ? (
+                <img
+                  className={styles.modalArt}
+                  src={display.imagePath}
+                  alt=""
+                  aria-hidden
+                />
+              ) : null}
+              <h2 id="powerup-modal-title" className={styles.modalTitle}>
+                {display?.label ?? selectedPowerUpId}
+                {item && item.count > 1 ? ` ×${item.count}` : ""}
+              </h2>
+              <p id="powerup-modal-desc" className={styles.modalDescription}>
+                {display?.description ?? ""}
+              </p>
+              <div className={styles.modalActions}>
                 <button
                   type="button"
-                  className={styles.useButton}
+                  className={styles.modalUseButton}
                   disabled={buttonDisabled}
-                  onClick={() => onUsePowerUp(item.powerUpId)}
+                  onClick={() => handleUseFromModal(selectedPowerUpId)}
                 >
-                  Use
+                  Usar
                 </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
+                <button
+                  ref={closeButtonRef}
+                  type="button"
+                  className={styles.modalCloseButton}
+                  onClick={closeModal}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </>
   );
 }
