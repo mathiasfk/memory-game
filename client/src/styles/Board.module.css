@@ -17,5 +17,5 @@
 .emptyCell {
   width: 100%;
   aspect-ratio: 1;
-  /* mantém o espaço da célula no grid, vazio */
+  /* keeps the cell space in the grid when empty */
 }

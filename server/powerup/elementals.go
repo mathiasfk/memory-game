@@ -11,8 +11,8 @@ type EarthElementalPowerUp struct {
 }
 
 func (e *EarthElementalPowerUp) ID() string          { return "earth_elemental" }
-func (e *EarthElementalPowerUp) Name() string      { return "Elemental da Terra" }
-func (e *EarthElementalPowerUp) Description() string { return "Destaca todos os tiles do elemento Terra (apenas este turno), sem revelar o símbolo." }
+func (e *EarthElementalPowerUp) Name() string        { return "Earth Elemental" }
+func (e *EarthElementalPowerUp) Description() string { return "Highlights all Earth element tiles (this turn only), without revealing the symbol." }
 func (e *EarthElementalPowerUp) Cost() int         { return e.CostValue }
 func (e *EarthElementalPowerUp) Rarity() int       { return RarityCommon }
 
@@ -26,8 +26,8 @@ type FireElementalPowerUp struct {
 }
 
 func (e *FireElementalPowerUp) ID() string          { return "fire_elemental" }
-func (e *FireElementalPowerUp) Name() string       { return "Elemental do Fogo" }
-func (e *FireElementalPowerUp) Description() string { return "Destaca todos os tiles do elemento Fogo (apenas este turno), sem revelar o símbolo." }
+func (e *FireElementalPowerUp) Name() string        { return "Fire Elemental" }
+func (e *FireElementalPowerUp) Description() string { return "Highlights all Fire element tiles (this turn only), without revealing the symbol." }
 func (e *FireElementalPowerUp) Cost() int          { return e.CostValue }
 func (e *FireElementalPowerUp) Rarity() int        { return RarityCommon }
 
@@ -41,8 +41,8 @@ type WaterElementalPowerUp struct {
 }
 
 func (e *WaterElementalPowerUp) ID() string          { return "water_elemental" }
-func (e *WaterElementalPowerUp) Name() string        { return "Elemental da Água" }
-func (e *WaterElementalPowerUp) Description() string { return "Destaca todos os tiles do elemento Água (apenas este turno), sem revelar o símbolo." }
+func (e *WaterElementalPowerUp) Name() string        { return "Water Elemental" }
+func (e *WaterElementalPowerUp) Description() string { return "Highlights all Water element tiles (this turn only), without revealing the symbol." }
 func (e *WaterElementalPowerUp) Cost() int           { return e.CostValue }
 func (e *WaterElementalPowerUp) Rarity() int          { return RarityCommon }
 
@@ -56,8 +56,8 @@ type AirElementalPowerUp struct {
 }
 
 func (e *AirElementalPowerUp) ID() string          { return "air_elemental" }
-func (e *AirElementalPowerUp) Name() string        { return "Elemental do Ar" }
-func (e *AirElementalPowerUp) Description() string { return "Destaca todos os tiles do elemento Ar (apenas este turno), sem revelar o símbolo." }
+func (e *AirElementalPowerUp) Name() string        { return "Air Elemental" }
+func (e *AirElementalPowerUp) Description() string { return "Highlights all Air element tiles (this turn only), without revealing the symbol." }
 func (e *AirElementalPowerUp) Cost() int           { return e.CostValue }
 func (e *AirElementalPowerUp) Rarity() int          { return RarityCommon }
 
