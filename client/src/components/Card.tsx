@@ -1,6 +1,6 @@
 import type { CardView } from "../types/game";
 import { getPowerUpDisplayByPairId, NUM_POWERUP_PAIRS } from "../powerups/registry";
-import { getNormalSymbolForPairId, SYMBOL_COLORS } from "../constants/symbols";
+import { getNormalSymbolForPairId } from "../constants/symbols";
 import styles from "../styles/Card.module.css";
 
 interface CardProps {
@@ -32,10 +32,6 @@ export default function Card({
 }: CardProps) {
   const isFaceUp = card.state !== "hidden" && card.state !== "removed";
   const pairId = card.pairId ?? null;
-  const elementColor =
-    card.element && card.element in SYMBOL_COLORS
-      ? (SYMBOL_COLORS as Record<string, string>)[card.element]
-      : undefined;
   const powerUpDisplay =
     pairId != null && pairId < NUM_POWERUP_PAIRS ? getPowerUpDisplayByPairId(pairId, pairIdToPowerUp) : null;
   const normalSymbol = pairId != null && pairId >= NUM_POWERUP_PAIRS ? getNormalSymbolForPairId(pairId) : null;
@@ -93,18 +89,14 @@ export default function Card({
       <div className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""}`}>
         <div
           className={styles.cardBack}
-          style={(() => {
-            if (isHighlighted) {
-              return {
-                boxShadow:
-                  "0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 255, 255, 0.5)",
-              };
-            }
-            if (elementColor) {
-              return { boxShadow: `inset 0 0 0 2px ${elementColor}` };
-            }
-            return undefined;
-          })()}
+          style={
+            isHighlighted
+              ? {
+                  boxShadow:
+                    "0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 255, 255, 0.5)",
+                }
+              : undefined
+          }
         >
           <img
             className={styles.cardBackImage}
