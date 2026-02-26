@@ -1,8 +1,7 @@
 package game
 
 // CardView is the client-facing representation of a card.
-// PairID is only included when the card is revealed or matched.
-// Element is set for normal cards (fire, water, air, earth) so the client can color tiles; omitted for arcana.
+// PairID and Element are only included when the card is revealed or matched; hidden/removed cards never expose element (no leak).
 type CardView struct {
 	Index   int    `json:"index"`
 	PairID  *int   `json:"pairId,omitempty"`
@@ -53,18 +52,20 @@ type GameStateMsg struct {
 }
 
 // BuildCardViews constructs the client-facing card list.
-// Hidden cards do not expose their pairId. Element is included for normal cards so the client can color tiles.
+// Hidden and removed cards do not expose pairId or element; only revealed/matched cards send them (no leak).
 func BuildCardViews(board *Board) []CardView {
 	views := make([]CardView, len(board.Cards))
 	for i, card := range board.Cards {
 		cv := CardView{
-			Index:   card.Index,
-			State:   card.State.String(),
-			Element: card.Element,
+			Index: card.Index,
+			State: card.State.String(),
 		}
 		if card.State == Revealed || card.State == Matched {
 			pairID := card.PairID
 			cv.PairID = &pairID
+			if card.Element != "" {
+				cv.Element = card.Element
+			}
 		}
 		views[i] = cv
 	}

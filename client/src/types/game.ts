@@ -6,7 +6,7 @@ export interface CardView {
   index: number;
   pairId?: number;
   state: CardState;
-  /** Element for normal cards (fire, water, air, earth); used to color the tile. Omitted for arcana. */
+  /** Element for normal cards when revealed (fire, water, air, earth). Never sent for hidden/removed cards. */
   element?: ElementType;
 }
 
