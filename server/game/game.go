@@ -60,7 +60,7 @@ type Action struct {
 }
 
 // ArcanaPairsPerMatch is the number of board pairs that grant power-ups in each match.
-const ArcanaPairsPerMatch = 4
+const ArcanaPairsPerMatch = 6
 
 // PowerUpProvider abstracts the power-up registry so the game package
 // does not import the powerup package directly (avoids circular deps).
@@ -132,7 +132,7 @@ type Game struct {
 
 // NewGame creates a new Game between two players.
 func NewGame(id string, cfg *config.Config, p0, p1 *Player, pups PowerUpProvider) *Game {
-	board := NewBoard(cfg.BoardRows, cfg.BoardCols)
+	board := NewBoard(cfg.BoardRows, cfg.BoardCols, ArcanaPairsPerMatch)
 	firstTurn := rand.Intn(2)
 
 	pairIDToPowerUp := make(map[int]string)
@@ -302,8 +302,9 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		g.FlippedIndices = g.FlippedIndices[:0]
 		g.TurnPhase = FirstFlip
 
-		// End of turn: clear Unveiling highlight and Leech for current player (effects last only this turn)
+		// End of turn: clear Unveiling highlight, elemental highlight, and Leech for current player (effects last only this turn)
 		player.UnveilingHighlightActive = false
+		player.ElementalHighlightIndices = nil
 		player.LeechActive = false
 		// Blood Pact is not cleared on match; only on mismatch or timeout
 
@@ -355,8 +356,9 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	// Reset combo for current player
 	player.ComboStreak = 0
 
-	// End of turn: clear Unveiling highlight and Leech (effects last only this turn)
+	// End of turn: clear Unveiling highlight, elemental highlight, and Leech (effects last only this turn)
 	player.UnveilingHighlightActive = false
+	player.ElementalHighlightIndices = nil
 	player.LeechActive = false
 	// Blood Pact: failed (mismatch); lose 3 points and clear pact
 	if player.BloodPactActive {
@@ -479,13 +481,41 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		return
 	}
 
-	// Chaos: clear known indices and unveiling highlight for both players
+	// Chaos: clear known indices, unveiling highlight, and elemental highlight for both players
 	if powerUpID == "chaos" {
 		g.KnownIndices = make(map[int]struct{})
 		for i := 0; i < 2; i++ {
 			if g.Players[i] != nil {
 				g.Players[i].UnveilingHighlightActive = false
+				g.Players[i].ElementalHighlightIndices = nil
 			}
+		}
+	}
+
+	// Elemental powerups: highlight all tiles of the chosen element (this turn only; no symbol reveal)
+	if powerUpID == "earth_elemental" || powerUpID == "fire_elemental" || powerUpID == "water_elemental" || powerUpID == "air_elemental" {
+		var targetElement string
+		switch powerUpID {
+		case "earth_elemental":
+			targetElement = ElementEarth
+		case "fire_elemental":
+			targetElement = ElementFire
+		case "water_elemental":
+			targetElement = ElementWater
+		case "air_elemental":
+			targetElement = ElementAir
+		default:
+			targetElement = ""
+		}
+		if targetElement != "" {
+			var indices []int
+			for i := range g.Board.Cards {
+				c := &g.Board.Cards[i]
+				if c.State != Removed && c.Element == targetElement {
+					indices = append(indices, i)
+				}
+			}
+			player.ElementalHighlightIndices = indices
 		}
 	}
 
@@ -609,8 +639,9 @@ func (g *Game) handleTurnTimeout() {
 	player := g.Players[g.CurrentTurn]
 	if player != nil {
 		player.ComboStreak = 0
-		// End of turn: clear Unveiling highlight and Leech (effects last only this turn)
+		// End of turn: clear Unveiling highlight, elemental highlight, and Leech (effects last only this turn)
 		player.UnveilingHighlightActive = false
+		player.ElementalHighlightIndices = nil
 		player.LeechActive = false
 		// Blood Pact: turn timeout counts as failure; lose 3 points and clear pact
 		if player.BloodPactActive {
@@ -776,6 +807,7 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		KnownIndices:                knownIndices,
 		UnveilingHighlightActive:    g.Players[playerIdx].UnveilingHighlightActive,
 		PairIDToPowerUp:             g.PairIDToPowerUp,
+		ElementalHighlightIndices:   g.Players[playerIdx].ElementalHighlightIndices,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
 		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()

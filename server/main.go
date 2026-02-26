@@ -50,6 +50,10 @@ func main() {
 	registry.Register(&powerup.BloodPactPowerUp{CostValue: 0})
 	registry.Register(&powerup.LeechPowerUp{CostValue: 0})
 	registry.Register(&powerup.OblivionPowerUp{CostValue: 0})
+	registry.Register(&powerup.EarthElementalPowerUp{CostValue: 0})
+	registry.Register(&powerup.FireElementalPowerUp{CostValue: 0})
+	registry.Register(&powerup.WaterElementalPowerUp{CostValue: 0})
+	registry.Register(&powerup.AirElementalPowerUp{CostValue: 0})
 
 	// Game history storage (optional; DATABASE_URL empty = no persistence)
 	ctx := context.Background()

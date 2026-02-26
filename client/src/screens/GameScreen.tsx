@@ -242,6 +242,7 @@ export default function GameScreen({
             knownIndices={gameState.knownIndices ?? []}
             unveilingHighlightActive={gameState.unveilingHighlightActive ?? false}
             pairIdToPowerUp={gameState.pairIdToPowerUp ?? null}
+            elementalHighlightIndices={gameState.elementalHighlightIndices ?? []}
           />
           </div>
         </div>

@@ -6,7 +6,7 @@ import (
 )
 
 func TestBuildCardViews_HiddenCardsOmitPairID(t *testing.T) {
-	board := NewBoard(2, 2)
+	board := NewBoard(2, 2, 0)
 
 	views := BuildCardViews(board)
 
@@ -21,7 +21,7 @@ func TestBuildCardViews_HiddenCardsOmitPairID(t *testing.T) {
 }
 
 func TestBuildCardViews_RevealedCardsIncludePairID(t *testing.T) {
-	board := NewBoard(2, 2)
+	board := NewBoard(2, 2, 0)
 	board.Cards[0].State = Revealed
 
 	views := BuildCardViews(board)
@@ -35,7 +35,7 @@ func TestBuildCardViews_RevealedCardsIncludePairID(t *testing.T) {
 }
 
 func TestBuildCardViews_MatchedCardsIncludePairID(t *testing.T) {
-	board := NewBoard(2, 2)
+	board := NewBoard(2, 2, 0)
 	board.Cards[0].State = Matched
 
 	views := BuildCardViews(board)

@@ -1,6 +1,6 @@
 import type { CardView } from "../types/game";
 import { getPowerUpDisplayByPairId, NUM_POWERUP_PAIRS } from "../powerups/registry";
-import { getNormalSymbolForPairId } from "../constants/symbols";
+import { getNormalSymbolForPairId, SYMBOL_COLORS } from "../constants/symbols";
 import styles from "../styles/Card.module.css";
 
 interface CardProps {
@@ -15,6 +15,8 @@ interface CardProps {
   isRadarAffected?: boolean;
   /** When true (Unveiling), this hidden card has never been revealed. */
   isUnknownHighlight?: boolean;
+  /** When true (Elemental powerup), this card is in the highlighted element set. */
+  isElementalHighlight?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }
@@ -27,11 +29,16 @@ export default function Card({
   isRadarCenter = false,
   isRadarAffected = false,
   isUnknownHighlight = false,
+  isElementalHighlight = false,
   onMouseEnter,
   onMouseLeave,
 }: CardProps) {
   const isFaceUp = card.state !== "hidden" && card.state !== "removed";
   const pairId = card.pairId ?? null;
+  const elementColor =
+    card.element && card.element in SYMBOL_COLORS
+      ? (SYMBOL_COLORS as Record<string, string>)[card.element]
+      : undefined;
   const powerUpDisplay =
     pairId != null && pairId < NUM_POWERUP_PAIRS ? getPowerUpDisplayByPairId(pairId, pairIdToPowerUp) : null;
   const normalSymbol = pairId != null && pairId >= NUM_POWERUP_PAIRS ? getNormalSymbolForPairId(pairId) : null;
@@ -48,6 +55,7 @@ export default function Card({
     isRadarCenter ? styles.radarCenter : "",
     isRadarAffected ? styles.radarAffected : "",
     isUnknownHighlight ? styles.unknownHighlight : "",
+    isElementalHighlight ? styles.elementalHighlight : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -87,7 +95,14 @@ export default function Card({
       aria-label={ariaLabel}
     >
       <div className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""}`}>
-        <div className={styles.cardBack}>
+        <div
+          className={styles.cardBack}
+          style={
+            elementColor
+              ? { boxShadow: `inset 0 0 0 2px ${elementColor}` }
+              : undefined
+          }
+        >
           <img
             className={styles.cardBackImage}
             src="/cards/Verse.webp"

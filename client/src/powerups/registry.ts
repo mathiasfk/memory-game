@@ -58,6 +58,34 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
     shortDescription: "Remove a tile and its pair from the game.",
     imagePath: "/cards/Oblivion.webp",
   },
+  earth_elemental: {
+    icon: "ERT",
+    label: "Elemental da Terra",
+    description: "Destaca todos os tiles do elemento Terra (apenas este turno), sem revelar o símbolo.",
+    shortDescription: "Highlights earth tiles.",
+    imagePath: "/cards/EarthElemental.webp",
+  },
+  fire_elemental: {
+    icon: "FIR",
+    label: "Elemental do Fogo",
+    description: "Destaca todos os tiles do elemento Fogo (apenas este turno), sem revelar o símbolo.",
+    shortDescription: "Highlights fire tiles.",
+    imagePath: "/cards/FireElemental.webp",
+  },
+  water_elemental: {
+    icon: "WAT",
+    label: "Elemental da Água",
+    description: "Destaca todos os tiles do elemento Água (apenas este turno), sem revelar o símbolo.",
+    shortDescription: "Highlights water tiles.",
+    imagePath: "/cards/WaterElemental.webp",
+  },
+  air_elemental: {
+    icon: "AIR",
+    label: "Elemental do Ar",
+    description: "Destaca todos os tiles do elemento Ar (apenas este turno), sem revelar o símbolo.",
+    shortDescription: "Highlights air tiles.",
+    imagePath: "/cards/AirElemental.webp",
+  },
 };
 
 /** Fallback when server does not send pairIdToPowerUp (e.g. old client). */
@@ -66,6 +94,8 @@ const PAIR_ID_TO_POWER_UP_ID: Record<number, string> = {
   1: "clairvoyance",
   2: "necromancy",
   3: "unveiling",
+  4: "blood_pact",
+  5: "leech",
 };
 
 /**
@@ -84,4 +114,4 @@ export function getPowerUpDisplayByPairId(
   return POWER_UP_DISPLAY[powerUpId] ?? null;
 }
 
-export const NUM_POWERUP_PAIRS = 4;
+export const NUM_POWERUP_PAIRS = 6;

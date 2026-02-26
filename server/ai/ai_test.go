@@ -29,7 +29,7 @@ func TestRunExitsOnGameOver(t *testing.T) {
 	params := &config.AIParams{Name: "Mnemosyne", DelayMinMS: 10, DelayMaxMS: 20, UseKnownPairChance: 85}
 
 	aiSend := make(chan []byte, 4)
-	board := game.NewBoard(2, 2)
+	board := game.NewBoard(2, 2, 0)
 	p0 := game.NewPlayer("Human", make(chan []byte, 4))
 	p1 := game.NewPlayer("Mnemosyne", aiSend)
 	g := game.NewGame("test", cfg, p0, p1, &mockPowerUpProvider{})
@@ -61,7 +61,7 @@ func TestRunExitsOnClosedChannel(t *testing.T) {
 	cfg := config.Defaults()
 	params := &cfg.AIProfiles[0]
 	aiSend := make(chan []byte, 4)
-	board := game.NewBoard(2, 2)
+	board := game.NewBoard(2, 2, 0)
 	p0 := game.NewPlayer("Human", make(chan []byte, 4))
 	p1 := game.NewPlayer(params.Name, aiSend)
 	g := game.NewGame("test", cfg, p0, p1, &mockPowerUpProvider{})

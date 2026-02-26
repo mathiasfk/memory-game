@@ -38,6 +38,8 @@ interface BoardProps {
   unveilingHighlightActive?: boolean;
   /** Per-match arcana mapping (pairId -> powerUpId) for card display. */
   pairIdToPowerUp?: Record<string, string> | null;
+  /** Indices to highlight when the player used an elemental powerup (this turn only). */
+  elementalHighlightIndices?: number[];
 }
 
 export default function Board({
@@ -51,6 +53,7 @@ export default function Board({
   knownIndices = [],
   unveilingHighlightActive = false,
   pairIdToPowerUp = null,
+  elementalHighlightIndices = [],
 }: BoardProps) {
   const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(new Set());
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -101,6 +104,8 @@ export default function Board({
   const isUnknownHighlight = (index: number, state: CardView["state"]) =>
     unveilingHighlightActive && state === "hidden" && !knownIndices.includes(index);
 
+  const isElementalHighlight = (index: number) => elementalHighlightIndices.includes(index);
+
   const isDisabled = (card: CardView) =>
     card.state === "removed" ||
     (radarTargetingMode || oblivionTargetingMode ? card.state !== "hidden" : !cardsClickable || card.state !== "hidden");
@@ -127,6 +132,7 @@ export default function Board({
             isRadarCenter={radarPreview?.center === card.index}
             isRadarAffected={radarPreview?.affected.includes(card.index) ?? false}
             isUnknownHighlight={isUnknownHighlight(card.index, card.state)}
+            isElementalHighlight={isElementalHighlight(card.index)}
             onMouseEnter={() => setHoveredIndex(card.index)}
             onMouseLeave={() => setHoveredIndex(null)}
           />

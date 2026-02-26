@@ -51,7 +51,7 @@ func TestRegistryAll(t *testing.T) {
 func TestChaosPowerUpApply(t *testing.T) {
 	s := &ChaosPowerUp{CostValue: 3}
 
-	board := game.NewBoard(4, 4)
+	board := game.NewBoard(4, 4, 0)
 
 	// Record original pairIDs
 	originalPairIDs := make([]int, len(board.Cards))

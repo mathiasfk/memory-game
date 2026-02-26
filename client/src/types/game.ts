@@ -1,9 +1,13 @@
 export type CardState = "hidden" | "revealed" | "matched" | "removed";
 
+export type ElementType = "fire" | "water" | "air" | "earth";
+
 export interface CardView {
   index: number;
   pairId?: number;
   state: CardState;
+  /** Element for normal cards (fire, water, air, earth); used to color the tile. Omitted for arcana. */
+  element?: ElementType;
 }
 
 export interface PlayerView {
@@ -46,4 +50,6 @@ export interface GameState {
   unveilingHighlightActive?: boolean;
   /** Maps board pair IDs (0..3) to power-up IDs for this match (arcana pairs). */
   pairIdToPowerUp?: Record<string, string>;
+  /** Card indices to highlight when the player used an elemental powerup (this turn only). */
+  elementalHighlightIndices?: number[];
 }

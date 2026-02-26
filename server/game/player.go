@@ -20,6 +20,9 @@ type Player struct {
 	BloodPactActive bool
 	// BloodPactMatchesCount is the number of consecutive matches since activating Blood Pact.
 	BloodPactMatchesCount int
+
+	// ElementalHighlightIndices are card indices to highlight when the player used an elemental powerup (this turn only). Cleared when turn ends or Chaos is used.
+	ElementalHighlightIndices []int
 }
 
 // NewPlayer creates a new Player with the given name and send channel.

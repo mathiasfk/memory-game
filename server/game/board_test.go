@@ -5,8 +5,8 @@ import (
 )
 
 func TestNewBoard(t *testing.T) {
-	rows, cols := 4, 4
-	board := NewBoard(rows, cols)
+	rows, cols, arcanaPairs := 4, 4, 0
+	board := NewBoard(rows, cols, arcanaPairs)
 
 	if board.Rows != rows {
 		t.Errorf("expected Rows=%d, got %d", rows, board.Rows)
@@ -49,10 +49,13 @@ func TestNewBoard(t *testing.T) {
 			t.Errorf("pair %d has %d cards, expected 2", pairID, count)
 		}
 	}
+	if board.ArcanaPairs != arcanaPairs {
+		t.Errorf("expected ArcanaPairs=%d, got %d", arcanaPairs, board.ArcanaPairs)
+	}
 }
 
 func TestNewBoardSmall(t *testing.T) {
-	board := NewBoard(2, 2)
+	board := NewBoard(2, 2, 0)
 	if len(board.Cards) != 4 {
 		t.Fatalf("expected 4 cards, got %d", len(board.Cards))
 	}
@@ -67,7 +70,7 @@ func TestNewBoardSmall(t *testing.T) {
 }
 
 func TestShuffleUnmatched(t *testing.T) {
-	board := NewBoard(4, 4)
+	board := NewBoard(4, 4, 0)
 
 	// Mark some cards as matched
 	board.Cards[0].State = Matched
@@ -99,7 +102,7 @@ func TestShuffleUnmatched(t *testing.T) {
 }
 
 func TestShufflePairIDsAmongIndices(t *testing.T) {
-	board := NewBoard(4, 4)
+	board := NewBoard(4, 4, 0)
 
 	// Mark indices 2 and 5 as matched (they will be "revived" in necromancy terms)
 	board.Cards[2].State = Matched
@@ -139,7 +142,7 @@ func TestShufflePairIDsAmongIndices(t *testing.T) {
 }
 
 func TestAllMatched(t *testing.T) {
-	board := NewBoard(2, 2)
+	board := NewBoard(2, 2, 0)
 
 	if AllMatched(board) {
 		t.Error("newly created board should not be all matched")
@@ -151,6 +154,33 @@ func TestAllMatched(t *testing.T) {
 
 	if !AllMatched(board) {
 		t.Error("all cards are matched but AllMatched returned false")
+	}
+}
+
+func TestNewBoard_ElementSamePerPair(t *testing.T) {
+	// 6 arcana + 12 normal pairs = 18 pairs = 36 cards
+	board := NewBoard(6, 6, 6)
+	if len(board.Cards) != 36 {
+		t.Fatalf("expected 36 cards, got %d", len(board.Cards))
+	}
+	pairToElement := make(map[int]string)
+	for _, card := range board.Cards {
+		if card.PairID >= 6 && card.Element != "" {
+			if elem, ok := pairToElement[card.PairID]; ok && elem != card.Element {
+				t.Errorf("pair %d has cards with different elements %q and %q", card.PairID, elem, card.Element)
+			}
+			pairToElement[card.PairID] = card.Element
+		}
+	}
+	// Check we have 3 pairs per element (fire, water, air, earth)
+	elementCount := make(map[string]int)
+	for _, elem := range pairToElement {
+		elementCount[elem]++
+	}
+	for elem, count := range elementCount {
+		if count != 3 {
+			t.Errorf("element %q has %d pairs, expected 3", elem, count)
+		}
 	}
 }
 

@@ -17,24 +17,27 @@ export interface NormalCardSymbol {
 
 /** 12 alchemical/astronomical symbols with element-based colors. */
 export const NORMAL_CARD_SYMBOLS: NormalCardSymbol[] = [
+  // 🔥 FIRE (3)
   { symbol: "\u{1F702}", color: SYMBOL_COLORS.fire },   // 🜂 fire
-  { symbol: "\u{1F704}", color: SYMBOL_COLORS.water },  // 🜄 water
-  { symbol: "\u{1F701}", color: SYMBOL_COLORS.air },    // 🜁 air
-  { symbol: "\u{1F703}", color: SYMBOL_COLORS.earth },  // 🜃 earth
   { symbol: "\u2609", color: SYMBOL_COLORS.fire },      // ☉ sun
-  { symbol: "\u263D", color: SYMBOL_COLORS.water },     // ☽ moon
-  { symbol: "\u263F", color: SYMBOL_COLORS.air },        // ☿ mercury (planet)
-  { symbol: "\u2644", color: SYMBOL_COLORS.earth },      // ♄ saturn
-  { symbol: "\u2643", color: SYMBOL_COLORS.air },        // ♃ jupiter
-  { symbol: "\u16B1", color: SYMBOL_COLORS.water },   // ᚱ Raidho
-  { symbol: "\u16B3", color: SYMBOL_COLORS.earth },   // ᚳ Cen 
-  { symbol: "\u16B4", color: SYMBOL_COLORS.fire },   // ᚴ Kaun 
-  { symbol: "\u16B7", color: SYMBOL_COLORS.earth },   // ᚷ Gyfu
-  { symbol: "\u16D7", color: SYMBOL_COLORS.water },  // ᛗ Mannaz
-  { symbol: "\u16DF", color: SYMBOL_COLORS.air },    // ᛟ Othala
-];
+  { symbol: "\u16B4", color: SYMBOL_COLORS.fire },      // ᚴ Kaun
 
-const NUM_POWERUPS = 4;
+  // 💧 WATER (3)
+  { symbol: "\u{1F704}", color: SYMBOL_COLORS.water },  // 🜄 water
+  { symbol: "\u263D", color: SYMBOL_COLORS.water },     // ☽ moon
+  { symbol: "\u16D7", color: SYMBOL_COLORS.water },     // ᛗ Mannaz
+
+  // 🌬 AIR (3)
+  { symbol: "\u{1F701}", color: SYMBOL_COLORS.air },    // 🜁 air
+  { symbol: "\u263F", color: SYMBOL_COLORS.air },       // ☿ mercury
+  { symbol: "\u16DF", color: SYMBOL_COLORS.air },       // ᛟ Othala
+
+  // 🌍 EARTH (3)
+  { symbol: "\u{1F703}", color: SYMBOL_COLORS.earth },  // 🜃 earth
+  { symbol: "\u2644", color: SYMBOL_COLORS.earth },     // ♄ saturn
+  { symbol: "\u16B7", color: SYMBOL_COLORS.earth },     // ᚷ Gyfu
+];
+const NUM_POWERUPS = 6;
 
 export function getNormalSymbolForPairId(pairId: number): NormalCardSymbol {
   const len = NORMAL_CARD_SYMBOLS.length;
