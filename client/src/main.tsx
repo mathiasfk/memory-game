@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { NeonAuthUIProvider } from "@neondatabase/neon-js/auth/react";
 import "@neondatabase/neon-js/ui/css";
 import { StrictMode } from "react";
@@ -12,6 +13,7 @@ createRoot(document.getElementById("root")!).render(
     <NeonAuthUIProvider authClient={authClient}>
       <BrowserRouter>
         <App />
+        <Analytics />
       </BrowserRouter>
     </NeonAuthUIProvider>
   </StrictMode>,

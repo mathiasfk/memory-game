@@ -2,3 +2,7 @@
 *.env
 !*.env.example
 .DS_Store
+
+# pnpm
+.pnpm-store
+node_modules
