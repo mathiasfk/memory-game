@@ -7,7 +7,10 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { authClient } from "./lib/auth";
+import { prefetchCardImages } from "./lib/prefetchCardImages";
 import "./styles/global.css";
+
+prefetchCardImages();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
