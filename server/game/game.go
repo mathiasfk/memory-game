@@ -302,9 +302,8 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		g.FlippedIndices = g.FlippedIndices[:0]
 		g.TurnPhase = FirstFlip
 
-		// End of turn: clear highlight and Leech for current player (effects last only this turn)
+		// End of match: clear highlight; Leech lasts whole turn (cleared on mismatch/timeout)
 		player.HighlightIndices = nil
-		player.LeechActive = false
 		// Blood Pact is not cleared on match; only on mismatch or timeout
 
 		// Check if game is over

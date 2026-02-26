@@ -12,7 +12,7 @@ type LeechPowerUp struct {
 
 func (l *LeechPowerUp) ID() string          { return "leech" }
 func (l *LeechPowerUp) Name() string        { return "Leech" }
-func (l *LeechPowerUp) Description() string { return "This turn, points you earn from matching are subtracted from the opponent." }
+func (l *LeechPowerUp) Description() string { return "This turn, all points you earn from matching are subtracted from the opponent (until you miss a pair)." }
 func (l *LeechPowerUp) Cost() int           { return l.CostValue }
 func (l *LeechPowerUp) Rarity() int         { return RarityRare }
 
