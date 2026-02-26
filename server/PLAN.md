@@ -234,7 +234,7 @@ func (r *Registry) All() []PowerUp              { ... }
 
 ### 3.10 Chaos Power-Up (`powerup/chaos.go`)
 
-Reshuffles all unmatched cards. When applied, the game layer clears `KnownIndices` and `UnveilingHighlightActive` for both players.
+Reshuffles all unmatched cards. When applied, the game layer clears `KnownIndices` and `HighlightIndices` for both players.
 
 ### 3.11 Clairvoyance, Necromancy, Unveiling
 

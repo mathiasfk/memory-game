@@ -302,9 +302,8 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		g.FlippedIndices = g.FlippedIndices[:0]
 		g.TurnPhase = FirstFlip
 
-		// End of turn: clear Unveiling highlight, elemental highlight, and Leech for current player (effects last only this turn)
-		player.UnveilingHighlightActive = false
-		player.ElementalHighlightIndices = nil
+		// End of turn: clear highlight and Leech for current player (effects last only this turn)
+		player.HighlightIndices = nil
 		player.LeechActive = false
 		// Blood Pact is not cleared on match; only on mismatch or timeout
 
@@ -356,9 +355,8 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	// Reset combo for current player
 	player.ComboStreak = 0
 
-	// End of turn: clear Unveiling highlight, elemental highlight, and Leech (effects last only this turn)
-	player.UnveilingHighlightActive = false
-	player.ElementalHighlightIndices = nil
+	// End of turn: clear highlight and Leech (effects last only this turn)
+	player.HighlightIndices = nil
 	player.LeechActive = false
 	// Blood Pact: failed (mismatch); lose 3 points and clear pact
 	if player.BloodPactActive {
@@ -481,13 +479,12 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		return
 	}
 
-	// Chaos: clear known indices, unveiling highlight, and elemental highlight for both players
+	// Chaos: clear known indices and highlight for both players
 	if powerUpID == "chaos" {
 		g.KnownIndices = make(map[int]struct{})
 		for i := 0; i < 2; i++ {
 			if g.Players[i] != nil {
-				g.Players[i].UnveilingHighlightActive = false
-				g.Players[i].ElementalHighlightIndices = nil
+				g.Players[i].HighlightIndices = nil
 			}
 		}
 	}
@@ -515,13 +512,20 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 					indices = append(indices, i)
 				}
 			}
-			player.ElementalHighlightIndices = indices
+			player.HighlightIndices = indices
 		}
 	}
 
-	// Unveiling: activate highlight for this player (lasts until end of current turn)
+	// Unveiling: highlight all hidden tiles that have never been revealed (this turn only)
 	if powerUpID == "unveiling" {
-		player.UnveilingHighlightActive = true
+		var indices []int
+		for i := range g.Board.Cards {
+			c := &g.Board.Cards[i]
+			if c.State == Hidden && !g.isKnown(i) {
+				indices = append(indices, i)
+			}
+		}
+		player.HighlightIndices = indices
 	}
 	// Leech: this turn, match points are subtracted from opponent
 	if powerUpID == "leech" {
@@ -639,9 +643,8 @@ func (g *Game) handleTurnTimeout() {
 	player := g.Players[g.CurrentTurn]
 	if player != nil {
 		player.ComboStreak = 0
-		// End of turn: clear Unveiling highlight, elemental highlight, and Leech (effects last only this turn)
-		player.UnveilingHighlightActive = false
-		player.ElementalHighlightIndices = nil
+		// End of turn: clear highlight and Leech (effects last only this turn)
+		player.HighlightIndices = nil
 		player.LeechActive = false
 		// Blood Pact: turn timeout counts as failure; lose 3 points and clear pact
 		if player.BloodPactActive {
@@ -769,6 +772,15 @@ func (g *Game) broadcastState() {
 	}
 }
 
+// isKnown returns whether the card at index idx has ever been revealed (used for Unveiling highlight).
+func (g *Game) isKnown(idx int) bool {
+	if g.KnownIndices == nil {
+		return false
+	}
+	_, ok := g.KnownIndices[idx]
+	return ok
+}
+
 // BuildStateForPlayer returns the game state view for the given player (0 or 1).
 func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 	opponentIdx := 1 - playerIdx
@@ -804,10 +816,9 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		Hand:                        hand,
 		FlippedIndices:              flipped,
 		Phase:                       g.TurnPhase.String(),
-		KnownIndices:                knownIndices,
-		UnveilingHighlightActive:    g.Players[playerIdx].UnveilingHighlightActive,
-		PairIDToPowerUp:             g.PairIDToPowerUp,
-		ElementalHighlightIndices:   g.Players[playerIdx].ElementalHighlightIndices,
+		KnownIndices:     knownIndices,
+		PairIDToPowerUp:  g.PairIDToPowerUp,
+		HighlightIndices: g.Players[playerIdx].HighlightIndices,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
 		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()

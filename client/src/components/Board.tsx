@@ -33,13 +33,10 @@ interface BoardProps {
   radarTargetingMode?: boolean;
   /** When true, player is choosing a card to remove with Oblivion. */
   oblivionTargetingMode?: boolean;
-  /** When true, highlight hidden tiles that have never been revealed (Unveiling). */
-  knownIndices?: number[];
-  unveilingHighlightActive?: boolean;
   /** Per-match arcana mapping (pairId -> powerUpId) for card display. */
   pairIdToPowerUp?: Record<string, string> | null;
-  /** Indices to highlight when the player used an elemental powerup (this turn only). */
-  elementalHighlightIndices?: number[];
+  /** Card indices to highlight (Unveiling or Elemental power-up; current turn only). */
+  highlightIndices?: number[];
 }
 
 export default function Board({
@@ -50,10 +47,8 @@ export default function Board({
   onCardClick,
   radarTargetingMode = false,
   oblivionTargetingMode = false,
-  knownIndices = [],
-  unveilingHighlightActive = false,
   pairIdToPowerUp = null,
-  elementalHighlightIndices = [],
+  highlightIndices = [],
 }: BoardProps) {
   const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(new Set());
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -101,10 +96,7 @@ export default function Board({
   const showAsEmpty = (index: number, state: CardView["state"]) =>
     state === "removed" || (state === "matched" && removedMatchedIndices.has(index));
 
-  const isUnknownHighlight = (index: number, state: CardView["state"]) =>
-    unveilingHighlightActive && state === "hidden" && !knownIndices.includes(index);
-
-  const isElementalHighlight = (index: number) => elementalHighlightIndices.includes(index);
+  const isHighlighted = (index: number) => highlightIndices.includes(index);
 
   const isDisabled = (card: CardView) =>
     card.state === "removed" ||
@@ -131,8 +123,7 @@ export default function Board({
             pairIdToPowerUp={pairIdToPowerUp}
             isRadarCenter={radarPreview?.center === card.index}
             isRadarAffected={radarPreview?.affected.includes(card.index) ?? false}
-            isUnknownHighlight={isUnknownHighlight(card.index, card.state)}
-            isElementalHighlight={isElementalHighlight(card.index)}
+            isHighlighted={isHighlighted(card.index)}
             onMouseEnter={() => setHoveredIndex(card.index)}
             onMouseLeave={() => setHoveredIndex(null)}
           />

@@ -44,12 +44,10 @@ export interface GameState {
   turnEndsAtUnixMs?: number;
   /** How many seconds before turn end to show the countdown. */
   turnCountdownShowSec?: number;
-  /** Card indices that have been revealed at some point (for Unveiling: highlight tiles NOT in this list). */
+  /** Card indices that have been revealed at some point (used when computing highlight). */
   knownIndices?: number[];
-  /** When true, highlight tiles that have never been revealed (Unveiling, current turn only). */
-  unveilingHighlightActive?: boolean;
   /** Maps board pair IDs (0..3) to power-up IDs for this match (arcana pairs). */
   pairIdToPowerUp?: Record<string, string>;
-  /** Card indices to highlight when the player used an elemental powerup (this turn only). */
-  elementalHighlightIndices?: number[];
+  /** Card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Current turn only. */
+  highlightIndices?: number[];
 }

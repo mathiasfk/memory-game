@@ -13,10 +13,8 @@ interface CardProps {
   isRadarCenter?: boolean;
   /** When true, this card is in the Radar 3x3 area but not the center. */
   isRadarAffected?: boolean;
-  /** When true (Unveiling), this hidden card has never been revealed. */
-  isUnknownHighlight?: boolean;
-  /** When true (Elemental powerup), this card is in the highlighted element set. */
-  isElementalHighlight?: boolean;
+  /** When true, this card is highlighted (Unveiling or Elemental power-up). */
+  isHighlighted?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }
@@ -28,8 +26,7 @@ export default function Card({
   pairIdToPowerUp = null,
   isRadarCenter = false,
   isRadarAffected = false,
-  isUnknownHighlight = false,
-  isElementalHighlight = false,
+  isHighlighted = false,
   onMouseEnter,
   onMouseLeave,
 }: CardProps) {
@@ -54,8 +51,7 @@ export default function Card({
     styles.cardWrapper,
     isRadarCenter ? styles.radarCenter : "",
     isRadarAffected ? styles.radarAffected : "",
-    isUnknownHighlight ? styles.unknownHighlight : "",
-    isElementalHighlight ? styles.elementalHighlight : "",
+    isHighlighted ? styles.cardHighlight : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -97,11 +93,18 @@ export default function Card({
       <div className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""}`}>
         <div
           className={styles.cardBack}
-          style={
-            elementColor
-              ? { boxShadow: `inset 0 0 0 2px ${elementColor}` }
-              : undefined
-          }
+          style={(() => {
+            if (isHighlighted) {
+              return {
+                boxShadow:
+                  "0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 255, 255, 0.5)",
+              };
+            }
+            if (elementColor) {
+              return { boxShadow: `inset 0 0 0 2px ${elementColor}` };
+            }
+            return undefined;
+          })()}
         >
           <img
             className={styles.cardBackImage}

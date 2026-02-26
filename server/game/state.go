@@ -44,14 +44,12 @@ type GameStateMsg struct {
 	Phase                string          `json:"phase"`
 	TurnEndsAtUnixMs     int64           `json:"turnEndsAtUnixMs,omitempty"`
 	TurnCountdownShowSec int             `json:"turnCountdownShowSec,omitempty"`
-	// KnownIndices are card indices that have been revealed at some point (used by Unveiling highlight).
+	// KnownIndices are card indices that have been revealed at some point (used when computing Unveiling highlight).
 	KnownIndices []int `json:"knownIndices,omitempty"`
-	// UnveilingHighlightActive is true when the player has used Unveiling and should see unknown tiles highlighted (current turn only).
-	UnveilingHighlightActive bool `json:"unveilingHighlightActive,omitempty"`
 	// PairIDToPowerUp maps board pair IDs (0..3 for arcana pairs) to power-up IDs for this match; client uses for display.
 	PairIDToPowerUp map[int]string `json:"pairIdToPowerUp,omitempty"`
-	// ElementalHighlightIndices are card indices to highlight when the player used an elemental powerup (this turn only).
-	ElementalHighlightIndices []int `json:"elementalHighlightIndices,omitempty"`
+	// HighlightIndices are card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Current turn only.
+	HighlightIndices []int `json:"highlightIndices,omitempty"`
 }
 
 // BuildCardViews constructs the client-facing card list.

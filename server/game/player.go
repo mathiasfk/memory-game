@@ -10,8 +10,8 @@ type Player struct {
 	// Hand is the player's power-up hand: powerUpId -> count. Use is free; cards are gained by matching pairs.
 	Hand map[string]int
 
-	// UnveilingHighlightActive is true after the player uses Unveiling; cleared when turn ends or Chaos is used.
-	UnveilingHighlightActive bool
+	// HighlightIndices are card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Cleared when turn ends or Chaos is used.
+	HighlightIndices []int
 
 	// LeechActive is true after the player uses Leech; points from matching this turn are subtracted from the opponent. Cleared when turn ends.
 	LeechActive bool
@@ -20,9 +20,6 @@ type Player struct {
 	BloodPactActive bool
 	// BloodPactMatchesCount is the number of consecutive matches since activating Blood Pact.
 	BloodPactMatchesCount int
-
-	// ElementalHighlightIndices are card indices to highlight when the player used an elemental powerup (this turn only). Cleared when turn ends or Chaos is used.
-	ElementalHighlightIndices []int
 }
 
 // NewPlayer creates a new Player with the given name and send channel.

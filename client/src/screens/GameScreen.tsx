@@ -239,10 +239,8 @@ export default function GameScreen({
             onCardClick={handleCardClick}
             radarTargetingMode={pendingClairvoyanceTarget}
             oblivionTargetingMode={pendingOblivionTarget}
-            knownIndices={gameState.knownIndices ?? []}
-            unveilingHighlightActive={gameState.unveilingHighlightActive ?? false}
             pairIdToPowerUp={gameState.pairIdToPowerUp ?? null}
-            elementalHighlightIndices={gameState.elementalHighlightIndices ?? []}
+            highlightIndices={gameState.highlightIndices ?? []}
           />
           </div>
         </div>

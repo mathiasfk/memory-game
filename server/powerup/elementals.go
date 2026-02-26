@@ -5,7 +5,7 @@ import (
 )
 
 // EarthElementalPowerUp highlights all tiles of the earth element (this turn only; no symbol reveal).
-// Activation is applied in the game layer (Player.ElementalHighlightIndices).
+// Activation is applied in the game layer (Player.HighlightIndices).
 type EarthElementalPowerUp struct {
 	CostValue int
 }
