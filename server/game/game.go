@@ -297,7 +297,11 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 			if player.Hand == nil {
 				player.Hand = make(map[string]int)
 			}
+			if player.HandCooldown == nil {
+				player.HandCooldown = make(map[string]int)
+			}
 			player.Hand[powerUpID]++
+			player.HandCooldown[powerUpID]++
 		}
 
 		g.FlippedIndices = g.FlippedIndices[:0]
@@ -374,9 +378,16 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	g.CurrentTurn = 1 - g.CurrentTurn
 	g.TurnPhase = FirstFlip
 
+	g.clearHandCooldownForPlayer(g.CurrentTurn)
 	g.cancelTurnTimer()
 	g.startTurnTimer()
 	g.broadcastState()
+}
+
+func (g *Game) clearHandCooldownForPlayer(playerIdx int) {
+	if p := g.Players[playerIdx]; p != nil && p.HandCooldown != nil {
+		p.HandCooldown = make(map[string]int)
+	}
 }
 
 func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) {
@@ -402,6 +413,14 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 	player := g.Players[playerIdx]
 	if player.Hand[powerUpID] < 1 {
 		g.sendError(playerIdx, "You don't have this power-up in hand.")
+		return
+	}
+	cooldown := 0
+	if player.HandCooldown != nil {
+		cooldown = player.HandCooldown[powerUpID]
+	}
+	if player.Hand[powerUpID]-cooldown < 1 {
+		g.sendError(playerIdx, "This arcana can only be used on your next turn.")
 		return
 	}
 
@@ -674,6 +693,7 @@ func (g *Game) handleTurnTimeout() {
 	g.CurrentTurn = 1 - g.CurrentTurn
 	g.TurnPhase = FirstFlip
 
+	g.clearHandCooldownForPlayer(g.CurrentTurn)
 	g.startTurnTimer()
 	g.broadcastState()
 }
@@ -831,11 +851,20 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 	opponentIdx := 1 - playerIdx
 
 	// Build hand from player's power-up hand, in registry order so it stays stable across turn changes.
-	h := g.Players[playerIdx].Hand
+	p := g.Players[playerIdx]
+	h := p.Hand
+	cooldown := p.HandCooldown
+	if cooldown == nil {
+		cooldown = make(map[string]int)
+	}
 	hand := make([]PowerUpInHand, 0, len(h))
 	for _, def := range g.PowerUps.AllPowerUps() {
 		if count := h[def.ID]; count > 0 {
-			hand = append(hand, PowerUpInHand{PowerUpID: def.ID, Count: count})
+			usable := count - cooldown[def.ID]
+			if usable < 0 {
+				usable = 0
+			}
+			hand = append(hand, PowerUpInHand{PowerUpID: def.ID, Count: count, UsableCount: usable})
 		}
 	}
 

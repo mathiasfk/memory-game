@@ -28,6 +28,8 @@ export interface PowerUpView {
 export interface PowerUpInHand {
   powerUpId: string;
   count: number;
+  /** Number of copies that can be used this turn (arcana have 1-turn cooldown after collection). */
+  usableCount?: number;
 }
 
 export type TurnPhase = "first_flip" | "second_flip" | "resolve";

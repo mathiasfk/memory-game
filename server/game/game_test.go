@@ -794,6 +794,239 @@ func TestMatchGrantsPowerUp(t *testing.T) {
 	}
 }
 
+func TestArcanaCooldown_UseRejectedSameTurn(t *testing.T) {
+	cfg := testConfig()
+	send0 := make(chan []byte, 100)
+	send1 := make(chan []byte, 100)
+	p0 := NewPlayer("Alice", send0)
+	p1 := NewPlayer("Bob", send1)
+	pups := newMockPowerUpProvider()
+	pups.Register("chaos", PowerUpDef{
+		ID:     "chaos",
+		Rarity: 1,
+		Apply:  func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error { return nil },
+	})
+	g := NewGame("arcana-cooldown-reject", cfg, p0, p1, pups)
+	go g.Run()
+	defer func() {
+		select {
+		case g.Actions <- Action{Type: ActionDisconnect, PlayerIdx: 0}:
+		default:
+		}
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	drainChannel(send0)
+	drainChannel(send1)
+
+	currentPlayer := g.CurrentTurn
+	var pair0Indices []int
+	for _, card := range g.Board.Cards {
+		if card.PairID == 0 {
+			pair0Indices = append(pair0Indices, card.Index)
+		}
+	}
+	if len(pair0Indices) < 2 {
+		t.Fatal("board has no pair with pairId 0")
+	}
+
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: pair0Indices[0]}
+	time.Sleep(30 * time.Millisecond)
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: pair0Indices[1]}
+	time.Sleep(50 * time.Millisecond)
+
+	if g.Players[currentPlayer].Hand["chaos"] != 1 {
+		t.Fatalf("expected Hand[chaos]=1 after match, got %d", g.Players[currentPlayer].Hand["chaos"])
+	}
+	if g.Players[currentPlayer].HandCooldown["chaos"] != 1 {
+		t.Fatalf("expected HandCooldown[chaos]=1 after match, got %d", g.Players[currentPlayer].HandCooldown["chaos"])
+	}
+
+	// Same turn: try to use chaos -> should be rejected
+	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "chaos"}
+	time.Sleep(50 * time.Millisecond)
+
+	ch := send0
+	if currentPlayer == 1 {
+		ch = send1
+	}
+	msgs := drainChannel(ch)
+	var foundError bool
+	for _, msg := range msgs {
+		var m map[string]string
+		json.Unmarshal(msg, &m)
+		if m["type"] == "error" {
+			foundError = true
+			break
+		}
+	}
+	if !foundError {
+		t.Error("expected error when using arcana in same turn (cooldown)")
+	}
+	if g.Players[currentPlayer].Hand["chaos"] != 1 {
+		t.Errorf("expected Hand[chaos]=1 after rejected use, got %d", g.Players[currentPlayer].Hand["chaos"])
+	}
+}
+
+func TestArcanaCooldown_UseAllowedAfterTurnSwitch(t *testing.T) {
+	cfg := testConfig()
+	send0 := make(chan []byte, 100)
+	send1 := make(chan []byte, 100)
+	p0 := NewPlayer("Alice", send0)
+	p1 := NewPlayer("Bob", send1)
+	pups := newMockPowerUpProvider()
+	pups.Register("chaos", PowerUpDef{
+		ID:     "chaos",
+		Rarity: 1,
+		Apply:  func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error { return nil },
+	})
+	g := NewGame("arcana-cooldown-allowed", cfg, p0, p1, pups)
+	go g.Run()
+	defer func() {
+		select {
+		case g.Actions <- Action{Type: ActionDisconnect, PlayerIdx: 0}:
+		default:
+		}
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	drainChannel(send0)
+	drainChannel(send1)
+
+	currentPlayer := g.CurrentTurn
+	// Match pairId 0 to get chaos (on cooldown)
+	var pair0Indices []int
+	for _, card := range g.Board.Cards {
+		if card.PairID == 0 {
+			pair0Indices = append(pair0Indices, card.Index)
+		}
+	}
+	if len(pair0Indices) < 2 {
+		t.Fatal("board has no pair with pairId 0")
+	}
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: pair0Indices[0]}
+	time.Sleep(30 * time.Millisecond)
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: pair0Indices[1]}
+	time.Sleep(50 * time.Millisecond)
+
+	// Mismatch so turn switches to opponent
+	idx1, idx2 := findNonPair(g.Board)
+	if idx1 == -1 {
+		t.Fatal("could not find non-matching pair")
+	}
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: idx1}
+	time.Sleep(30 * time.Millisecond)
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: idx2}
+	time.Sleep(time.Duration(cfg.RevealDurationMS+100) * time.Millisecond)
+
+	if g.CurrentTurn != 1-currentPlayer {
+		t.Fatalf("expected turn to switch to %d, got %d", 1-currentPlayer, g.CurrentTurn)
+	}
+
+	// Opponent mismatches so turn switches back
+	opponent := 1 - currentPlayer
+	idx3, idx4 := findNonPair(g.Board)
+	if idx3 == -1 {
+		t.Fatal("could not find non-matching pair for opponent")
+	}
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: opponent, Index: idx3}
+	time.Sleep(30 * time.Millisecond)
+	g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: opponent, Index: idx4}
+	time.Sleep(time.Duration(cfg.RevealDurationMS+100) * time.Millisecond)
+
+	if g.CurrentTurn != currentPlayer {
+		t.Fatalf("expected turn to switch back to %d, got %d", currentPlayer, g.CurrentTurn)
+	}
+	// Cooldown should be cleared for currentPlayer
+	if g.Players[currentPlayer].HandCooldown["chaos"] != 0 {
+		t.Fatalf("expected HandCooldown[chaos]=0 after turn switch back, got %d", g.Players[currentPlayer].HandCooldown["chaos"])
+	}
+
+	drainChannel(send0)
+	drainChannel(send1)
+	// Use chaos -> should succeed
+	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "chaos"}
+	time.Sleep(50 * time.Millisecond)
+
+	ch := send0
+	if currentPlayer == 1 {
+		ch = send1
+	}
+	msgs := drainChannel(ch)
+	for _, msg := range msgs {
+		var m map[string]string
+		json.Unmarshal(msg, &m)
+		if m["type"] == "error" {
+			t.Errorf("unexpected error when using arcana after turn switch: %s", m["message"])
+		}
+	}
+	if g.Players[currentPlayer].Hand["chaos"] != 0 {
+		t.Errorf("expected Hand[chaos]=0 after use, got %d", g.Players[currentPlayer].Hand["chaos"])
+	}
+}
+
+func TestArcanaCooldown_MultipleCopies(t *testing.T) {
+	cfg := testConfig()
+	g, send0, send1, pups := createTestGame(cfg)
+	pups.Register("chaos", PowerUpDef{
+		ID:     "chaos",
+		Rarity: 1,
+		Apply:  func(board *Board, active *Player, opponent *Player, ctx *PowerUpContext) error { return nil },
+	})
+	go g.Run()
+	defer func() {
+		select {
+		case g.Actions <- Action{Type: ActionDisconnect, PlayerIdx: 0}:
+		default:
+		}
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	drainChannel(send0)
+	drainChannel(send1)
+
+	currentPlayer := g.CurrentTurn
+	// Two in hand, one on cooldown -> one usable
+	g.Players[currentPlayer].Hand["chaos"] = 2
+	g.Players[currentPlayer].HandCooldown["chaos"] = 1
+
+	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "chaos"}
+	time.Sleep(50 * time.Millisecond)
+	if g.Players[currentPlayer].Hand["chaos"] != 1 {
+		t.Errorf("expected Hand[chaos]=1 after first use, got %d", g.Players[currentPlayer].Hand["chaos"])
+	}
+	// Now 1 in hand, 1 on cooldown -> 0 usable
+	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "chaos"}
+	time.Sleep(50 * time.Millisecond)
+	ch := send0
+	if currentPlayer == 1 {
+		ch = send1
+	}
+	msgs := drainChannel(ch)
+	var foundError bool
+	for _, msg := range msgs {
+		var m map[string]string
+		json.Unmarshal(msg, &m)
+		if m["type"] == "error" {
+			foundError = true
+			break
+		}
+	}
+	if !foundError {
+		t.Error("expected error when using second chaos (all on cooldown)")
+	}
+	if g.Players[currentPlayer].Hand["chaos"] != 1 {
+		t.Errorf("expected Hand[chaos]=1 after rejected use, got %d", g.Players[currentPlayer].Hand["chaos"])
+	}
+	// Simulate turn switch and back: clear cooldown
+	g.clearHandCooldownForPlayer(currentPlayer)
+	g.Actions <- Action{Type: ActionUsePowerUp, PlayerIdx: currentPlayer, PowerUpID: "chaos"}
+	time.Sleep(50 * time.Millisecond)
+	if g.Players[currentPlayer].Hand["chaos"] != 0 {
+		t.Errorf("expected Hand[chaos]=0 after use post clear, got %d", g.Players[currentPlayer].Hand["chaos"])
+	}
+}
+
 func TestFullGame(t *testing.T) {
 	// Use a small 2x2 board for a quick full game
 	cfg := &config.Config{

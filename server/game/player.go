@@ -10,6 +10,9 @@ type Player struct {
 	// Hand is the player's power-up hand: powerUpId -> count. Use is free; cards are gained by matching pairs.
 	Hand map[string]int
 
+	// HandCooldown is the number of copies per powerUpId that were earned this turn and cannot be used until the player's next turn.
+	HandCooldown map[string]int
+
 	// HighlightIndices are card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Cleared when turn ends or Chaos is used.
 	HighlightIndices []int
 
@@ -25,10 +28,11 @@ type Player struct {
 // NewPlayer creates a new Player with the given name and send channel.
 func NewPlayer(name string, send chan []byte) *Player {
 	return &Player{
-		Name:        name,
-		Score:       0,
-		ComboStreak: 0,
-		Send:        send,
-		Hand:        make(map[string]int),
+		Name:         name,
+		Score:        0,
+		ComboStreak:  0,
+		Send:         send,
+		Hand:         make(map[string]int),
+		HandCooldown: make(map[string]int),
 	}
 }

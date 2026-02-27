@@ -27,8 +27,9 @@ type PowerUpView struct {
 
 // PowerUpInHand is one slot in the player's power-up hand sent to the client.
 type PowerUpInHand struct {
-	PowerUpID string `json:"powerUpId"`
-	Count     int    `json:"count"`
+	PowerUpID   string `json:"powerUpId"`
+	Count       int    `json:"count"`
+	UsableCount int    `json:"usableCount"`
 }
 
 // GameStateMsg is the full game state broadcast to a specific player.

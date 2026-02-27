@@ -64,6 +64,8 @@ export default function PowerUpHand({
           <ul className={styles.list}>
             {items.map((item) => {
               const display = POWER_UP_DISPLAY[item.powerUpId];
+              const usable = item.usableCount ?? item.count;
+              const onCooldown = item.count > 0 && usable === 0;
 
               return (
                 <li key={item.powerUpId}>
@@ -71,7 +73,7 @@ export default function PowerUpHand({
                     type="button"
                     className={styles.item}
                     onClick={() => setSelectedPowerUpId(item.powerUpId)}
-                    aria-label={`${display?.label ?? item.powerUpId}${item.count > 1 ? `, ${item.count} in hand` : ""}. Click to view details and use.`}
+                    aria-label={`${display?.label ?? item.powerUpId}${item.count > 1 ? `, ${item.count} in hand` : ""}${onCooldown ? ", available next turn" : ""}. Click to view details and use.`}
                   >
                     {display?.imagePath ? (
                       <img
@@ -86,7 +88,9 @@ export default function PowerUpHand({
                       {item.count > 1 ? ` ×${item.count}` : ""}
                     </span>
                     <span className={styles.description}>
-                      {handDescription(display)}
+                      {onCooldown
+                        ? "Available next turn."
+                        : handDescription(display)}
                     </span>
                   </button>
                 </li>
@@ -99,7 +103,9 @@ export default function PowerUpHand({
       {selectedPowerUpId != null && (() => {
         const display = POWER_UP_DISPLAY[selectedPowerUpId];
         const item = items.find((i) => i.powerUpId === selectedPowerUpId);
-        const buttonDisabled = !enabled;
+        const usable = item ? (item.usableCount ?? item.count) : 0;
+        const buttonDisabled = !enabled || usable < 1;
+        const onCooldown = item != null && item.count > 0 && (item.usableCount ?? 0) === 0;
 
         return (
           <div
@@ -131,6 +137,7 @@ export default function PowerUpHand({
               </h2>
               <p id="powerup-modal-desc" className={styles.modalDescription}>
                 {display?.description ?? ""}
+                {onCooldown ? " Available next turn." : ""}
               </p>
               <div className={styles.modalActions}>
                 <button
@@ -139,7 +146,7 @@ export default function PowerUpHand({
                   disabled={buttonDisabled}
                   onClick={() => handleUseFromModal(selectedPowerUpId)}
                 >
-                  Usar
+                  Use
                 </button>
                 <button
                   ref={closeButtonRef}
@@ -147,7 +154,7 @@ export default function PowerUpHand({
                   className={styles.modalCloseButton}
                   onClick={closeModal}
                 >
-                  Fechar
+                  Close
                 </button>
               </div>
             </div>
