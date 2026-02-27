@@ -286,6 +286,7 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 			player.BloodPactMatchesCount++
 			if player.BloodPactMatchesCount >= 3 {
 				player.Score += 5
+				g.broadcastPowerUpEffectResolved(player.Name, "Blood Pact", player.Name+" honored the Pact and gained 5 points")
 				player.BloodPactActive = false
 				player.BloodPactMatchesCount = 0
 			}
@@ -363,6 +364,7 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 		if player.Score < 0 {
 			player.Score = 0
 		}
+		g.broadcastPowerUpEffectResolved(player.Name, "Blood Pact", player.Name+" broke the Pact and lost 3 points")
 		player.BloodPactActive = false
 		player.BloodPactMatchesCount = 0
 	}
@@ -662,6 +664,7 @@ func (g *Game) handleTurnTimeout() {
 			if player.Score < 0 {
 				player.Score = 0
 			}
+			g.broadcastPowerUpEffectResolved(player.Name, "Blood Pact", player.Name+" broke the Pact and lost 3 points")
 			player.BloodPactActive = false
 			player.BloodPactMatchesCount = 0
 		}
@@ -774,6 +777,23 @@ func (g *Game) broadcastPowerUpUsed(playerName, powerUpLabel string, noEffect bo
 		"playerName":  playerName,
 		"powerUpLabel": powerUpLabel,
 		"noEffect":     noEffect,
+	}
+	data, _ := json.Marshal(msg)
+	for i := 0; i < 2; i++ {
+		if g.Players[i] != nil && g.Players[i].Send != nil {
+			wsutil.SafeSend(g.Players[i].Send, data)
+		}
+	}
+}
+
+// broadcastPowerUpEffectResolved notifies both players when a delayed powerup effect (e.g. Blood Pact) is resolved.
+// message is the full announcement text, e.g. "Mathias honored the Pact and gained 5 points".
+func (g *Game) broadcastPowerUpEffectResolved(playerName, powerUpLabel, message string) {
+	msg := map[string]interface{}{
+		"type":         "powerup_effect_resolved",
+		"playerName":  playerName,
+		"powerUpLabel": powerUpLabel,
+		"message":      message,
 	}
 	data, _ := json.Marshal(msg)
 	for i := 0; i < 2; i++ {

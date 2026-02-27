@@ -110,6 +110,13 @@ export interface PowerUpUsedMsg {
   noEffect?: boolean;
 }
 
+export interface PowerUpEffectResolvedMsg {
+  type: "powerup_effect_resolved";
+  playerName: string;
+  powerUpLabel: string;
+  message: string;
+}
+
 export type ServerMessage =
   | ErrorMsg
   | WaitingForMatchMsg
@@ -120,4 +127,5 @@ export type ServerMessage =
   | OpponentReconnectingMsg
   | OpponentReconnectedMsg
   | TurnTimeoutMsg
-  | PowerUpUsedMsg;
+  | PowerUpUsedMsg
+  | PowerUpEffectResolvedMsg;

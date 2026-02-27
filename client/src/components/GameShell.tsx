@@ -117,6 +117,15 @@ export function GameShell() {
         }, 3000);
         break;
       }
+      case "powerup_effect_resolved": {
+        setPowerUpMessage(msg.message);
+        if (powerUpMessageTimeoutRef.current) clearTimeout(powerUpMessageTimeoutRef.current);
+        powerUpMessageTimeoutRef.current = setTimeout(() => {
+          powerUpMessageTimeoutRef.current = null;
+          setPowerUpMessage(null);
+        }, 3000);
+        break;
+      }
       case "error":
         if (msg.message.includes("Game not found") || msg.message.includes("Invalid rejoin")) {
           clearGameSession();
