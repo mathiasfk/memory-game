@@ -22,6 +22,7 @@ const MESSAGE_TYPES: ReadonlySet<ServerMessage["type"]> = new Set([
   "opponent_reconnecting",
   "opponent_reconnected",
   "turn_timeout",
+  "powerup_used",
 ]);
 
 const BASE_RECONNECT_DELAY_MS = 500;

@@ -103,6 +103,13 @@ export interface TurnTimeoutMsg {
   type: "turn_timeout";
 }
 
+export interface PowerUpUsedMsg {
+  type: "powerup_used";
+  playerName: string;
+  powerUpLabel: string;
+  noEffect?: boolean;
+}
+
 export type ServerMessage =
   | ErrorMsg
   | WaitingForMatchMsg
@@ -112,4 +119,5 @@ export type ServerMessage =
   | OpponentDisconnectedMsg
   | OpponentReconnectingMsg
   | OpponentReconnectedMsg
-  | TurnTimeoutMsg;
+  | TurnTimeoutMsg
+  | PowerUpUsedMsg;

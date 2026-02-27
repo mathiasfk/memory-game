@@ -536,6 +536,17 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		player.BloodPactMatchesCount = 0
 	}
 
+	// Determine if the power-up had no effect (for UX message)
+	noEffect := false
+	switch {
+	case powerUpID == "clairvoyance":
+		noEffect = len(clairvoyanceRevealIndices) == 0
+	case powerUpID == "unveiling", powerUpID == "earth_elemental", powerUpID == "fire_elemental", powerUpID == "water_elemental", powerUpID == "air_elemental":
+		noEffect = len(player.HighlightIndices) == 0
+	}
+	powerUpLabel := pup.Name
+	g.broadcastPowerUpUsed(player.Name, powerUpLabel, noEffect)
+
 	// Broadcast updated state (turn does not end)
 	g.broadcastState()
 
@@ -755,6 +766,21 @@ func (g *Game) sendError(playerIdx int, message string) {
 	}
 	data, _ := json.Marshal(msg)
 	wsutil.SafeSend(player.Send, data)
+}
+
+func (g *Game) broadcastPowerUpUsed(playerName, powerUpLabel string, noEffect bool) {
+	msg := map[string]interface{}{
+		"type":         "powerup_used",
+		"playerName":  playerName,
+		"powerUpLabel": powerUpLabel,
+		"noEffect":     noEffect,
+	}
+	data, _ := json.Marshal(msg)
+	for i := 0; i < 2; i++ {
+		if g.Players[i] != nil && g.Players[i].Send != nil {
+			wsutil.SafeSend(g.Players[i].Send, data)
+		}
+	}
 }
 
 func (g *Game) broadcastState() {

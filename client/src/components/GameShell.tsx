@@ -8,10 +8,12 @@ import LobbyScreen from "../screens/LobbyScreen";
 import WaitingScreen from "../screens/WaitingScreen";
 import type { GameOverMsg, GameStateMsg, MatchFoundMsg } from "../types/messages";
 import { getGameSession, clearGameSession, saveGameSession } from "../lib/gameSession";
+import { ToastContainer, type ToastItem } from "./Toast";
 import styles from "../styles/App.module.css";
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? "";
+const GAME_OVER_DELAY_MS = 600;
 
 type ScreenName = "lobby" | "waiting" | "game" | "gameover";
 
@@ -35,8 +37,20 @@ export function GameShell() {
   const [gameResult, setGameResult] = useState<GameOverMsg | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [opponentReconnecting, setOpponentReconnecting] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [pendingGameOver, setPendingGameOver] = useState<GameOverMsg | null>(null);
+  const [powerUpMessage, setPowerUpMessage] = useState<string | null>(null);
   const [authSent, setAuthSent] = useState(false);
+  const gameOverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const powerUpMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const addToast = useCallback((message: string) => {
+    setToasts((prev) => [...prev, { id: crypto.randomUUID(), message }]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const handleMessage = useCallback((msg: import("../types/messages").ServerMessage) => {
     switch (msg.type) {
@@ -70,7 +84,13 @@ export function GameShell() {
         setGameResult(msg);
         setOpponentDisconnected(false);
         setOpponentReconnecting(null);
-        setScreen("gameover");
+        setPendingGameOver(msg);
+        if (gameOverTimeoutRef.current) clearTimeout(gameOverTimeoutRef.current);
+        gameOverTimeoutRef.current = setTimeout(() => {
+          gameOverTimeoutRef.current = null;
+          setScreen("gameover");
+          setPendingGameOver(null);
+        }, GAME_OVER_DELAY_MS);
         break;
       case "opponent_disconnected":
         clearGameSession();
@@ -85,13 +105,25 @@ export function GameShell() {
       case "opponent_reconnected":
         setOpponentReconnecting(null);
         break;
+      case "powerup_used": {
+        const text = msg.noEffect
+          ? `${msg.playerName} used ${msg.powerUpLabel} but it had no effect`
+          : `${msg.playerName} used ${msg.powerUpLabel}!`;
+        setPowerUpMessage(text);
+        if (powerUpMessageTimeoutRef.current) clearTimeout(powerUpMessageTimeoutRef.current);
+        powerUpMessageTimeoutRef.current = setTimeout(() => {
+          powerUpMessageTimeoutRef.current = null;
+          setPowerUpMessage(null);
+        }, 3000);
+        break;
+      }
       case "error":
         if (msg.message.includes("Game not found") || msg.message.includes("Invalid rejoin")) {
           clearGameSession();
         }
         // Do not show "No active game" as error; it is normal when user has no game in progress
         if (!msg.message.includes("No active game for this user")) {
-          setErrorMessage(msg.message);
+          addToast(msg.message);
         }
         break;
       default: {
@@ -99,7 +131,7 @@ export function GameShell() {
         void _exhaustiveCheck;
       }
     }
-  }, []);
+  }, [addToast]);
 
   const { connected, send } = useGameSocket(WS_URL, { onMessage: handleMessage });
 
@@ -121,14 +153,14 @@ export function GameShell() {
   useEffect(() => {
     if (!connected || authSentRef.current) return;
     if (!NEON_AUTH_URL) {
-      setErrorMessage("VITE_NEON_AUTH_URL is not set.");
+      addToast("VITE_NEON_AUTH_URL is not set.");
       return;
     }
 
     let cancelled = false;
     const timeoutId = window.setTimeout(() => {
       if (cancelled || authSentRef.current) return;
-      setErrorMessage("Auth token request timed out. Try signing out and back in.");
+      addToast("Auth token request timed out. Try signing out and back in.");
     }, 15000);
 
     function sendAuthAndReady(jwt: string) {
@@ -136,7 +168,6 @@ export function GameShell() {
       send({ type: "auth", token: jwt });
       authSentRef.current = true;
       setAuthSent(true);
-      setErrorMessage(null); // Clear any prior error so rejoin can show clean state
     }
 
     const getSessionUrl = `${NEON_AUTH_URL.replace(/\/$/, "")}/get-session`;
@@ -161,15 +192,15 @@ export function GameShell() {
           return;
         }
         if (tokenResult?.error) {
-          setErrorMessage(tokenResult.error.message ?? "Could not get auth token.");
+          addToast(tokenResult.error.message ?? "Could not get auth token.");
           return;
         }
-        setErrorMessage("Could not get auth token. Try signing out and back in.");
+        addToast("Could not get auth token. Try signing out and back in.");
       })
       .catch((err) => {
         if (cancelled) return;
         const msg = err?.message ?? String(err);
-        setErrorMessage(`Auth failed: ${msg}. Try signing out and back in.`);
+        addToast(`Auth failed: ${msg}. Try signing out and back in.`);
       })
       .finally(() => {
         window.clearTimeout(timeoutId);
@@ -179,7 +210,7 @@ export function GameShell() {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [connected, send]);
+  }, [connected, send, addToast]);
 
   // Reset auth sent on disconnect so we re-send on reconnect
   useEffect(() => {
@@ -188,6 +219,20 @@ export function GameShell() {
       setAuthSent(false);
     }
   }, [connected]);
+
+  // Clear game-over delay and power-up message timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (gameOverTimeoutRef.current) {
+        clearTimeout(gameOverTimeoutRef.current);
+        gameOverTimeoutRef.current = null;
+      }
+      if (powerUpMessageTimeoutRef.current) {
+        clearTimeout(powerUpMessageTimeoutRef.current);
+        powerUpMessageTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Rejoin saved game when socket reconnects (only after auth was sent to avoid "Authentication required").
   // With session (same device): send rejoin. Without session (e.g. other device): send rejoin_my_game once.
@@ -205,7 +250,6 @@ export function GameShell() {
     if (session?.gameId && session?.rejoinToken && session?.playerName) {
       if (prevConnectedRef.current) return;
       prevConnectedRef.current = true;
-      setErrorMessage(null);
       send({
         type: "rejoin",
         gameId: session.gameId,
@@ -217,13 +261,11 @@ export function GameShell() {
     // No local session: try rejoin by user (cross-device, same account)
     if (rejoinMyGameSentRef.current) return;
     rejoinMyGameSentRef.current = true;
-    setErrorMessage(null);
     send({ type: "rejoin_my_game" });
   }, [connected, authSent, send, screen]);
 
   const handleFindMatch = useCallback(() => {
     if (!authSentRef.current) return; // Auth must be sent first; button is disabled until then
-    setErrorMessage(null);
     playerNameRef.current = userName;
     send({ type: "set_name", name: userName });
     setScreen("waiting");
@@ -247,7 +289,6 @@ export function GameShell() {
   );
 
   const handlePlayAgain = useCallback(() => {
-    setErrorMessage(null);
     setGameResult(null);
     setOpponentDisconnected(false);
     clearGameSession();
@@ -256,7 +297,6 @@ export function GameShell() {
   }, [send]);
 
   const handleBackToHome = useCallback(() => {
-    setErrorMessage(null);
     setGameResult(null);
     setMatchInfo(null);
     setGameState(null);
@@ -272,7 +312,6 @@ export function GameShell() {
   }, [send, handleBackToHome]);
 
   const handleAbandon = useCallback(() => {
-    setErrorMessage(null);
     clearGameSession();
     send({ type: "leave_game" });
     setMatchInfo(null);
@@ -289,7 +328,7 @@ export function GameShell() {
 
   return (
     <main className={styles.app}>
-      {errorMessage && <p className={styles.error}>Error: {errorMessage}</p>}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {screen === "lobby" && (
         <LobbyScreen
@@ -303,12 +342,13 @@ export function GameShell() {
       {screen === "waiting" && (
         <WaitingScreen connected={connected} onCancel={handleCancelMatchmaking} />
       )}
-      {screen === "game" && (
+      {(screen === "game" || pendingGameOver !== null) && (
         <GameScreen
           connected={connected}
           matchInfo={matchInfo}
           gameState={gameState}
           opponentReconnectingDeadlineMs={opponentReconnecting}
+          powerUpMessage={powerUpMessage}
           onFlipCard={handleFlipCard}
           onUsePowerUp={handleUsePowerUp}
           onAbandon={handleAbandon}

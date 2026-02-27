@@ -90,6 +90,11 @@
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
 }
 
+/* Match highlight: white outline when card is matched (before removal) */
+.cardInner.cardMatchHighlight {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95), 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
 /* Highlight is applied via inline style in Card.tsx so it clears completely when turn ends */
 
 @media (hover: hover) {

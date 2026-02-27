@@ -124,6 +124,7 @@ export default function Board({
             isRadarCenter={radarPreview?.center === card.index}
             isRadarAffected={radarPreview?.affected.includes(card.index) ?? false}
             isHighlighted={isHighlighted(card.index)}
+            isMatched={card.state === "matched" && !removedMatchedIndices.has(card.index)}
             onMouseEnter={() => setHoveredIndex(card.index)}
             onMouseLeave={() => setHoveredIndex(null)}
           />

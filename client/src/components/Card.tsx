@@ -15,6 +15,8 @@ interface CardProps {
   isRadarAffected?: boolean;
   /** When true, this card is highlighted (Unveiling or Elemental power-up). */
   isHighlighted?: boolean;
+  /** When true, this card is part of a match (show white outline until removed). */
+  isMatched?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }
@@ -27,6 +29,7 @@ export default function Card({
   isRadarCenter = false,
   isRadarAffected = false,
   isHighlighted = false,
+  isMatched = false,
   onMouseEnter,
   onMouseLeave,
 }: CardProps) {
@@ -86,7 +89,9 @@ export default function Card({
       onMouseLeave={onMouseLeave}
       aria-label={ariaLabel}
     >
-      <div className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""}`}>
+      <div
+        className={`${styles.cardInner} ${isFaceUp ? styles.faceUp : ""} ${isMatched ? styles.cardMatchHighlight : ""}`}
+      >
         <div
           className={styles.cardBack}
           style={

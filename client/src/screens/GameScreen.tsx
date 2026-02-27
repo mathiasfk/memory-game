@@ -10,6 +10,8 @@ interface GameScreenProps {
   matchInfo: MatchFoundMsg | null;
   gameState: GameStateMsg | null;
   opponentReconnectingDeadlineMs: number | null;
+  /** Temporary message when a power-up is used (e.g. "Thalia used Leech!"). */
+  powerUpMessage?: string | null;
   onFlipCard: (index: number) => void;
   onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
   onAbandon: () => void;
@@ -34,6 +36,7 @@ export default function GameScreen({
   matchInfo,
   gameState,
   opponentReconnectingDeadlineMs,
+  powerUpMessage = null,
   onFlipCard,
   onUsePowerUp,
   onAbandon,
@@ -213,6 +216,11 @@ export default function GameScreen({
       </header>
 
       <div className={styles.contextualRow}>
+        {powerUpMessage && (
+          <p className={styles.powerUpMessage} role="status" aria-live="polite">
+            {powerUpMessage}
+          </p>
+        )}
         <div className={styles.countdownRow}>
           {showCountdown && (
             <div className={countdownStyles.countdownWrap} aria-live="polite" aria-atomic="true">
