@@ -21,7 +21,6 @@ function PlayerScoreCard({
       <h3>{title}</h3>
       <p className={styles.name}>{player.name}</p>
       <p>Score: {player.score}</p>
-      <p>Combo: x{player.comboStreak}</p>
     </div>
   );
 }

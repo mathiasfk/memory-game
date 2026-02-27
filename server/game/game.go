@@ -270,8 +270,7 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		card2.State = Matched
 
 		player := g.Players[playerIdx]
-		player.ComboStreak++
-		points := g.Config.ComboBasePoints * player.ComboStreak
+		points := 1
 		player.Score += points
 		// Leech: subtract same amount from opponent (minimum 0)
 		if player.LeechActive {
@@ -355,9 +354,6 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	for _, idx := range g.FlippedIndices {
 		g.Board.Cards[idx].State = Hidden
 	}
-
-	// Reset combo for current player
-	player.ComboStreak = 0
 
 	// End of turn: clear highlight and Leech (effects last only this turn)
 	player.HighlightIndices = nil
@@ -673,7 +669,6 @@ func (g *Game) handleTurnTimeout() {
 	}
 	player := g.Players[g.CurrentTurn]
 	if player != nil {
-		player.ComboStreak = 0
 		// End of turn: clear highlight and Leech (effects last only this turn)
 		player.HighlightIndices = nil
 		player.LeechActive = false

@@ -14,9 +14,6 @@ func TestDefaults(t *testing.T) {
 	if cfg.BoardCols != 6 {
 		t.Errorf("expected BoardCols=6, got %d", cfg.BoardCols)
 	}
-	if cfg.ComboBasePoints != 1 {
-		t.Errorf("expected ComboBasePoints=1, got %d", cfg.ComboBasePoints)
-	}
 	if cfg.RevealDurationMS != 1000 {
 		t.Errorf("expected RevealDurationMS=1000, got %d", cfg.RevealDurationMS)
 	}
@@ -56,8 +53,8 @@ func TestDefaults(t *testing.T) {
 	if cfg.AIProfiles[1].Name != "Calliope" {
 		t.Errorf("expected second AI name Calliope, got %q", cfg.AIProfiles[1].Name)
 	}
-	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 80 || cfg.AIProfiles[1].ForgetChance != 15 {
-		t.Errorf("expected Calliope 500/1100/80 ForgetChance=15, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance)
+	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 87 || cfg.AIProfiles[1].ForgetChance != 15 {
+		t.Errorf("expected Calliope 500/1100/87 ForgetChance=15, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance)
 	}
 	if cfg.AIProfiles[2].Name != "Thalia" {
 		t.Errorf("expected third AI name Thalia, got %q", cfg.AIProfiles[2].Name)
@@ -70,12 +67,10 @@ func TestDefaults(t *testing.T) {
 func TestLoadWithEnvOverrides(t *testing.T) {
 	os.Setenv("BOARD_ROWS", "6")
 	os.Setenv("BOARD_COLS", "6")
-	os.Setenv("COMBO_BASE_POINTS", "2")
 	os.Setenv("WS_PORT", "9090")
 	defer func() {
 		os.Unsetenv("BOARD_ROWS")
 		os.Unsetenv("BOARD_COLS")
-		os.Unsetenv("COMBO_BASE_POINTS")
 		os.Unsetenv("WS_PORT")
 	}()
 
@@ -86,9 +81,6 @@ func TestLoadWithEnvOverrides(t *testing.T) {
 	}
 	if cfg.BoardCols != 6 {
 		t.Errorf("expected BoardCols=6 after env override, got %d", cfg.BoardCols)
-	}
-	if cfg.ComboBasePoints != 2 {
-		t.Errorf("expected ComboBasePoints=2 after env override, got %d", cfg.ComboBasePoints)
 	}
 	if cfg.WSPort != 9090 {
 		t.Errorf("expected WSPort=9090 after env override, got %d", cfg.WSPort)

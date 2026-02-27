@@ -32,7 +32,6 @@ func TestMatchmakerPairsPlayers(t *testing.T) {
 	cfg := &config.Config{
 		BoardRows:          2,
 		BoardCols:          2,
-		ComboBasePoints:    1,
 		RevealDurationMS:   100,
 		MaxNameLength:      24,
 		WSPort:             8080,
@@ -109,7 +108,6 @@ func TestMatchmakerPairsWithAIAfterTimeout(t *testing.T) {
 	cfg := &config.Config{
 		BoardRows:          2,
 		BoardCols:          2,
-		ComboBasePoints:    1,
 		RevealDurationMS:   100,
 		MaxNameLength:      24,
 		WSPort:             8080,
@@ -155,7 +153,6 @@ func TestMatchmakerLeaveQueue(t *testing.T) {
 	cfg := &config.Config{
 		BoardRows:          2,
 		BoardCols:          2,
-		ComboBasePoints:    1,
 		RevealDurationMS:   100,
 		MaxNameLength:      24,
 		WSPort:             8080,

@@ -61,7 +61,6 @@ func testConfig() *config.Config {
 	return &config.Config{
 		BoardRows:        4,
 		BoardCols:        4,
-		ComboBasePoints:  1,
 		RevealDurationMS: 100, // Short for testing
 		MaxNameLength:    24,
 		WSPort:           8080,
@@ -290,11 +289,8 @@ func TestFlipCard_SuccessfulMatch(t *testing.T) {
 		t.Errorf("expected card[%d] to be Matched, got %v", idx2, g.Board.Cards[idx2].State)
 	}
 
-	// Check combo and score
+	// Check score (1 point per match)
 	player := g.Players[currentPlayer]
-	if player.ComboStreak != 1 {
-		t.Errorf("expected ComboStreak=1, got %d", player.ComboStreak)
-	}
 	if player.Score != 1 {
 		t.Errorf("expected Score=1, got %d", player.Score)
 	}
@@ -372,13 +368,9 @@ func TestFlipCard_Mismatch(t *testing.T) {
 		t.Errorf("expected TurnPhase=FirstFlip after resolve, got %v", g.TurnPhase)
 	}
 
-	// Combo should be 0
-	if g.Players[currentPlayer].ComboStreak != 0 {
-		t.Errorf("expected ComboStreak=0 after mismatch, got %d", g.Players[currentPlayer].ComboStreak)
-	}
 }
 
-func TestComboScoring(t *testing.T) {
+func TestFixedScoring(t *testing.T) {
 	cfg := testConfig()
 	g, send0, send1, _ := createTestGame(cfg)
 	go g.Run()
@@ -395,7 +387,7 @@ func TestComboScoring(t *testing.T) {
 
 	currentPlayer := g.CurrentTurn
 
-	// Find and match multiple pairs to test combo scoring
+	// Find and match multiple pairs to test fixed scoring (1 point per match)
 	pairMap := make(map[int][]int)
 	for _, card := range g.Board.Cards {
 		if card.State == Hidden {
@@ -411,7 +403,7 @@ func TestComboScoring(t *testing.T) {
 	}
 
 	if len(pairs) < 3 {
-		t.Skip("need at least 3 pairs for combo test")
+		t.Skip("need at least 3 pairs for fixed scoring test")
 	}
 
 	// Match 3 pairs consecutively
@@ -424,12 +416,9 @@ func TestComboScoring(t *testing.T) {
 
 	player := g.Players[currentPlayer]
 
-	// Expected: combo=3, score = 1+2+3 = 6
-	if player.ComboStreak != 3 {
-		t.Errorf("expected ComboStreak=3, got %d", player.ComboStreak)
-	}
-	if player.Score != 6 {
-		t.Errorf("expected Score=6, got %d", player.Score)
+	// Expected: 1 point per match, score = 3
+	if player.Score != 3 {
+		t.Errorf("expected Score=3 (1 per match), got %d", player.Score)
 	}
 }
 
@@ -1030,10 +1019,9 @@ func TestArcanaCooldown_MultipleCopies(t *testing.T) {
 func TestFullGame(t *testing.T) {
 	// Use a small 2x2 board for a quick full game
 	cfg := &config.Config{
-		BoardRows:          2,
-		BoardCols:          2,
-		ComboBasePoints:    1,
-		RevealDurationMS:   50,
+		BoardRows:       2,
+		BoardCols:       2,
+		RevealDurationMS: 50,
 		MaxNameLength:      24,
 		WSPort:             8080,
 		PowerUps: config.PowerUpsConfig{

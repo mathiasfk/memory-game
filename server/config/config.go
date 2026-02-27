@@ -35,9 +35,8 @@ type PowerUpsConfig struct {
 
 // Config holds all configurable game parameters.
 type Config struct {
-	BoardRows        int    `json:"board_rows"`
-	BoardCols        int    `json:"board_cols"`
-	ComboBasePoints  int    `json:"combo_base_points"`
+	BoardRows         int    `json:"board_rows"`
+	BoardCols         int    `json:"board_cols"`
 	RevealDurationMS int    `json:"reveal_duration_ms"`
 	MaxNameLength    int    `json:"max_name_length"`
 	WSPort           int    `json:"ws_port"`
@@ -63,10 +62,9 @@ type Config struct {
 // Defaults returns a Config with all default values from the spec.
 func Defaults() *Config {
 	return &Config{
-		BoardRows:            6,
-		BoardCols:            6,
-		ComboBasePoints:      1,
-		RevealDurationMS:     1000,
+		BoardRows:        6,
+		BoardCols:        6,
+		RevealDurationMS: 1000,
 		MaxNameLength:        24,
 		WSPort:               8080,
 		MaxLatencyMS:         500,
@@ -103,7 +101,6 @@ func Load() *Config {
 	// Environment variable overrides
 	overrideInt(&cfg.BoardRows, "BOARD_ROWS")
 	overrideInt(&cfg.BoardCols, "BOARD_COLS")
-	overrideInt(&cfg.ComboBasePoints, "COMBO_BASE_POINTS")
 	overrideInt(&cfg.RevealDurationMS, "REVEAL_DURATION_MS")
 	overrideInt(&cfg.PowerUps.Clairvoyance.RevealDurationMS, "POWERUP_CLAIRVOYANCE_REVEAL_MS")
 	overrideInt(&cfg.MaxNameLength, "MAX_NAME_LENGTH")

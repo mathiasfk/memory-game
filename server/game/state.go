@@ -11,9 +11,8 @@ type CardView struct {
 
 // PlayerView is the client-facing representation of a player.
 type PlayerView struct {
-	Name        string `json:"name"`
-	Score       int    `json:"score"`
-	ComboStreak int    `json:"comboStreak"`
+	Name  string `json:"name"`
+	Score int    `json:"score"`
 }
 
 // PowerUpView is the client-facing representation of an available power-up (legacy; hand used instead).
@@ -76,8 +75,7 @@ func BuildCardViews(board *Board) []CardView {
 // BuildPlayerView creates a PlayerView from a Player.
 func BuildPlayerView(p *Player, currentRound int) PlayerView {
 	return PlayerView{
-		Name:        p.Name,
-		Score:       p.Score,
-		ComboStreak: p.ComboStreak,
+		Name:  p.Name,
+		Score: p.Score,
 	}
 }

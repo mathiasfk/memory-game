@@ -48,7 +48,6 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 	cfg := &config.Config{
 		BoardRows:          2,
 		BoardCols:          2,
-		ComboBasePoints:    1,
 		RevealDurationMS:   100,
 		MaxNameLength:      24,
 		WSPort:             0, // not used when using httptest
@@ -221,7 +220,6 @@ func TestIntegration_OpponentDisconnect(t *testing.T) {
 	cfg := &config.Config{
 		BoardRows:            2,
 		BoardCols:            2,
-		ComboBasePoints:      1,
 		RevealDurationMS:     100,
 		MaxNameLength:        24,
 		WSPort:               0,
@@ -332,7 +330,6 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 	cfg := &config.Config{
 		BoardRows:          2,
 		BoardCols:          2,
-		ComboBasePoints:    1,
 		RevealDurationMS:   100,
 		MaxNameLength:      24,
 		WSPort:             0,

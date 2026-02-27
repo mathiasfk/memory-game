@@ -46,7 +46,7 @@ func TestBuildCardViews_MatchedCardsIncludePairID(t *testing.T) {
 }
 
 func TestBuildPlayerView(t *testing.T) {
-	p := &Player{Name: "Alice", Score: 5, ComboStreak: 2}
+	p := &Player{Name: "Alice", Score: 5}
 	v := BuildPlayerView(p, 0)
 
 	if v.Name != "Alice" {
@@ -54,9 +54,6 @@ func TestBuildPlayerView(t *testing.T) {
 	}
 	if v.Score != 5 {
 		t.Errorf("expected Score=5, got %d", v.Score)
-	}
-	if v.ComboStreak != 2 {
-		t.Errorf("expected ComboStreak=2, got %d", v.ComboStreak)
 	}
 }
 

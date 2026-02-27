@@ -68,28 +68,9 @@ All user-facing text in the client (buttons, labels, messages, and accessibility
 
 ---
 
-## 5. Scoring and Combo System
+## 5. Scoring
 
-### 5.1 Base Scoring
-
-Each matched pair awards points based on the player's current **combo streak**.
-
-### 5.2 Combo Streak
-
-- A player's combo streak starts at `0`.
-- When a player matches a pair, the combo streak increments by `1`, and the player earns `COMBO_BASE_POINTS * combo_streak` points for that match.
-- When a player fails to match (turn ends), the combo streak resets to `0`.
-- The combo streak is per-player and is tracked independently.
-
-**Example** (with `COMBO_BASE_POINTS = 1`):
-
-| Match # (consecutive) | Combo Streak | Points Earned | Running Total |
-|------------------------|--------------|---------------|---------------|
-| 1st                    | 1            | 1             | 1             |
-| 2nd                    | 2            | 2             | 3             |
-| 3rd                    | 3            | 3             | 6             |
-| Miss                   | reset to 0   | 0             | 6             |
-| 1st (new streak)       | 1            | 1             | 7             |
+Each matched pair awards **1 point** to the active player, regardless of how many pairs they match in the same turn. The game ends when all pairs have been matched; the player with the higher score wins (draw if tied).
 
 ---
 
@@ -238,13 +219,11 @@ Broadcast to both players after every state-changing event (card flip, power-up 
   ],
   "you": {
     "name": "<string>",
-    "score": "<int>",
-    "comboStreak": "<int>"
+    "score": "<int>"
   },
   "opponent": {
     "name": "<string>",
-    "score": "<int>",
-    "comboStreak": "<int>"
+    "score": "<int>"
   },
   "yourTurn": "<bool>",
   "hand": [
@@ -347,7 +326,6 @@ Card {
 Player {
   name:           string
   score:          int
-  comboStreak:    int
 }
 ```
 
@@ -363,7 +341,6 @@ All of the following values must be configurable (e.g., via config file, environ
 |--------------------------|-------|---------|--------------------------------------------------------------|
 | `BOARD_ROWS`             | int   | `4`     | Number of rows on the board.                                 |
 | `BOARD_COLS`             | int   | `4`     | Number of columns on the board. `ROWS * COLS` must be even.  |
-| `COMBO_BASE_POINTS`      | int   | `1`     | Points multiplier per combo level.                           |
 | `REVEAL_DURATION_MS`     | int   | `1000`  | How long mismatched cards stay revealed before hiding (ms).  |
 | `POWERUP_SHUFFLE_COST`   | int   | `3`     | Point cost of the Shuffle power-up.                          |
 | `MAX_NAME_LENGTH`        | int   | `24`    | Maximum characters for a player display name.                |

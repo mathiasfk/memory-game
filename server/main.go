@@ -34,8 +34,8 @@ func main() {
 		log.Printf("Auth: configured (base URL: %s)", cfg.NeonAuthBaseURL)
 	}
 
-	log.Printf("Configuration: BoardRows=%d, BoardCols=%d, ComboBasePoints=%d, RevealDurationMS=%d, WSPort=%d",
-		cfg.BoardRows, cfg.BoardCols, cfg.ComboBasePoints, cfg.RevealDurationMS, cfg.WSPort)
+	log.Printf("Configuration: BoardRows=%d, BoardCols=%d, RevealDurationMS=%d, WSPort=%d",
+		cfg.BoardRows, cfg.BoardCols, cfg.RevealDurationMS, cfg.WSPort)
 
 	// Set up power-up registry (power-ups are earned by matching pairs; use has no point cost)
 	registry := powerup.NewRegistry()

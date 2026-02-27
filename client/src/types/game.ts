@@ -13,7 +13,6 @@ export interface CardView {
 export interface PlayerView {
   name: string;
   score: number;
-  comboStreak: number;
 }
 
 export interface PowerUpView {

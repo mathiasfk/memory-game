@@ -82,8 +82,8 @@ export interface GameStateMsg extends GameState {
 export interface GameOverMsg {
   type: "game_over";
   result: "win" | "lose" | "draw";
-  you: Omit<PlayerView, "comboStreak">;
-  opponent: Omit<PlayerView, "comboStreak">;
+  you: PlayerView;
+  opponent: PlayerView;
 }
 
 export interface OpponentDisconnectedMsg {
