@@ -40,7 +40,8 @@
   gap: 0.35rem;
   min-width: 100px;
   max-width: 140px;
-  min-height: 0;
+  height: 13rem;
+  min-height: 13rem;
   padding: 0;
   border-radius: 0.55rem;
   border: 1px solid rgba(148, 163, 184, 0.25);

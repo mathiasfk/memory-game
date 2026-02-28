@@ -27,7 +27,7 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
     icon: "NEC",
     label: "Necromancy",
     description: "Returns all collected tiles back to the board in new random positions.",
-    shortDescription: "Returns matched tiles to the board.",
+    shortDescription: "Returns matched tiles to board.",
     imagePath: "/cards/Necromancy.webp",
   },
   unveiling: {
@@ -48,14 +48,14 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
     icon: "LCH",
     label: "Leech",
     description: "This turn, points you earn from matching are subtracted from the opponent.",
-    shortDescription: "Your match points drain from opponent.",
+    shortDescription: "Your points drain from opponent.",
     imagePath: "/cards/Leech.webp",
   },
   oblivion: {
     icon: "OBL",
     label: "Oblivion",
     description: "Select a tile. It and its pair are removed from the game. No one gains or loses points.",
-    shortDescription: "Remove a tile and its pair from the game.",
+    shortDescription: "Remove a tile and its pair.",
     imagePath: "/cards/Oblivion.webp",
   },
   earth_elemental: {
