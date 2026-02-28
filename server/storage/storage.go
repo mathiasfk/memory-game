@@ -699,7 +699,7 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 	// By combo: cards used together in the same turn (arcana_use grouped by match_id, round, player_idx).
 	// Combo = sorted set of power_up_ids used in one turn; only combos with 2+ cards (synergy).
 	// Wins = number of times that combo was used and the player who used it won the match.
-	// Point swing = per-turn sum of (player/opponent) deltas from arcana_use, then averaged across combo uses.
+	// Point swing = from first card of combo until end of turn (consistent with individual card metric).
 	comboRows, err := s.pool.Query(ctx, `
 		WITH turn_cards AS (
 			SELECT match_id, round, player_idx, array_agg(DISTINCT power_up_id ORDER BY power_up_id) AS arr
@@ -715,8 +715,8 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 		),
 		turn_swing AS (
 			SELECT tc.combo_key, tc.card_count, tc.match_id, tc.round, tc.player_idx,
-				SUM(COALESCE(au.point_delta_player, 0))::float AS turn_delta_player,
-				SUM(COALESCE(au.point_delta_opponent, 0))::float AS turn_delta_opponent
+				MIN(au.player_score_before) AS first_player_before,
+				MIN(au.opponent_score_before) AS first_opponent_before
 			FROM turn_combos tc
 			JOIN arcana_use au ON au.match_id = tc.match_id AND au.round = tc.round AND au.player_idx = tc.player_idx
 			GROUP BY tc.combo_key, tc.card_count, tc.match_id, tc.round, tc.player_idx
@@ -724,9 +724,10 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 		SELECT ts.combo_key, ts.card_count,
 			COUNT(*) AS total_uses,
 			COUNT(*) FILTER (WHERE gh.winner_index = ts.player_idx) AS wins,
-			AVG(ts.turn_delta_player)::float AS avg_point_swing_player,
-			AVG(ts.turn_delta_opponent)::float AS avg_point_swing_opponent
+			AVG(t.player_score_after_turn - ts.first_player_before)::float AS avg_point_swing_player,
+			AVG(t.opponent_score_after_turn - ts.first_opponent_before)::float AS avg_point_swing_opponent
 		FROM turn_swing ts
+		JOIN turn t ON t.match_id = ts.match_id AND t.round = ts.round AND t.player_idx = ts.player_idx
 		JOIN game_history gh ON gh.id = ts.match_id
 		GROUP BY ts.combo_key, ts.card_count
 		ORDER BY COUNT(*) DESC
