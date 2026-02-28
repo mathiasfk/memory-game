@@ -90,9 +90,43 @@
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
 }
 
-/* Match highlight: white outline when card is matched (before removal) */
+/* Match highlight: animated shine outline when card is matched (before removal) */
 .cardInner.cardMatchHighlight {
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95), 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.cardInner.cardMatchHighlight::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(0.55rem + 3px);
+  z-index: 0;
+  background: linear-gradient(
+    to top,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 25%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(255, 255, 255, 0.25) 75%,
+    transparent 100%
+  );
+  background-size: 100% 300%;
+  background-position: 0% 100%;
+  animation: matchShine 0.65s ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes matchShine {
+  0% {
+    background-position: 0% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.cardInner.cardMatchHighlight .cardBack,
+.cardInner.cardMatchHighlight .cardFront {
+  z-index: 1;
 }
 
 /* Highlight is applied via inline style in Card.tsx so it clears completely when turn ends */

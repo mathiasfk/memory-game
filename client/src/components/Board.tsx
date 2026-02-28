@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import Card from "./Card";
 import type { CardView } from "../types/game";
+import { playSound } from "../lib/sounds";
 import styles from "../styles/Board.module.css";
 
 const MATCHED_DISPLAY_MS = 800;
+const MATCH_HIGHLIGHT_DELAY_MS = 200;
 
 /** Returns the 3x3 region around centerIndex (center + affected indices). */
 function radarRegion(rows: number, cols: number, centerIndex: number): { center: number; affected: number[] } {
@@ -51,9 +53,12 @@ export default function Board({
   highlightIndices = [],
 }: BoardProps) {
   const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(new Set());
+  const [showMatchHighlightIndices, setShowMatchHighlightIndices] = useState<Set<number>>(new Set());
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const timeoutsRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const highlightTimeoutsRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const pendingRemovalRef = useRef<Set<number>>(new Set());
+  const prevMatchedCountRef = useRef(0);
 
   const radarPreview =
     radarTargetingMode && hoveredIndex !== null ? radarRegion(rows, cols, hoveredIndex) : null;
@@ -63,12 +68,24 @@ export default function Board({
 
   useEffect(() => {
     if (matchedIndices.length === 0) {
+      prevMatchedCountRef.current = 0;
       setRemovedMatchedIndices((prev) => (prev.size > 0 ? new Set() : prev));
+      setShowMatchHighlightIndices((prev) => (prev.size > 0 ? new Set() : prev));
       pendingRemovalRef.current = new Set();
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current = new Map();
+      highlightTimeoutsRef.current.forEach(clearTimeout);
+      highlightTimeoutsRef.current = new Map();
       return;
     }
+
+    const newPairs = Math.floor((matchedIndices.length - prevMatchedCountRef.current) / 2);
+    if (newPairs > 0) {
+      for (let i = 0; i < newPairs; i++) {
+        playSound("pairMatch");
+      }
+    }
+    prevMatchedCountRef.current = matchedIndices.length;
 
     const alreadyScheduledOrRemoved = (idx: number) =>
       removedMatchedIndices.has(idx) || pendingRemovalRef.current.has(idx);
@@ -87,9 +104,27 @@ export default function Board({
   }, [matchedIndices.join(",")]);
 
   useEffect(() => {
+    if (matchedIndices.length === 0) return;
+
+    matchedIndices.forEach((index) => {
+      if (showMatchHighlightIndices.has(index)) return;
+      if (highlightTimeoutsRef.current.has(index)) return;
+      const id = setTimeout(() => {
+        setShowMatchHighlightIndices((prev) => new Set(prev).add(index));
+        highlightTimeoutsRef.current.delete(index);
+      }, MATCH_HIGHLIGHT_DELAY_MS);
+      highlightTimeoutsRef.current.set(index, id);
+    });
+
+    return () => {};
+  }, [matchedIndices.join(",")]);
+
+  useEffect(() => {
     return () => {
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current = new Map();
+      highlightTimeoutsRef.current.forEach(clearTimeout);
+      highlightTimeoutsRef.current = new Map();
     };
   }, []);
 
@@ -124,7 +159,11 @@ export default function Board({
             isRadarCenter={radarPreview?.center === card.index}
             isRadarAffected={radarPreview?.affected.includes(card.index) ?? false}
             isHighlighted={isHighlighted(card.index)}
-            isMatched={card.state === "matched" && !removedMatchedIndices.has(card.index)}
+            isMatched={
+              card.state === "matched" &&
+              !removedMatchedIndices.has(card.index) &&
+              showMatchHighlightIndices.has(card.index)
+            }
             onMouseEnter={() => setHoveredIndex(card.index)}
             onMouseLeave={() => setHoveredIndex(null)}
           />
