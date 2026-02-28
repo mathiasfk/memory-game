@@ -48,6 +48,9 @@ export function GameShell() {
   const powerUpMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Index we just flipped (so we don't play tile sound again when server confirms). */
   const lastFlipIndexByUsRef = useRef<number | null>(null);
+  /** Key for Board so it remounts when we receive the first game_state (new game or rejoin). */
+  const [boardKey, setBoardKey] = useState(0);
+  const prevHadGameStateRef = useRef(false);
 
   const addToast = useCallback((message: string) => {
     setToasts((prev) => [...prev, { id: crypto.randomUUID(), message }]);
@@ -171,6 +174,15 @@ export function GameShell() {
       }
     }
   }, [addToast, gameState]);
+
+  // Remount Board when we receive the first game_state (new game or rejoin) so it can show already matched/removed tiles as empty.
+  useEffect(() => {
+    const hasState = gameState != null;
+    if (hasState && !prevHadGameStateRef.current) {
+      setBoardKey((k) => k + 1);
+    }
+    prevHadGameStateRef.current = hasState;
+  }, [gameState]);
 
   const { connected, send } = useGameSocket(WS_URL, { onMessage: handleMessage });
 
@@ -440,6 +452,7 @@ export function GameShell() {
           connected={connected}
           matchInfo={matchInfo}
           gameState={gameState}
+          boardKey={boardKey}
           opponentReconnectingDeadlineMs={opponentReconnecting}
           powerUpMessage={powerUpMessage}
           onFlipCard={handleFlipCard}

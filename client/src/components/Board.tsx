@@ -27,6 +27,8 @@ function radarRegion(rows: number, cols: number, centerIndex: number): { center:
 
 interface BoardProps {
   cards: CardView[];
+  /** Indices of cards already matched/removed when Board mounts (e.g. after rejoin); shown as empty from first paint. */
+  initialRemovedIndices?: number[];
   rows: number;
   cols: number;
   cardsClickable: boolean;
@@ -43,6 +45,7 @@ interface BoardProps {
 
 export default function Board({
   cards,
+  initialRemovedIndices = [],
   rows,
   cols,
   cardsClickable,
@@ -52,7 +55,9 @@ export default function Board({
   pairIdToPowerUp = null,
   highlightIndices = [],
 }: BoardProps) {
-  const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(new Set());
+  const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(
+    () => new Set(initialRemovedIndices),
+  );
   const [showMatchHighlightIndices, setShowMatchHighlightIndices] = useState<Set<number>>(new Set());
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const timeoutsRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
@@ -65,6 +70,11 @@ export default function Board({
 
   const sortedCards = [...cards].sort((a, b) => a.index - b.index);
   const matchedIndices = sortedCards.filter((c) => c.state === "matched").map((c) => c.index);
+
+  // Sync ref so we don't play match sound for pairs that were already matched when Board mounted (e.g. after rejoin).
+  useEffect(() => {
+    prevMatchedCountRef.current = matchedIndices.length;
+  }, []);
 
   useEffect(() => {
     if (matchedIndices.length === 0) {

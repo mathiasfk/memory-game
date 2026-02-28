@@ -9,6 +9,8 @@ interface GameScreenProps {
   connected: boolean;
   matchInfo: MatchFoundMsg | null;
   gameState: GameStateMsg | null;
+  /** Key so Board remounts on first game_state (new game or rejoin) and can show already matched/removed tiles as empty. */
+  boardKey: number;
   opponentReconnectingDeadlineMs: number | null;
   /** Temporary message when a power-up is used (e.g. "Thalia used Leech!"). */
   powerUpMessage?: string | null;
@@ -35,6 +37,7 @@ export default function GameScreen({
   connected,
   matchInfo,
   gameState,
+  boardKey,
   opponentReconnectingDeadlineMs,
   powerUpMessage = null,
   onFlipCard,
@@ -240,7 +243,11 @@ export default function GameScreen({
         <div className={styles.leftColumn}>
           <div className={styles.boardWrapper}>
             <Board
+            key={boardKey}
             cards={gameState.cards}
+            initialRemovedIndices={gameState.cards
+              .filter((c) => c.state === "matched" || c.state === "removed")
+              .map((c) => c.index)}
             rows={matchInfo.boardRows}
             cols={matchInfo.boardCols}
             cardsClickable={cardsClickable}
