@@ -42,6 +42,7 @@ export function GameShell() {
   const [pendingGameOver, setPendingGameOver] = useState<GameOverMsg | null>(null);
   const [powerUpMessage, setPowerUpMessage] = useState<string | null>(null);
   const [authSent, setAuthSent] = useState(false);
+  const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   const gameOverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const powerUpMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -323,7 +324,12 @@ export function GameShell() {
     handleBackToHome();
   }, [send, handleBackToHome]);
 
-  const handleAbandon = useCallback(() => {
+  const handleAbandonClick = useCallback(() => {
+    setShowAbandonConfirm(true);
+  }, []);
+
+  const handleConfirmAbandon = useCallback(() => {
+    setShowAbandonConfirm(false);
     clearGameSession();
     send({ type: "leave_game" });
     setMatchInfo(null);
@@ -333,6 +339,10 @@ export function GameShell() {
     setScreen("lobby");
   }, [send]);
 
+  const handleCancelAbandon = useCallback(() => {
+    setShowAbandonConfirm(false);
+  }, []);
+
   const handleSignOut = useCallback(async () => {
     await authClient.signOut();
     navigate("/auth/sign-in", { replace: true });
@@ -341,6 +351,44 @@ export function GameShell() {
   return (
     <main className={styles.app}>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {showAbandonConfirm && (
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="abandon-modal-title"
+          aria-describedby="abandon-modal-desc"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCancelAbandon();
+          }}
+        >
+          <div className={styles.modalPanel} onClick={(e) => e.stopPropagation()}>
+            <h2 id="abandon-modal-title" className={styles.modalTitle}>
+              Leave game?
+            </h2>
+            <p id="abandon-modal-desc" className={styles.modalDescription}>
+              Abandoning counts as a loss and will lower your Rating. Your opponent will be awarded a win. Are you sure?
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.modalCancel}
+                onClick={handleCancelAbandon}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.modalConfirm}
+                onClick={handleConfirmAbandon}
+              >
+                Leave game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {screen === "lobby" && (
         <LobbyScreen
@@ -364,7 +412,7 @@ export function GameShell() {
           powerUpMessage={powerUpMessage}
           onFlipCard={handleFlipCard}
           onUsePowerUp={handleUsePowerUp}
-          onAbandon={handleAbandon}
+          onAbandon={handleAbandonClick}
         />
       )}
       {screen === "gameover" && (

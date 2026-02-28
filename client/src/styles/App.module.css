@@ -15,3 +15,68 @@
   border-radius: 0.5rem;
   color: #fecaca;
 }
+
+/* Abandon confirmation modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalPanel {
+  background: var(--card-bg, #1e293b);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  max-width: 22rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modalTitle {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.modalDescription {
+  margin: 0 0 1.25rem;
+  color: var(--muted, #94a3b8);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.modalActions button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.modalCancel {
+  background: transparent;
+  border: 1px solid var(--border, #334155);
+  color: var(--text, #e2e8f0);
+}
+
+.modalCancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.modalConfirm {
+  background: rgba(220, 38, 38, 0.9);
+  border: none;
+  color: #fff;
+}
+
+.modalConfirm:hover {
+  background: rgba(220, 38, 38, 1);
+}
