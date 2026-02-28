@@ -136,6 +136,7 @@ export default function PowerUpHand({
               <p id="powerup-modal-desc" className={styles.modalDescription}>
                 {display?.description ?? ""}
                 {onCooldown ? " Available next turn." : ""}
+                {!enabled ? " You can use it on your turn." : ""}
               </p>
               <div className={styles.modalActions}>
                 <button
