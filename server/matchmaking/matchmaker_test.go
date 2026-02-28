@@ -1,6 +1,7 @@
 package matchmaking
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -42,7 +43,7 @@ func TestMatchmakerPairsPlayers(t *testing.T) {
 
 	pups := &mockPowerUpProvider{}
 	mm := NewMatchmaker(cfg, pups, nil)
-	go mm.Run()
+	go mm.Run(context.Background())
 
 	// Create two mock clients with send channels
 	send1 := make(chan []byte, 100)
@@ -118,7 +119,7 @@ func TestMatchmakerPairsWithAIAfterTimeout(t *testing.T) {
 
 	pups := &mockPowerUpProvider{}
 	mm := NewMatchmaker(cfg, pups, nil)
-	go mm.Run()
+	go mm.Run(context.Background())
 
 	send1 := make(chan []byte, 100)
 	c1 := &ws.Client{Send: send1, Name: "Alice"}
@@ -163,7 +164,7 @@ func TestMatchmakerLeaveQueue(t *testing.T) {
 
 	pups := &mockPowerUpProvider{}
 	mm := NewMatchmaker(cfg, pups, nil)
-	go mm.Run()
+	go mm.Run(context.Background())
 
 	send1 := make(chan []byte, 100)
 	c1 := &ws.Client{Send: send1, Name: "Alice"}

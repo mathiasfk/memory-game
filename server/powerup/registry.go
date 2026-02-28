@@ -2,6 +2,8 @@ package powerup
 
 import (
 	"math/rand"
+
+	"memory-game-server/config"
 	"memory-game-server/game"
 )
 
@@ -125,4 +127,27 @@ func (r *Registry) PickArcanaForMatch(n int) []game.PowerUpDef {
 		weights = append(weights[:idx], weights[idx+1:]...)
 	}
 	return picked
+}
+
+// RegisterAll registers all built-in power-ups on the registry using the given power-up config.
+// Call this from main (or server setup) so adding a new power-up only requires registering it here.
+func RegisterAll(r *Registry, cfg *config.PowerUpsConfig) {
+	if cfg == nil {
+		cfg = &config.PowerUpsConfig{}
+	}
+	r.Register(&ChaosPowerUp{CostValue: cfg.Chaos.Cost})
+	clairvoyanceRevealSec := cfg.Clairvoyance.RevealDurationMS / 1000
+	if clairvoyanceRevealSec < 1 {
+		clairvoyanceRevealSec = 1
+	}
+	r.Register(&ClairvoyancePowerUp{CostValue: cfg.Clairvoyance.Cost, RevealDuration: clairvoyanceRevealSec})
+	r.Register(&NecromancyPowerUp{CostValue: 0})
+	r.Register(&UnveilingPowerUp{CostValue: 0})
+	r.Register(&BloodPactPowerUp{CostValue: 0})
+	r.Register(&LeechPowerUp{CostValue: 0})
+	r.Register(&OblivionPowerUp{CostValue: 0})
+	r.Register(&EarthElementalPowerUp{CostValue: 0})
+	r.Register(&FireElementalPowerUp{CostValue: 0})
+	r.Register(&WaterElementalPowerUp{CostValue: 0})
+	r.Register(&AirElementalPowerUp{CostValue: 0})
 }

@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -45,9 +46,13 @@ func NewHub(cfg *config.Config, mm MatchmakerInterface) *Hub {
 }
 
 // Run starts the hub's main loop. Should be run as a goroutine.
-func (h *Hub) Run() {
+// When ctx is cancelled (e.g. on server shutdown), Run returns and no longer accepts new registrations.
+func (h *Hub) Run(ctx context.Context) {
 	for {
 		select {
+		case <-ctx.Done():
+			log.Print("Hub: shutdown signal received, stopping")
+			return
 		case client := <-h.Register:
 			h.Clients[client] = true
 			log.Printf("Client connected. Total clients: %d", len(h.Clients))

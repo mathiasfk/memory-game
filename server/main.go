@@ -39,21 +39,7 @@ func main() {
 
 	// Set up power-up registry (power-ups are earned by matching pairs; use has no point cost)
 	registry := powerup.NewRegistry()
-	registry.Register(&powerup.ChaosPowerUp{CostValue: 0})
-	clairvoyanceRevealSec := cfg.PowerUps.Clairvoyance.RevealDurationMS / 1000
-	if clairvoyanceRevealSec < 1 {
-		clairvoyanceRevealSec = 1
-	}
-	registry.Register(&powerup.ClairvoyancePowerUp{CostValue: 0, RevealDuration: clairvoyanceRevealSec})
-	registry.Register(&powerup.NecromancyPowerUp{CostValue: 0})
-	registry.Register(&powerup.UnveilingPowerUp{CostValue: 0})
-	registry.Register(&powerup.BloodPactPowerUp{CostValue: 0})
-	registry.Register(&powerup.LeechPowerUp{CostValue: 0})
-	registry.Register(&powerup.OblivionPowerUp{CostValue: 0})
-	registry.Register(&powerup.EarthElementalPowerUp{CostValue: 0})
-	registry.Register(&powerup.FireElementalPowerUp{CostValue: 0})
-	registry.Register(&powerup.WaterElementalPowerUp{CostValue: 0})
-	registry.Register(&powerup.AirElementalPowerUp{CostValue: 0})
+	powerup.RegisterAll(registry, &cfg.PowerUps)
 
 	// Game history storage (optional; DATABASE_URL empty = no persistence)
 	ctx := context.Background()
@@ -65,13 +51,17 @@ func main() {
 		defer historyStore.Close()
 	}
 
+	// Context for graceful shutdown: cancel signals hub and matchmaker to stop.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Set up matchmaker
 	mm := matchmaking.NewMatchmaker(cfg, registry, historyStore)
-	go mm.Run()
+	go mm.Run(ctx)
 
 	// Set up WebSocket hub
 	hub := ws.NewHub(cfg, mm)
-	go hub.Run()
+	go hub.Run(ctx)
 
 	// HTTP handler for WebSocket upgrades
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -98,9 +88,10 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Print("Shutting down server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	cancel() // stop hub and matchmaker (no new connections or matches)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Server shutdown: %v", err)
 	}
 	log.Print("Server stopped")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,14 +21,13 @@ func setupTestServerWithConfig(t *testing.T, cfg *config.Config) (*httptest.Serv
 	t.Helper()
 
 	registry := powerup.NewRegistry()
-	registry.Register(&powerup.ChaosPowerUp{CostValue: cfg.PowerUps.Chaos.Cost})
-	registry.Register(&powerup.ClairvoyancePowerUp{CostValue: cfg.PowerUps.Clairvoyance.Cost, RevealDuration: 1})
+	powerup.RegisterAll(registry, &cfg.PowerUps)
 
 	mm := matchmaking.NewMatchmaker(cfg, registry, nil)
-	go mm.Run()
+	go mm.Run(context.Background())
 
 	hub := ws.NewHub(cfg, mm)
-	go hub.Run()
+	go hub.Run(context.Background())
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

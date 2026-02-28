@@ -48,7 +48,7 @@ type arcanaEvent struct {
 // persisting them in a background goroutine (batch insert), so the game loop
 // does not block on I/O.
 type queuedTelemetrySink struct {
-	store        *storage.Store
+	store        storage.HistoryStore
 	mu           sync.Mutex
 	turnEvents   []turnEvent
 	arcanaEvents []arcanaEvent
@@ -56,7 +56,7 @@ type queuedTelemetrySink struct {
 
 // newQueuedTelemetrySink returns a sink that queues turn and arcana_use events.
 // Events are persisted only when FlushMatch(matchID) is called (after InsertGameResult).
-func newQueuedTelemetrySink(store *storage.Store) *queuedTelemetrySink {
+func newQueuedTelemetrySink(store storage.HistoryStore) *queuedTelemetrySink {
 	return &queuedTelemetrySink{
 		store:        store,
 		turnEvents:   nil,
@@ -173,7 +173,7 @@ type Matchmaker struct {
 	pendingMu     sync.Mutex
 	config        *config.Config
 	powerUps      game.PowerUpProvider
-	historyStore  *storage.Store
+	historyStore  storage.HistoryStore
 	queuedSink    *queuedTelemetrySink        // async telemetry when historyStore != nil
 	activeGames   map[string]*game.Game
 	userIDToGame  map[string]string // userID -> gameID for rejoin by user (cross-device)
@@ -183,7 +183,7 @@ type Matchmaker struct {
 // NewMatchmaker creates a new Matchmaker. historyStore may be nil to disable game history persistence.
 // When historyStore is set, a shared queued telemetry sink is used; turn/arcana_use are persisted only
 // when a game ends (FlushMatch after InsertGameResult), since those tables reference game_history(id).
-func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider, historyStore *storage.Store) *Matchmaker {
+func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider, historyStore storage.HistoryStore) *Matchmaker {
 	var queuedSink *queuedTelemetrySink
 	if historyStore != nil {
 		queuedSink = newQueuedTelemetrySink(historyStore)
@@ -251,14 +251,19 @@ func (m *Matchmaker) LeaveQueue(c *ws.Client) {
 
 // Run is the matchmaker's main loop. It waits for a first player, then either
 // a second player within AIPairTimeoutSec or starts a game vs the AI.
-// Should be run as a goroutine.
-func (m *Matchmaker) Run() {
+// Should be run as a goroutine. When ctx is cancelled (e.g. on server shutdown), Run returns.
+func (m *Matchmaker) Run(ctx context.Context) {
 	timeout := time.Duration(m.config.AIPairTimeoutSec) * time.Second
 	if timeout < 0 {
 		timeout = 0
 	}
 	for {
-		<-m.notify
+		select {
+		case <-ctx.Done():
+			log.Print("Matchmaker: shutdown signal received, stopping")
+			return
+		case <-m.notify:
+		}
 		m.waitMu.Lock()
 		if len(m.waiting) == 0 {
 			m.waitMu.Unlock()
@@ -293,6 +298,12 @@ func (m *Matchmaker) Run() {
 		m.pendingMu.Unlock()
 
 		select {
+		case <-ctx.Done():
+			m.pendingMu.Lock()
+			m.pendingClient = nil
+			m.pendingCancel = nil
+			m.pendingMu.Unlock()
+			return
 		case <-m.notify:
 			m.pendingMu.Lock()
 			m.pendingClient = nil

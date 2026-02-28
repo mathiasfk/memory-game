@@ -84,16 +84,23 @@ func Defaults() *Config {
 	}
 }
 
-// Load reads configuration from an optional config.json file,
+// Load reads configuration from an optional config file,
 // then applies environment variable overrides. Fields not set
 // in either source retain their default values.
+// Config file path: CONFIG_PATH or CONFIG_FILE env, or "config.json" in the current directory.
 func Load() *Config {
 	cfg := Defaults()
 
-	// Try to load from config.json
-	if f, err := os.Open("config.json"); err == nil {
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = os.Getenv("CONFIG_FILE")
+	}
+	if configPath == "" {
+		configPath = "config.json"
+	}
+	if f, err := os.Open(configPath); err == nil {
 		if err := json.NewDecoder(f).Decode(cfg); err != nil {
-			log.Printf("Warning: failed to parse config.json: %v", err)
+			log.Printf("Warning: failed to parse config file %q: %v", configPath, err)
 		}
 		f.Close()
 	}

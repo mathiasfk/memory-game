@@ -17,11 +17,11 @@ const bearerPrefix = "Bearer "
 // Handler holds dependencies for API handlers.
 type Handler struct {
 	Config       *config.Config
-	HistoryStore *storage.Store
+	HistoryStore storage.HistoryStore
 }
 
 // NewHandler creates a new API handler with the given dependencies.
-func NewHandler(cfg *config.Config, historyStore *storage.Store) *Handler {
+func NewHandler(cfg *config.Config, historyStore storage.HistoryStore) *Handler {
 	return &Handler{
 		Config:       cfg,
 		HistoryStore: historyStore,
