@@ -71,13 +71,13 @@ export default function PowerUpHand({
                 <li key={item.powerUpId}>
                   <button
                     type="button"
-                    className={styles.item}
+                    className={`${styles.item} ${onCooldown ? styles.itemDisabled : ""}`}
                     onClick={() => setSelectedPowerUpId(item.powerUpId)}
                     aria-label={`${display?.label ?? item.powerUpId}${item.count > 1 ? `, ${item.count} in hand` : ""}${onCooldown ? ", available next turn" : ""}. Click to view details and use.`}
                   >
                     {display?.imagePath ? (
                       <img
-                        className={styles.cardArt}
+                        className={`${styles.cardArt} ${onCooldown ? styles.cardArtDisabled : ""}`}
                         src={display.imagePath}
                         alt=""
                         aria-hidden
@@ -88,9 +88,7 @@ export default function PowerUpHand({
                       {item.count > 1 ? ` ×${item.count}` : ""}
                     </span>
                     <span className={styles.description}>
-                      {onCooldown
-                        ? "Available next turn."
-                        : handDescription(display)}
+                      {handDescription(display)}
                     </span>
                   </button>
                 </li>
@@ -125,7 +123,7 @@ export default function PowerUpHand({
             >
               {display?.imagePath ? (
                 <img
-                  className={styles.modalArt}
+                  className={`${styles.modalArt} ${onCooldown ? styles.modalArtDisabled : ""}`}
                   src={display.imagePath}
                   alt=""
                   aria-hidden

@@ -56,12 +56,21 @@
   outline-offset: 2px;
 }
 
+/* Card just obtained, inactive for current turn */
+.itemDisabled {
+  filter: grayscale(1);
+}
+
 .cardArt {
   width: 100%;
   display: block;
   aspect-ratio: 1;
   object-fit: cover;
   flex-shrink: 0;
+}
+
+.cardArtDisabled {
+  filter: grayscale(1);
 }
 
 .item .title {
@@ -149,6 +158,10 @@
   object-fit: cover;
   border-radius: 0.45rem;
   margin-bottom: 0.75rem;
+}
+
+.modalArtDisabled {
+  filter: grayscale(1);
 }
 
 .modalTitle {

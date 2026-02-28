@@ -88,7 +88,7 @@ func Defaults() *Config {
 			Clairvoyance: ClairvoyancePowerUpConfig{RevealDurationMS: 3000},
 		},
 		AIProfiles: []AIParams{
-			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
+			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseKnownPairChance: 90, ForgetChance: 1},
 			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 87, ForgetChance: 15},
 			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 85, ForgetChance: 30},
 		},
