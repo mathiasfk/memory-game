@@ -175,9 +175,10 @@ type Matchmaker struct {
 	powerUps      game.PowerUpProvider
 	historyStore  storage.HistoryStore
 	queuedSink    *queuedTelemetrySink        // async telemetry when historyStore != nil
-	activeGames   map[string]*game.Game
-	userIDToGame  map[string]string // userID -> gameID for rejoin by user (cross-device)
-	mu            sync.RWMutex
+	activeGames      map[string]*game.Game
+	userIDToGame     map[string]string   // userID -> gameID for rejoin by user (cross-device)
+	gameIDToClients  map[string][]*ws.Client // gameID -> clients to clear Game ref when game is removed
+	mu               sync.RWMutex
 }
 
 // NewMatchmaker creates a new Matchmaker. historyStore may be nil to disable game history persistence.
@@ -195,8 +196,9 @@ func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider, historyStore s
 		powerUps:     pups,
 		historyStore: historyStore,
 		queuedSink:   queuedSink,
-		activeGames:  make(map[string]*game.Game),
-		userIDToGame: make(map[string]string),
+		activeGames:     make(map[string]*game.Game),
+		userIDToGame:    make(map[string]string),
+		gameIDToClients: make(map[string][]*ws.Client),
 	}
 }
 
@@ -380,6 +382,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 	m.activeGames[matchID] = g
 	m.userIDToGame[client1.UserID] = matchID
 	m.userIDToGame[client2.UserID] = matchID
+	m.gameIDToClients[matchID] = []*ws.Client{client1, client2}
 	m.mu.Unlock()
 
 	client1.Game = g
@@ -446,6 +449,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 	m.mu.Lock()
 	m.activeGames[matchID] = g
 	m.userIDToGame[client1.UserID] = matchID
+	m.gameIDToClients[matchID] = []*ws.Client{client1}
 	m.mu.Unlock()
 
 	client1.Game = g
@@ -485,7 +489,9 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 func (m *Matchmaker) removeGame(gameID string) {
 	m.mu.Lock()
 	g := m.activeGames[gameID]
+	clients := m.gameIDToClients[gameID]
 	delete(m.activeGames, gameID)
+	delete(m.gameIDToClients, gameID)
 	if g != nil {
 		for i := 0; i < 2; i++ {
 			if g.PlayerUserIDs[i] != "" {
@@ -494,6 +500,13 @@ func (m *Matchmaker) removeGame(gameID string) {
 		}
 	}
 	m.mu.Unlock()
+	// Clear client Game refs so they can Find game again (e.g. after opponent_disconnected)
+	for _, cl := range clients {
+		if cl != nil {
+			cl.Game = nil
+			cl.PlayerID = 0
+		}
+	}
 }
 
 // Rejoin looks up a game by ID and rejoin token, and returns the game and player index if the token
