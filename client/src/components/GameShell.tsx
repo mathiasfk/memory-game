@@ -8,6 +8,7 @@ import LobbyScreen from "../screens/LobbyScreen";
 import WaitingScreen from "../screens/WaitingScreen";
 import type { GameOverMsg, GameStateMsg, MatchFoundMsg } from "../types/messages";
 import { getGameSession, clearGameSession, saveGameSession } from "../lib/gameSession";
+import { playSound } from "../lib/sounds";
 import { ToastContainer, type ToastItem } from "./Toast";
 import styles from "../styles/App.module.css";
 
@@ -285,7 +286,10 @@ export function GameShell() {
   }, [userName, send]);
 
   const handleFlipCard = useCallback(
-    (index: number) => send({ type: "flip_card", index }),
+    (index: number) => {
+      playSound("tileFlip");
+      send({ type: "flip_card", index });
+    },
     [send],
   );
 
