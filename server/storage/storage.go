@@ -279,15 +279,16 @@ func (s *Store) InsertTurn(ctx context.Context, matchID string, round, playerIdx
 	return err
 }
 
-// InsertArcanaUse records a power-up use. point_delta_* are optional (nullable).
-func (s *Store) InsertArcanaUse(ctx context.Context, matchID string, round, playerIdx int, powerUpID string, targetCardIndex int, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore int) error {
+// InsertArcanaUse records a power-up use. pointDeltaPlayer/pointDeltaOpponent are the score change
+// from card use until end of turn (for balance telemetry).
+func (s *Store) InsertArcanaUse(ctx context.Context, matchID string, round, playerIdx int, powerUpID string, targetCardIndex int, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore int, pointDeltaPlayer, pointDeltaOpponent int) error {
 	if s == nil || s.pool == nil {
 		return nil
 	}
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO arcana_use (match_id, round, player_idx, power_up_id, target_card_index, player_score_before, opponent_score_before, pairs_matched_before)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		matchID, round, playerIdx, powerUpID, targetCardIndex, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore)
+		INSERT INTO arcana_use (match_id, round, player_idx, power_up_id, target_card_index, player_score_before, opponent_score_before, pairs_matched_before, point_delta_player, point_delta_opponent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		matchID, round, playerIdx, powerUpID, targetCardIndex, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore, pointDeltaPlayer, pointDeltaOpponent)
 	return err
 }
 
@@ -444,18 +445,27 @@ func (s *Store) GetUserRole(ctx context.Context, userID string) (string, error) 
 
 // TelemetryMetrics holds aggregated metrics for the admin telemetry dashboard.
 type TelemetryMetrics struct {
+	Players TelemetryPlayers  `json:"players"`
 	Global  TelemetryGlobal   `json:"global"`
 	ByCard  []TelemetryByCard `json:"by_card"`
 	ByCombo []TelemetryByCombo `json:"by_combo"`
 }
 
+// TelemetryPlayers holds player-count and activity metrics.
+type TelemetryPlayers struct {
+	RegisteredCount   int `json:"registered_count"`
+	ActiveLastWeek    int `json:"active_last_week"`
+	TotalMatches      int `json:"total_matches"`
+}
+
 type TelemetryGlobal struct {
-	TotalMatches        int     `json:"total_matches"`
-	TotalTurns           int     `json:"total_turns"`
-	AvgDeltaPlayer       float64 `json:"avg_delta_player"`
-	AvgDeltaOpponent     float64 `json:"avg_delta_opponent"`
-	CardsPerTurnAvg      float64 `json:"cards_per_turn_avg"`
-	CardsPerTurnMax      int     `json:"cards_per_turn_max"`
+	TotalMatches            int      `json:"total_matches"`
+	TotalTurns              int      `json:"total_turns"`
+	AvgTurnsPerMatch        float64  `json:"avg_turns_per_match"`
+	AvgNetPointSwingPerTurn float64  `json:"avg_net_point_swing_per_turn"`
+	AvgNetPointSwingPerCard *float64 `json:"avg_net_point_swing_per_card,omitempty"`
+	CardsPerTurnAvg         float64  `json:"cards_per_turn_avg"`
+	CardsPerTurnMax         int      `json:"cards_per_turn_max"`
 }
 
 type TelemetryByCard struct {
@@ -489,22 +499,52 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 	}
 	out := &TelemetryMetrics{}
 
-	// Global: total matches
+	// Players: registered count (players with a rating row)
+	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM player_ratings`).Scan(&out.Players.RegisteredCount); err != nil {
+		return nil, err
+	}
+	// Players: active in last 7 days (distinct users who played a match)
+	if err := s.pool.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT user_id) FROM (
+			SELECT player0_user_id AS user_id FROM game_history WHERE played_at >= now() - interval '7 days'
+			UNION
+			SELECT player1_user_id FROM game_history WHERE played_at >= now() - interval '7 days'
+		) t
+	`).Scan(&out.Players.ActiveLastWeek); err != nil {
+		return nil, err
+	}
+	// Global: total matches (also used for Players.TotalMatches)
 	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM game_history`).Scan(&out.Global.TotalMatches); err != nil {
 		return nil, err
 	}
+	out.Players.TotalMatches = out.Global.TotalMatches
+
 	// Global: total turns
 	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM turn`).Scan(&out.Global.TotalTurns); err != nil {
 		return nil, err
 	}
-	// Global: avg point delta per turn
+	// Global: avg turns per match
+	if out.Global.TotalMatches > 0 {
+		out.Global.AvgTurnsPerMatch = float64(out.Global.TotalTurns) / float64(out.Global.TotalMatches)
+	}
+	// Global: avg net point swing per turn (player gain + opponent loss = point_delta_player - point_delta_opponent)
 	if out.Global.TotalTurns > 0 {
 		if err := s.pool.QueryRow(ctx, `
-			SELECT AVG(point_delta_player)::float, AVG(point_delta_opponent)::float FROM turn
-		`).Scan(&out.Global.AvgDeltaPlayer, &out.Global.AvgDeltaOpponent); err != nil {
+			SELECT AVG((point_delta_player - point_delta_opponent))::float FROM turn
+		`).Scan(&out.Global.AvgNetPointSwingPerTurn); err != nil {
 			return nil, err
 		}
 	}
+	// Global: avg net point swing per card (arcana uses only; only rows with deltas)
+	var avgNetPerCard *float64
+	if err := s.pool.QueryRow(ctx, `
+		SELECT AVG((COALESCE(point_delta_player, 0) - COALESCE(point_delta_opponent, 0)))::float
+		FROM arcana_use
+		WHERE point_delta_player IS NOT NULL AND point_delta_opponent IS NOT NULL
+	`).Scan(&avgNetPerCard); err != nil {
+		return nil, err
+	}
+	out.Global.AvgNetPointSwingPerCard = avgNetPerCard
 	// Global: cards per turn (count arcana_use per match_id, round)
 	var cardsPerTurnAvg *float64
 	var cardsPerTurnMax *int

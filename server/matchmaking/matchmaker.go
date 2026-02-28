@@ -98,6 +98,9 @@ func (s *queuedTelemetrySink) RecordArcanaUse(matchID string, round, playerIdx i
 // FlushMatch persists queued turn and arcana_use events for the given match.
 // Must be called after the game_history row exists (e.g. after InsertGameResult in OnGameEnd),
 // since turn and arcana_use reference game_history(id).
+//
+// Arcana point_delta is computed as the score change from the moment the card was used until
+// the end of that turn (for balance telemetry: direct and indirect impact of the card in the turn).
 func (s *queuedTelemetrySink) FlushMatch(matchID string) {
 	if s == nil {
 		return
@@ -135,8 +138,28 @@ func (s *queuedTelemetrySink) FlushMatch(matchID string) {
 	for _, e := range turns {
 		_ = s.store.InsertTurn(ctx, e.matchID, e.round, e.playerIdx, e.playerScoreAfter, e.opponentScoreAfter, e.deltaPlayer, e.deltaOpponent)
 	}
+	// Build round -> end-of-turn scores for this match (from turn events we just flushed).
+	endScoreByRound := make(map[int]struct{ score0, score1 int })
+	for _, t := range turns {
+		if t.playerIdx == 0 {
+			endScoreByRound[t.round] = struct{ score0, score1 int }{t.playerScoreAfter, t.opponentScoreAfter}
+		} else {
+			endScoreByRound[t.round] = struct{ score0, score1 int }{t.opponentScoreAfter, t.playerScoreAfter}
+		}
+	}
 	for _, e := range arcanas {
-		_ = s.store.InsertArcanaUse(ctx, e.matchID, e.round, e.playerIdx, e.powerUpID, e.targetCardIndex, e.playerScoreBefore, e.opponentScoreBefore, e.pairsMatchedBefore)
+		deltaPlayer, deltaOpponent := 0, 0
+		if end, ok := endScoreByRound[e.round]; ok {
+			// Delta from card use until end of turn for the player who used the card and the opponent.
+			if e.playerIdx == 0 {
+				deltaPlayer = end.score0 - e.playerScoreBefore
+				deltaOpponent = end.score1 - e.opponentScoreBefore
+			} else {
+				deltaPlayer = end.score1 - e.playerScoreBefore
+				deltaOpponent = end.score0 - e.opponentScoreBefore
+			}
+		}
+		_ = s.store.InsertArcanaUse(ctx, e.matchID, e.round, e.playerIdx, e.powerUpID, e.targetCardIndex, e.playerScoreBefore, e.opponentScoreBefore, e.pairsMatchedBefore, deltaPlayer, deltaOpponent)
 	}
 }
 

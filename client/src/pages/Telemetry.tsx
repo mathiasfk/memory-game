@@ -42,16 +42,24 @@ export interface TelemetryByCombo {
   win_rate_pct: number;
 }
 
+export interface TelemetryPlayers {
+  registered_count: number;
+  active_last_week: number;
+  total_matches: number;
+}
+
 export interface TelemetryGlobal {
   total_matches: number;
   total_turns: number;
-  avg_delta_player: number;
-  avg_delta_opponent: number;
+  avg_turns_per_match: number;
+  avg_net_point_swing_per_turn: number;
+  avg_net_point_swing_per_card: number | null;
   cards_per_turn_avg: number;
   cards_per_turn_max: number;
 }
 
 export interface TelemetryMetrics {
+  players?: TelemetryPlayers;
   global: TelemetryGlobal;
   by_card: TelemetryByCard[];
   by_combo: TelemetryByCombo[];
@@ -139,26 +147,51 @@ export function TelemetryPage() {
           {!loading && !error && metrics && (
             <>
               <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Jogadores</h2>
+                <div className={styles.globalGrid}>
+                  <div className={styles.globalCard}>
+                    <span className={styles.globalLabel}>Jogadores registrados</span>
+                    <span className={styles.globalValue}>{metrics.players?.registered_count ?? "—"}</span>
+                  </div>
+                  <div className={styles.globalCard}>
+                    <span className={styles.globalLabel}>Ativos na última semana</span>
+                    <span className={styles.globalValue}>{metrics.players?.active_last_week ?? "—"}</span>
+                  </div>
+                  <div className={styles.globalCard}>
+                    <span className={styles.globalLabel}>Total de partidas</span>
+                    <span className={styles.globalValue}>{metrics.players?.total_matches ?? metrics.global.total_matches ?? "—"}</span>
+                  </div>
+                </div>
+              </section>
+
+              <section className={styles.section}>
                 <h2 className={styles.sectionTitle}>Métricas globais</h2>
                 <div className={styles.globalGrid}>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Partidas</span>
-                    <span className={styles.globalValue}>{metrics.global.total_matches}</span>
-                  </div>
-                  <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Turnos</span>
-                    <span className={styles.globalValue}>{metrics.global.total_turns}</span>
-                  </div>
-                  <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Point swing médio (jogador)</span>
+                    <span className={styles.globalLabel}>Turnos médio por partida</span>
                     <span className={styles.globalValue}>
-                      {metrics.global.avg_delta_player.toFixed(2)}
+                      {metrics.global.total_matches > 0
+                        ? metrics.global.avg_turns_per_match.toFixed(1)
+                        : "—"}
                     </span>
                   </div>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Point swing médio (oponente)</span>
+                    <span className={styles.globalLabel}>Point swing médio por turno</span>
                     <span className={styles.globalValue}>
-                      {metrics.global.avg_delta_opponent.toFixed(2)}
+                      {metrics.global.total_turns > 0
+                        ? metrics.global.avg_net_point_swing_per_turn.toFixed(2)
+                        : "—"}
+                    </span>
+                  </div>
+                  <div
+                    className={styles.globalCard}
+                    title="Variação do placar do momento do uso da carta até o fim do turno"
+                  >
+                    <span className={styles.globalLabel}>Point swing médio por carta</span>
+                    <span className={styles.globalValue}>
+                      {metrics.global.avg_net_point_swing_per_card != null
+                        ? metrics.global.avg_net_point_swing_per_card.toFixed(2)
+                        : "—"}
                     </span>
                   </div>
                   <div className={styles.globalCard}>
@@ -246,9 +279,12 @@ function ArcanaCard({
           <span className={styles.arcanaStatLabel}>Win rate</span>{" "}
           {card.total_matches > 0 ? card.win_rate_pct.toFixed(1) : "—"}%
         </span>
-        <span className={styles.arcanaStat}>
+        <span
+          className={styles.arcanaStat}
+          title="Variação líquida (jogador − oponente) do momento do uso da carta até o fim do turno; mesma métrica do global"
+        >
           <span className={styles.arcanaStatLabel}>Point swing</span>{" "}
-          {(card.avg_point_swing_player + card.avg_point_swing_opponent).toFixed(1)}
+          {(card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1)}
         </span>
         <span className={styles.arcanaStat}>
           <span className={styles.arcanaStatLabel}>Usos</span> {card.use_count}
@@ -281,9 +317,15 @@ function ArcanaDetailModal({
         <p className={styles.modalDescription}>{description}</p>
         <div className={styles.modalMetrics}>
           <h3 className={styles.modalSubtitle}>Métricas principais</h3>
+          <p className={styles.modalHelper}>
+            Point swing = variação do placar do momento do uso até o fim do turno (impacto direto e indireto da carta). O valor líquido (jogador − oponente) é a mesma métrica do global.
+          </p>
           <div className={styles.modalMetricsGrid}>
             <span className={styles.modalMetric}>
               Win rate: {card.total_matches > 0 ? card.win_rate_pct.toFixed(1) : "—"}%
+            </span>
+            <span className={styles.modalMetric}>
+              Point swing líquido: {(card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1)}
             </span>
             <span className={styles.modalMetric}>
               Point swing (jogador): {card.avg_point_swing_player.toFixed(1)}

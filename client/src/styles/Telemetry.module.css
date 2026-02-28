@@ -253,6 +253,13 @@
   color: #e2e8f0;
 }
 
+.modalHelper {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
 .modalMetricsGrid {
   display: flex;
   flex-wrap: wrap;
