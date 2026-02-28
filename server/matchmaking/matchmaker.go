@@ -357,7 +357,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 		g.TelemetrySink = m.queuedSink
 		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
 			var e0Before, e0After, e1Before, e1After *int
-			if endReason == "completed" {
+			if endReason == "completed" || endReason == "opponent_disconnected" {
 				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
 				if err == nil {
 					e0Before, e0After = &eb0, &ea0
@@ -424,7 +424,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 		g.TelemetrySink = m.queuedSink
 		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
 			var e0Before, e0After, e1Before, e1After *int
-			if endReason == "completed" {
+			if endReason == "completed" || endReason == "opponent_disconnected" {
 				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
 				if err == nil {
 					e0Before, e0After = &eb0, &ea0

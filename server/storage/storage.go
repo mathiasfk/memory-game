@@ -236,8 +236,9 @@ func (s *Store) UpdateRatingsAfterGame(ctx context.Context, p0UserID, p1UserID, 
 }
 
 // InsertGameResult records a finished game. matchID is the UUID of the match (used as game_history.id).
-// winnerIndex is 0 or 1, or -1 for draw (stored as NULL).
-// For completed games pass elo before/after; for abandonos pass nil for all four.
+// winnerIndex is 0 or 1 (winner), or -1 for draw (stored as NULL).
+// For end_reason "opponent_disconnected", winnerIndex is the player who stayed (winner); the abandoner is 1 - winnerIndex.
+// Pass elo before/after for both "completed" and "opponent_disconnected"; pass nil only when ratings are not updated.
 func (s *Store) InsertGameResult(ctx context.Context, matchID, player0UserID, player1UserID, player0Name, player1Name string, player0Score, player1Score int, winnerIndex int, endReason string, elo0Before, elo0After, elo1Before, elo1After *int) error {
 	if s == nil || s.pool == nil {
 		return nil
@@ -304,7 +305,7 @@ type GameRecord struct {
 	Player1Name      string  `json:"player1_name"`
 	Player0Score     int     `json:"player0_score"`
 	Player1Score     int     `json:"player1_score"`
-	WinnerIndex      *int    `json:"winner_index"` // 0, 1, or null for draw
+	WinnerIndex      *int    `json:"winner_index"` // 0 or 1 (winner), or null for draw. When end_reason is "opponent_disconnected", abandoner = 1 - winner_index.
 	EndReason        string  `json:"end_reason"`
 	YourIndex        *int    `json:"your_index"` // 0 or 1 for the requesting user; set by ListByUserID
 	Player0EloBefore *int    `json:"player0_elo_before,omitempty"`
