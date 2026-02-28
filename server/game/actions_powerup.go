@@ -159,6 +159,7 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 				}
 			}
 			player.HighlightIndices = indices
+			opponent.HighlightIndices = indices // same info for both players
 		}
 	}
 
@@ -172,6 +173,7 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 			}
 		}
 		player.HighlightIndices = indices
+		opponent.HighlightIndices = indices // same info for both players
 	}
 	// Leech: this turn, match points are subtracted from opponent
 	if powerUpID == "leech" {

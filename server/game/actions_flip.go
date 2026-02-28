@@ -102,8 +102,12 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		g.FlippedIndices = g.FlippedIndices[:0]
 		g.TurnPhase = FirstFlip
 
-		// End of match: clear highlight; Leech lasts whole turn (cleared on mismatch/timeout)
-		player.HighlightIndices = nil
+		// End of match: clear highlight for both players; Leech lasts whole turn (cleared on mismatch/timeout)
+		for i := 0; i < 2; i++ {
+			if g.Players[i] != nil {
+				g.Players[i].HighlightIndices = nil
+			}
+		}
 		// Blood Pact is not cleared on match; only on mismatch or timeout
 
 		// Check if game is over
@@ -151,8 +155,12 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 		g.Board.Cards[idx].State = Hidden
 	}
 
-	// End of turn: clear highlight and Leech (effects last only this turn)
-	player.HighlightIndices = nil
+	// End of turn: clear highlight for both players and Leech (effects last only this turn)
+	for i := 0; i < 2; i++ {
+		if g.Players[i] != nil {
+			g.Players[i].HighlightIndices = nil
+		}
+	}
 	player.LeechActive = false
 	// Blood Pact: failed (mismatch); lose 3 points and clear pact
 	if player.BloodPactActive {
@@ -208,8 +216,12 @@ func (g *Game) handleTurnTimeout() {
 	}
 	player := g.Players[g.CurrentTurn]
 	if player != nil {
-		// End of turn: clear highlight and Leech (effects last only this turn)
-		player.HighlightIndices = nil
+		// End of turn: clear highlight for both players and Leech (effects last only this turn)
+		for i := 0; i < 2; i++ {
+			if g.Players[i] != nil {
+				g.Players[i].HighlightIndices = nil
+			}
+		}
 		player.LeechActive = false
 		// Blood Pact: turn timeout counts as failure; lose 3 points and clear pact
 		if player.BloodPactActive {
