@@ -41,6 +41,8 @@ export interface TelemetryByCombo {
   total_matches: number;
   wins: number;
   win_rate_pct: number;
+  avg_point_swing_player: number;
+  avg_point_swing_opponent: number;
 }
 
 export interface TelemetryPlayers {
@@ -71,6 +73,7 @@ export function TelemetryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<TelemetryByCard | null>(null);
+  const [selectedCombo, setSelectedCombo] = useState<TelemetryByCombo | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,41 +229,20 @@ export function TelemetryPage() {
                 <p className={styles.comboHelp}>
                   Combos of 2+ cards played together in the same turn (synergy).
                 </p>
-                <ul className={styles.comboList}>
+                <div className={styles.cardGrid}>
                   {metrics.by_combo.length === 0 && (
-                    <li className={styles.comboEmpty}>
+                    <p className={styles.comboEmpty}>
                       No multi-card combo recorded (need at least 2 cards used in the same turn).
-                    </li>
+                    </p>
                   )}
                   {metrics.by_combo.map((combo) => (
-                    <li key={combo.combo_key} className={styles.comboItem}>
-                      <div className={styles.comboCardArts}>
-                        {combo.combo_key.split(",").map((powerUpId, idx) => {
-                          const id = powerUpId.trim();
-                          const display = POWER_UP_DISPLAY[id];
-                          return display?.imagePath ? (
-                            <img
-                              key={`${id}-${idx}`}
-                              className={styles.comboCardArt}
-                              src={display.imagePath}
-                              alt=""
-                              title={display.label}
-                              aria-hidden
-                            />
-                          ) : null;
-                        })}
-                      </div>
-                      <span className={styles.comboKey}>
-                        {combo.combo_key}
-                        <span className={styles.comboCardCount}> ({combo.card_count} cards)</span>
-                      </span>
-                      <span className={styles.comboStats}>
-                        {combo.total_matches} uses, {combo.wins} wins (
-                        {combo.win_rate_pct.toFixed(1)}%)
-                      </span>
-                    </li>
+                    <ComboCard
+                      key={combo.combo_key}
+                      combo={combo}
+                      onClick={() => setSelectedCombo(combo)}
+                    />
                   ))}
-                </ul>
+                </div>
               </section>
             </>
           )}
@@ -270,6 +252,12 @@ export function TelemetryPage() {
           <ArcanaDetailModal
             card={selectedCard}
             onClose={() => setSelectedCard(null)}
+          />
+        )}
+        {selectedCombo && (
+          <ComboDetailModal
+            combo={selectedCombo}
+            onClose={() => setSelectedCombo(null)}
           />
         )}
       </SignedIn>
@@ -394,6 +382,134 @@ function ArcanaDetailModal({
           )}
           <p className={styles.modalText}>
             <strong>Pairs already matched:</strong> {card.use_count > 0 ? card.avg_pairs_matched_before.toFixed(1) : "—"} on average
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ComboCard({
+  combo,
+  onClick,
+}: {
+  combo: TelemetryByCombo;
+  onClick: () => void;
+}) {
+  const netSwing = combo.avg_point_swing_player - combo.avg_point_swing_opponent;
+
+  return (
+    <button
+      type="button"
+      className={styles.arcanaCard}
+      onClick={onClick}
+    >
+      <div className={styles.comboCardArts}>
+        {combo.combo_key.split(",").map((powerUpId, idx) => {
+          const id = powerUpId.trim();
+          const display = POWER_UP_DISPLAY[id];
+          return display?.imagePath ? (
+            <img
+              key={`${id}-${idx}`}
+              className={styles.comboCardArt}
+              src={display.imagePath}
+              alt=""
+              title={display.label}
+              aria-hidden
+            />
+          ) : null;
+        })}
+      </div>
+      <div className={styles.arcanaCardHeader}>
+        <span className={styles.arcanaCardName}>
+          {combo.combo_key}
+          <span className={styles.comboCardCount}> ({combo.card_count} cards)</span>
+        </span>
+      </div>
+      <div className={styles.arcanaCardStats}>
+        <span className={styles.arcanaStat}>
+          <span className={styles.arcanaStatLabel}>Win rate</span>{" "}
+          {combo.total_matches > 0 ? combo.win_rate_pct.toFixed(1) : "—"}%
+        </span>
+        <span
+          className={styles.arcanaStat}
+          title="Net change (player − opponent) for the turn when this combo was used"
+        >
+          <span className={styles.arcanaStatLabel}>Point swing</span>{" "}
+          {netSwing.toFixed(1)}
+        </span>
+        <span className={styles.arcanaStat}>
+          <span className={styles.arcanaStatLabel}>Uses</span> {combo.total_matches}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function ComboDetailModal({
+  combo,
+  onClose,
+}: {
+  combo: TelemetryByCombo;
+  onClose: () => void;
+}) {
+  const netSwing = combo.avg_point_swing_player - combo.avg_point_swing_opponent;
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="combo-modal-title">
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2 id="combo-modal-title" className={styles.modalTitle}>
+            Combo: {combo.combo_key}
+          </h2>
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
+        <div className={styles.comboCardArts}>
+          {combo.combo_key.split(",").map((powerUpId, idx) => {
+            const id = powerUpId.trim();
+            const display = POWER_UP_DISPLAY[id];
+            return display?.imagePath ? (
+              <img
+                key={`${id}-${idx}`}
+                className={styles.comboCardArt}
+                src={display.imagePath}
+                alt=""
+                title={display.label}
+                aria-hidden
+              />
+            ) : null;
+          })}
+        </div>
+        <div className={styles.modalMetrics}>
+          <h3 className={styles.modalSubtitle}>Main metrics</h3>
+          <p className={styles.modalHelper}>
+            Point swing = score change for the turn when this combo was used (sum of all cards in the turn).
+          </p>
+          <div className={styles.modalMetricsGrid}>
+            <span className={styles.modalMetric}>
+              Win rate: {combo.total_matches > 0 ? combo.win_rate_pct.toFixed(1) : "—"}%
+            </span>
+            <span className={styles.modalMetric}>
+              Net point swing: {netSwing.toFixed(1)}
+            </span>
+            <span className={styles.modalMetric}>
+              Point swing (player): {combo.avg_point_swing_player.toFixed(1)}
+            </span>
+            <span className={styles.modalMetric}>
+              Point swing (opponent): {combo.avg_point_swing_opponent.toFixed(1)}
+            </span>
+            <span className={styles.modalMetric}>Uses: {combo.total_matches}</span>
+          </div>
+        </div>
+        <div className={styles.modalExtra}>
+          <h3 className={styles.modalSubtitle}>Complementary</h3>
+          <p className={styles.modalText}>
+            <strong>Cards in combo:</strong> {combo.card_count}
+          </p>
+          <p className={styles.modalText}>
+            <strong>Wins in uses:</strong> {combo.wins} wins in {combo.total_matches} uses
           </p>
         </div>
       </div>

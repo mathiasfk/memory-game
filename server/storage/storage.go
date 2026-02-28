@@ -487,11 +487,13 @@ type TelemetryTurnBucket struct {
 }
 
 type TelemetryByCombo struct {
-	ComboKey     string  `json:"combo_key"`
-	CardCount    int     `json:"card_count"` // number of cards in the combo (2+)
-	TotalMatches int     `json:"total_matches"`
-	Wins         int     `json:"wins"`
-	WinRatePct   float64 `json:"win_rate_pct"`
+	ComboKey               string  `json:"combo_key"`
+	CardCount              int     `json:"card_count"` // number of cards in the combo (2+)
+	TotalMatches           int     `json:"total_matches"`
+	Wins                   int     `json:"wins"`
+	WinRatePct             float64 `json:"win_rate_pct"`
+	AvgPointSwingPlayer    float64 `json:"avg_point_swing_player"`
+	AvgPointSwingOpponent  float64 `json:"avg_point_swing_opponent"`
 }
 
 // GetTelemetryMetrics returns aggregated metrics from game_history, match_arcana, turn, arcana_use.
@@ -697,6 +699,7 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 	// By combo: cards used together in the same turn (arcana_use grouped by match_id, round, player_idx).
 	// Combo = sorted set of power_up_ids used in one turn; only combos with 2+ cards (synergy).
 	// Wins = number of times that combo was used and the player who used it won the match.
+	// Point swing = per-turn sum of (player/opponent) deltas from arcana_use, then averaged across combo uses.
 	comboRows, err := s.pool.Query(ctx, `
 		WITH turn_cards AS (
 			SELECT match_id, round, player_idx, array_agg(DISTINCT power_up_id ORDER BY power_up_id) AS arr
@@ -709,13 +712,23 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 				array_length(arr, 1) AS card_count
 			FROM turn_cards
 			WHERE array_length(arr, 1) >= 2
+		),
+		turn_swing AS (
+			SELECT tc.combo_key, tc.card_count, tc.match_id, tc.round, tc.player_idx,
+				SUM(COALESCE(au.point_delta_player, 0))::float AS turn_delta_player,
+				SUM(COALESCE(au.point_delta_opponent, 0))::float AS turn_delta_opponent
+			FROM turn_combos tc
+			JOIN arcana_use au ON au.match_id = tc.match_id AND au.round = tc.round AND au.player_idx = tc.player_idx
+			GROUP BY tc.combo_key, tc.card_count, tc.match_id, tc.round, tc.player_idx
 		)
-		SELECT tc.combo_key, tc.card_count,
+		SELECT ts.combo_key, ts.card_count,
 			COUNT(*) AS total_uses,
-			COUNT(*) FILTER (WHERE gh.winner_index = tc.player_idx) AS wins
-		FROM turn_combos tc
-		JOIN game_history gh ON gh.id = tc.match_id
-		GROUP BY tc.combo_key, tc.card_count
+			COUNT(*) FILTER (WHERE gh.winner_index = ts.player_idx) AS wins,
+			AVG(ts.turn_delta_player)::float AS avg_point_swing_player,
+			AVG(ts.turn_delta_opponent)::float AS avg_point_swing_opponent
+		FROM turn_swing ts
+		JOIN game_history gh ON gh.id = ts.match_id
+		GROUP BY ts.combo_key, ts.card_count
 		ORDER BY COUNT(*) DESC
 		LIMIT 50
 	`)
@@ -726,7 +739,8 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 	for comboRows.Next() {
 		var comboKey string
 		var cardCount, total, wins int
-		if err := comboRows.Scan(&comboKey, &cardCount, &total, &wins); err != nil {
+		var avgSwingPlayer, avgSwingOpponent float64
+		if err := comboRows.Scan(&comboKey, &cardCount, &total, &wins, &avgSwingPlayer, &avgSwingOpponent); err != nil {
 			return nil, err
 		}
 		winRatePct := 0.0
@@ -734,11 +748,13 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 			winRatePct = 100.0 * float64(wins) / float64(total)
 		}
 		out.ByCombo = append(out.ByCombo, TelemetryByCombo{
-			ComboKey:     comboKey,
-			CardCount:    cardCount,
-			TotalMatches: total,
-			Wins:         wins,
-			WinRatePct:   winRatePct,
+			ComboKey:              comboKey,
+			CardCount:             cardCount,
+			TotalMatches:          total,
+			Wins:                  wins,
+			WinRatePct:            winRatePct,
+			AvgPointSwingPlayer:   avgSwingPlayer,
+			AvgPointSwingOpponent: avgSwingOpponent,
 		})
 	}
 	if err := comboRows.Err(); err != nil {

@@ -55,7 +55,7 @@ export default function LobbyScreen({
             onClick={() => navigate("/telemetry")}
             className={styles.historyButton}
           >
-            Telemetria
+            Telemetry
           </button>
         )}
         <button type="button" onClick={onSignOut} className={styles.signOut}>
