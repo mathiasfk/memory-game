@@ -37,6 +37,7 @@ export interface TelemetryByCard {
 
 export interface TelemetryByCombo {
   combo_key: string;
+  card_count: number;
   total_matches: number;
   wins: number;
   win_rate_pct: number;
@@ -221,16 +222,24 @@ export function TelemetryPage() {
               </section>
 
               <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Metrics by combo</h2>
+                <h2 className={styles.sectionTitle}>Metrics by combo (same turn)</h2>
+                <p className={styles.comboHelp}>
+                  Combos of 2+ cards played together in the same turn (synergy).
+                </p>
                 <ul className={styles.comboList}>
                   {metrics.by_combo.length === 0 && (
-                    <li className={styles.comboEmpty}>No 6-card combo recorded.</li>
+                    <li className={styles.comboEmpty}>
+                      No multi-card combo recorded (need at least 2 cards used in the same turn).
+                    </li>
                   )}
-                  {metrics.by_combo.map((combo, i) => (
+                  {metrics.by_combo.map((combo) => (
                     <li key={combo.combo_key} className={styles.comboItem}>
-                      <span className={styles.comboKey}>{combo.combo_key}</span>
+                      <span className={styles.comboKey}>
+                        {combo.combo_key}
+                        <span className={styles.comboCardCount}> ({combo.card_count} cards)</span>
+                      </span>
                       <span className={styles.comboStats}>
-                        {combo.total_matches} matches, {combo.wins} wins (
+                        {combo.total_matches} uses, {combo.wins} wins (
                         {combo.win_rate_pct.toFixed(1)}%)
                       </span>
                     </li>
