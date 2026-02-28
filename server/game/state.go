@@ -32,6 +32,11 @@ type PowerUpInHand struct {
 }
 
 // GameStateMsg is the full game state broadcast to a specific player.
+//
+// Server is the single source of truth for: which tiles are arcana (pairId in PairIDToPowerUp,
+// or pairId < ArcanaPairs), which are normal and their element (CardView.Element when revealed/matched),
+// and how many arcana pairs exist (ArcanaPairs). The client must use only these fields and must not
+// derive arcana/normal/element from local constants.
 type GameStateMsg struct {
 	Type                 string          `json:"type"`
 	Cards                []CardView      `json:"cards"`
@@ -45,14 +50,17 @@ type GameStateMsg struct {
 	TurnCountdownShowSec int             `json:"turnCountdownShowSec,omitempty"`
 	// KnownIndices are card indices that have been revealed at some point (used when computing Unveiling highlight).
 	KnownIndices []int `json:"knownIndices,omitempty"`
-	// PairIDToPowerUp maps board pair IDs (0..3 for arcana pairs) to power-up IDs for this match; client uses for display.
+	// PairIDToPowerUp maps board pair IDs (0..ArcanaPairs-1) to power-up IDs for this match. Defines which pairIds are arcana.
 	PairIDToPowerUp map[int]string `json:"pairIdToPowerUp,omitempty"`
+	// ArcanaPairs is the number of arcana pairs (pairIDs 0..ArcanaPairs-1). Remaining pairs are normal and have Element set.
+	ArcanaPairs int `json:"arcanaPairs,omitempty"`
 	// HighlightIndices are card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Current turn only.
 	HighlightIndices []int `json:"highlightIndices,omitempty"`
 }
 
-// BuildCardViews constructs the client-facing card list.
-// Hidden and removed cards do not expose pairId or element; only revealed/matched cards send them (no leak).
+// BuildCardViews constructs the client-facing card list. Server is source of truth: we send
+// PairID and Element only for revealed/matched cards (Element is set only for normal pairs, i.e. PairID >= ArcanaPairs).
+// Hidden and removed cards do not expose pairId or element (no leak).
 func BuildCardViews(board *Board) []CardView {
 	views := make([]CardView, len(board.Cards))
 	for i, card := range board.Cards {

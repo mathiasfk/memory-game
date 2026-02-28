@@ -255,6 +255,7 @@ export default function GameScreen({
             radarTargetingMode={pendingClairvoyanceTarget}
             oblivionTargetingMode={pendingOblivionTarget}
             pairIdToPowerUp={gameState.pairIdToPowerUp ?? null}
+            arcanaPairs={gameState.arcanaPairs}
             highlightIndices={gameState.highlightIndices ?? []}
           />
           </div>

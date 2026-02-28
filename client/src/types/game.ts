@@ -6,7 +6,7 @@ export interface CardView {
   index: number;
   pairId?: number;
   state: CardState;
-  /** Element for normal cards when revealed (fire, water, air, earth). Never sent for hidden/removed cards. */
+  /** From server: element for normal cards when revealed (fire, water, air, earth). Only set for revealed/matched; never for hidden/removed or arcana. */
   element?: ElementType;
 }
 
@@ -47,8 +47,10 @@ export interface GameState {
   turnCountdownShowSec?: number;
   /** Card indices that have been revealed at some point (used when computing highlight). */
   knownIndices?: number[];
-  /** Maps board pair IDs (0..3) to power-up IDs for this match (arcana pairs). */
+  /** From server: pairId -> power-up ID for arcana pairs. Defines which pairIds are arcana. */
   pairIdToPowerUp?: Record<string, string>;
+  /** From server: number of arcana pairs (pairIDs 0..arcanaPairs-1). Remaining pairs are normal; their element is in card.element when revealed. */
+  arcanaPairs?: number;
   /** Card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Current turn only. */
   highlightIndices?: number[];
 }

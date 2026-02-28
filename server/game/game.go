@@ -371,6 +371,7 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		Phase:                       g.TurnPhase.String(),
 		KnownIndices:     knownIndices,
 		PairIDToPowerUp:  g.PairIDToPowerUp,
+		ArcanaPairs:      g.Board.ArcanaPairs,
 		HighlightIndices: g.Players[playerIdx].HighlightIndices,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {

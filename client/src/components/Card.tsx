@@ -1,14 +1,26 @@
 import type { CardView } from "../types/game";
-import { getPowerUpDisplayByPairId, NUM_POWERUP_PAIRS } from "../powerups/registry";
-import { getNormalSymbolForPairId } from "../constants/symbols";
+import { getPowerUpDisplayByPairId } from "../powerups/registry";
+import {
+  getNormalSymbolByElement,
+  getNormalSymbolForPairId,
+} from "../constants/symbols";
 import styles from "../styles/Card.module.css";
 
+/** Fallback when server does not send arcanaPairs (backward compat). Must match server ArcanaPairsPerMatch. */
+const DEFAULT_ARCANA_PAIRS = 6;
+
+/**
+ * Renders a single card. Arcana vs normal and element (fire/water/air/earth) come only from server:
+ * - pairIdToPowerUp (which pairIds are arcana), arcanaPairs (count), card.element (element for normal tiles when revealed).
+ */
 interface CardProps {
   card: CardView;
   disabled: boolean;
   onClick: (index: number) => void;
-  /** Per-match arcana mapping (pairId -> powerUpId); when set, used for power-up display. */
+  /** From server: pairId -> powerUpId for arcana pairs. If present, used to decide arcana; else arcanaPairs is used. */
   pairIdToPowerUp?: Record<string, string> | null;
+  /** From server: number of arcana pairs. Used when pairIdToPowerUp is absent and for normal-symbol fallback. */
+  arcanaPairs?: number;
   /** When true, this card is the Radar target (center of 3x3). */
   isRadarCenter?: boolean;
   /** When true, this card is in the Radar 3x3 area but not the center. */
@@ -26,6 +38,7 @@ export default function Card({
   disabled,
   onClick,
   pairIdToPowerUp = null,
+  arcanaPairs,
   isRadarCenter = false,
   isRadarAffected = false,
   isHighlighted = false,
@@ -35,9 +48,25 @@ export default function Card({
 }: CardProps) {
   const isFaceUp = card.state !== "hidden" && card.state !== "removed";
   const pairId = card.pairId ?? null;
+  const effectiveArcanaPairs = arcanaPairs ?? DEFAULT_ARCANA_PAIRS;
+  // Arcana vs normal: server truth via pairIdToPowerUp (which pairIds are arcana) or arcanaPairs cutoff.
+  const isArcana =
+    pairId != null &&
+    (pairIdToPowerUp != null
+      ? pairIdToPowerUp[String(pairId)] != null
+      : pairId < effectiveArcanaPairs);
   const powerUpDisplay =
-    pairId != null && pairId < NUM_POWERUP_PAIRS ? getPowerUpDisplayByPairId(pairId, pairIdToPowerUp) : null;
-  const normalSymbol = pairId != null && pairId >= NUM_POWERUP_PAIRS ? getNormalSymbolForPairId(pairId) : null;
+    isArcana && pairId != null ? getPowerUpDisplayByPairId(pairId, pairIdToPowerUp) : null;
+  // Normal card display: prefer server element (card.element) for symbol/color; fallback to pairId + arcanaPairs only when element not sent.
+  const normalSymbol =
+    pairId != null && !isArcana
+      ? card.element != null
+        ? getNormalSymbolByElement(
+            card.element,
+            (pairId - effectiveArcanaPairs) % 3
+          )
+        : getNormalSymbolForPairId(pairId, effectiveArcanaPairs)
+      : null;
 
   const ariaLabel =
     pairId != null

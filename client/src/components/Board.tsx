@@ -39,6 +39,8 @@ interface BoardProps {
   oblivionTargetingMode?: boolean;
   /** Per-match arcana mapping (pairId -> powerUpId) for card display. */
   pairIdToPowerUp?: Record<string, string> | null;
+  /** Number of arcana pairs this match (from server); used to distinguish arcana vs normal cards. */
+  arcanaPairs?: number;
   /** Card indices to highlight (Unveiling or Elemental power-up; current turn only). */
   highlightIndices?: number[];
 }
@@ -53,6 +55,7 @@ export default function Board({
   radarTargetingMode = false,
   oblivionTargetingMode = false,
   pairIdToPowerUp = null,
+  arcanaPairs,
   highlightIndices = [],
 }: BoardProps) {
   const [removedMatchedIndices, setRemovedMatchedIndices] = useState<Set<number>>(
@@ -166,6 +169,7 @@ export default function Board({
             disabled={isDisabled(card)}
             onClick={onCardClick}
             pairIdToPowerUp={pairIdToPowerUp}
+            arcanaPairs={arcanaPairs}
             isRadarCenter={radarPreview?.center === card.index}
             isRadarAffected={radarPreview?.affected.includes(card.index) ?? false}
             isHighlighted={isHighlighted(card.index)}
