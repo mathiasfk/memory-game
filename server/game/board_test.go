@@ -201,3 +201,58 @@ func TestCardStateString(t *testing.T) {
 		}
 	}
 }
+
+// TestElementalHighlightIndices_OnlyCompletePairs ensures we never highlight an odd number of tiles:
+// only pairs where both cards have the element and are not removed are included.
+func TestElementalHighlightIndices_OnlyCompletePairs(t *testing.T) {
+	// 6 arcana + 12 normal pairs = 18 pairs; earth is pairIDs 15,16,17 (3 pairs = 6 cards)
+	board := NewBoard(6, 6, 6)
+	indices := elementalHighlightIndices(board, ElementEarth)
+	if n := len(indices); n%2 != 0 {
+		t.Errorf("elementalHighlightIndices returned odd count %d", n)
+	}
+	if n := len(indices); n != 6 {
+		t.Errorf("full board: expected 6 earth tiles (3 pairs), got %d", n)
+	}
+	// Simulate Oblivion: remove one card of an earth pair. We should highlight only the 2 complete earth pairs (4 tiles), not 5.
+	var oneEarthIndex int
+	for i := range board.Cards {
+		if board.Cards[i].Element == ElementEarth {
+			oneEarthIndex = i
+			break
+		}
+	}
+	pairID := board.Cards[oneEarthIndex].PairID
+	for i := range board.Cards {
+		if board.Cards[i].PairID == pairID {
+			board.Cards[i].State = Removed
+		}
+	}
+	indices2 := elementalHighlightIndices(board, ElementEarth)
+	if n := len(indices2); n%2 != 0 {
+		t.Errorf("after removing one earth pair: elementalHighlightIndices returned odd count %d", n)
+	}
+	if n := len(indices2); n != 4 {
+		t.Errorf("after removing one earth pair: expected 4 earth tiles (2 complete pairs), got %d", n)
+	}
+}
+
+// TestElementalHighlightIndices_NeverArcana ensures arcana cards (PairID < ArcanaPairs) are never highlighted.
+func TestElementalHighlightIndices_NeverArcana(t *testing.T) {
+	board := NewBoard(6, 6, 6)
+	// Arcana pairs are 0..5; normal earth pairs are 15,16,17. Ensure no arcana index appears.
+	indices := elementalHighlightIndices(board, ElementEarth)
+	arcanaPairIDs := make(map[int]bool)
+	for i := 0; i < 6; i++ {
+		arcanaPairIDs[i] = true
+	}
+	for _, idx := range indices {
+		if idx < 0 || idx >= len(board.Cards) {
+			t.Errorf("highlight index %d out of range", idx)
+			continue
+		}
+		if arcanaPairIDs[board.Cards[idx].PairID] {
+			t.Errorf("arcana card (pairID %d) at index %d must not be in elemental highlight", board.Cards[idx].PairID, idx)
+		}
+	}
+}

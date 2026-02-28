@@ -4,6 +4,30 @@ import (
 	"time"
 )
 
+// elementalHighlightIndices returns board indices of normal (non-arcana) cards with the given element that form complete pairs.
+// Only cards with PairID >= ArcanaPairs are considered, so arcana tiles are never highlighted.
+// Pairs are included only when both cards have the element and are not removed (never an odd number of tiles).
+func elementalHighlightIndices(board *Board, targetElement string) []int {
+	type pairKey = int
+	byPair := make(map[pairKey][]int)
+	for i := range board.Cards {
+		c := &board.Cards[i]
+		if c.PairID < board.ArcanaPairs {
+			continue // never highlight arcana cards
+		}
+		if c.State != Removed && c.Element == targetElement {
+			byPair[c.PairID] = append(byPair[c.PairID], i)
+		}
+	}
+	var indices []int
+	for _, idxs := range byPair {
+		if len(idxs) == 2 {
+			indices = append(indices, idxs[0], idxs[1])
+		}
+	}
+	return indices
+}
+
 func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) {
 	// Validate it's this player's turn
 	if playerIdx != g.CurrentTurn {
@@ -135,7 +159,8 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		}
 	}
 
-	// Elemental powerups: highlight all tiles of the chosen element (this turn only; no symbol reveal)
+	// Elemental powerups: highlight all tiles of the chosen element (this turn only; no symbol reveal).
+	// Only highlight complete pairs (both cards of a pair have the element and are not removed) so we never show an odd number of tiles.
 	if powerUpID == "earth_elemental" || powerUpID == "fire_elemental" || powerUpID == "water_elemental" || powerUpID == "air_elemental" {
 		var targetElement string
 		switch powerUpID {
@@ -151,13 +176,7 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 			targetElement = ""
 		}
 		if targetElement != "" {
-			var indices []int
-			for i := range g.Board.Cards {
-				c := &g.Board.Cards[i]
-				if c.State != Removed && c.Element == targetElement {
-					indices = append(indices, i)
-				}
-			}
+			indices := elementalHighlightIndices(g.Board, targetElement)
 			player.HighlightIndices = indices
 			opponent.HighlightIndices = indices // same info for both players
 		}
