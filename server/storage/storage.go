@@ -499,13 +499,17 @@ type TelemetryByCard struct {
 }
 
 type TelemetryByCombo struct {
-	ComboKey               string  `json:"combo_key"`
-	CardCount              int     `json:"card_count"` // number of cards in the combo (2+)
-	TotalMatches           int     `json:"total_matches"`
-	Wins                   int     `json:"wins"`
-	WinRatePct             float64 `json:"win_rate_pct"`
-	AvgPointSwingPlayer    float64 `json:"avg_point_swing_player"`
-	AvgPointSwingOpponent  float64 `json:"avg_point_swing_opponent"`
+	ComboKey               string                    `json:"combo_key"`
+	CardCount              int                       `json:"card_count"` // number of cards in the combo (2+)
+	TotalMatches           int                       `json:"total_matches"`
+	Wins                   int                       `json:"wins"`
+	WinRatePct             float64                   `json:"win_rate_pct"`
+	AvgPointSwingPlayer    float64                   `json:"avg_point_swing_player"`
+	AvgPointSwingOpponent  float64                   `json:"avg_point_swing_opponent"`
+	AvgTurnAtUse           float64                   `json:"avg_turn_at_use"`
+	AvgPairsMatchedBefore  float64                   `json:"avg_pairs_matched_before"`
+	TurnHistogram         []TelemetryHistogramBucket `json:"turn_histogram"`
+	PairsHistogram        []TelemetryHistogramBucket `json:"pairs_histogram"`
 }
 
 // defaultTelemetryBinConfig is used when GetTelemetryMetrics is called with nil binConfig.
@@ -829,6 +833,42 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 		})
 	}
 
+	// Combo "game stage at use": (combo_key, round, pairs_matched_before) per combo use for histograms.
+	comboUseRows, err := s.pool.Query(ctx, `
+		WITH turn_cards AS (
+			SELECT match_id, round, player_idx, array_agg(DISTINCT power_up_id ORDER BY power_up_id) AS arr
+			FROM arcana_use
+			GROUP BY match_id, round, player_idx
+		),
+		turn_combos AS (
+			SELECT match_id, round, player_idx,
+				array_to_string(arr, ',') AS combo_key
+			FROM turn_cards
+			WHERE array_length(arr, 1) >= 2
+		)
+		SELECT tc.combo_key, tc.round, MIN(au.pairs_matched_before) AS pairs_matched_before
+		FROM turn_combos tc
+		JOIN arcana_use au ON au.match_id = tc.match_id AND au.round = tc.round AND au.player_idx = tc.player_idx
+		GROUP BY tc.combo_key, tc.match_id, tc.round, tc.player_idx
+	`)
+	if err != nil {
+		return nil, err
+	}
+	comboUseByKey := make(map[string][]struct{ round, pairs int })
+	for comboUseRows.Next() {
+		var comboKey string
+		var round, pairs int
+		if err := comboUseRows.Scan(&comboKey, &round, &pairs); err != nil {
+			comboUseRows.Close()
+			return nil, err
+		}
+		comboUseByKey[comboKey] = append(comboUseByKey[comboKey], struct{ round, pairs int }{round, pairs})
+	}
+	comboUseRows.Close()
+	if err := comboUseRows.Err(); err != nil {
+		return nil, err
+	}
+
 	// By combo: cards used together in the same turn (arcana_use grouped by match_id, round, player_idx).
 	// Combo = sorted set of power_up_ids used in one turn; only combos with 2+ cards (synergy).
 	// Wins = number of times that combo was used and the player who used it won the match.
@@ -881,6 +921,39 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 		if total > 0 {
 			winRatePct = 100.0 * float64(wins) / float64(total)
 		}
+		uses := comboUseByKey[comboKey]
+		var avgTurn, avgPairs float64
+		comboTurnBins := make([]int, len(turnLabels))
+		comboPairsBins := make([]int, len(pairsLabels))
+		for _, u := range uses {
+			avgTurn += float64(u.round)
+			avgPairs += float64(u.pairs)
+			binIdx := cfg.TurnNumBins - 1
+			if u.round < cfg.TurnMax {
+				binIdx = u.round / turnStep
+				if binIdx >= cfg.TurnNumBins-1 {
+					binIdx = cfg.TurnNumBins - 2
+				}
+			}
+			comboTurnBins[binIdx]++
+			pairsBinIdx := u.pairs / pairsStep
+			if pairsBinIdx >= cfg.PairsNumBins {
+				pairsBinIdx = cfg.PairsNumBins - 1
+			}
+			comboPairsBins[pairsBinIdx]++
+		}
+		if n := len(uses); n > 0 {
+			avgTurn /= float64(n)
+			avgPairs /= float64(n)
+		}
+		turnHist := make([]TelemetryHistogramBucket, len(turnLabels))
+		for i, label := range turnLabels {
+			turnHist[i] = TelemetryHistogramBucket{Label: label, Count: comboTurnBins[i]}
+		}
+		pairsHist := make([]TelemetryHistogramBucket, len(pairsLabels))
+		for i, label := range pairsLabels {
+			pairsHist[i] = TelemetryHistogramBucket{Label: label, Count: comboPairsBins[i]}
+		}
 		out.ByCombo = append(out.ByCombo, TelemetryByCombo{
 			ComboKey:              comboKey,
 			CardCount:             cardCount,
@@ -889,6 +962,10 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 			WinRatePct:            winRatePct,
 			AvgPointSwingPlayer:   avgSwingPlayer,
 			AvgPointSwingOpponent: avgSwingOpponent,
+			AvgTurnAtUse:          avgTurn,
+			AvgPairsMatchedBefore: avgPairs,
+			TurnHistogram:         turnHist,
+			PairsHistogram:        pairsHist,
 		})
 	}
 	if err := comboRows.Err(); err != nil {

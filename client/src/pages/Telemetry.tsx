@@ -53,6 +53,10 @@ export interface TelemetryByCombo {
   win_rate_pct: number;
   avg_point_swing_player: number;
   avg_point_swing_opponent: number;
+  avg_turn_at_use: number;
+  avg_pairs_matched_before: number;
+  turn_histogram: TelemetryHistogramBucket[];
+  pairs_histogram: TelemetryHistogramBucket[];
 }
 
 export interface TelemetryPlayers {
@@ -383,7 +387,7 @@ function ArcanaDetailModal({
             <p className={styles.modalEmpty}>No data.</p>
           ) : (
             <div className={styles.histogramChart}>
-              <ResponsiveContainer width="100%" height={150}>
+              <ResponsiveContainer width="100%" height={130}>
                 <BarChart data={card.turn_histogram} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -401,7 +405,7 @@ function ArcanaDetailModal({
             <p className={styles.modalEmpty}>No data.</p>
           ) : (
             <div className={styles.histogramChart}>
-              <ResponsiveContainer width="100%" height={150}>
+              <ResponsiveContainer width="100%" height={130}>
                 <BarChart data={card.pairs_histogram} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -532,7 +536,43 @@ function ComboDetailModal({
           </div>
         </div>
         <div className={styles.modalExtra}>
-          <h3 className={styles.modalSubtitle}>Complementary</h3>
+          <h3 className={styles.modalSubtitle}>Game stage at use</h3>
+          <p className={styles.modalMetricLabel}>Turn</p>
+          <p className={styles.modalText}>
+            Average: {combo.total_matches > 0 ? Math.round(combo.avg_turn_at_use) : "—"}
+          </p>
+          {!combo.turn_histogram?.length ? (
+            <p className={styles.modalEmpty}>No data.</p>
+          ) : (
+            <div className={styles.histogramChart}>
+              <ResponsiveContainer width="100%" height={130}>
+                <BarChart data={combo.turn_histogram} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="rgba(148, 163, 184, 0.6)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <p className={styles.modalMetricLabel}>Pairs already matched</p>
+          <p className={styles.modalText}>
+            Average: {combo.total_matches > 0 ? combo.avg_pairs_matched_before.toFixed(1) : "—"}
+          </p>
+          {!combo.pairs_histogram?.length ? (
+            <p className={styles.modalEmpty}>No data.</p>
+          ) : (
+            <div className={styles.histogramChart}>
+              <ResponsiveContainer width="100%" height={130}>
+                <BarChart data={combo.pairs_histogram} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="rgba(148, 163, 184, 0.6)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
           <p className={styles.modalText}>
             <strong>Cards in combo:</strong> {combo.card_count}
           </p>
