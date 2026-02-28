@@ -101,7 +101,7 @@ export function TelemetryPage() {
       .then((res) => {
         if (cancelled || !res) return;
         if (res.status === 403) {
-          setError("Acesso negado. Apenas administradores podem ver esta página.");
+          setError("Access denied. Only administrators can view this page.");
           setLoading(false);
           return;
         }
@@ -138,37 +138,37 @@ export function TelemetryPage() {
     <>
       <SignedIn>
         <div className={styles.wrapper}>
-          <h1 className={styles.title}>Análise da telemetria</h1>
+          <h1 className={styles.title}>Telemetry analysis</h1>
           <Link to="/" className={styles.backLink}>
-            Voltar ao lobby
+            Back to lobby
           </Link>
-          {loading && <p className={styles.status}>Carregando...</p>}
+          {loading && <p className={styles.status}>Loading...</p>}
           {error && <p className={styles.error}>{error}</p>}
           {!loading && !error && metrics && (
             <>
               <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Jogadores</h2>
+                <h2 className={styles.sectionTitle}>Players</h2>
                 <div className={styles.globalGrid}>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Jogadores registrados</span>
+                    <span className={styles.globalLabel}>Registered players</span>
                     <span className={styles.globalValue}>{metrics.players?.registered_count ?? "—"}</span>
                   </div>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Ativos na última semana</span>
+                    <span className={styles.globalLabel}>Active in the last week</span>
                     <span className={styles.globalValue}>{metrics.players?.active_last_week ?? "—"}</span>
                   </div>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Total de partidas</span>
+                    <span className={styles.globalLabel}>Total matches</span>
                     <span className={styles.globalValue}>{metrics.players?.total_matches ?? metrics.global.total_matches ?? "—"}</span>
                   </div>
                 </div>
               </section>
 
               <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Métricas globais</h2>
+                <h2 className={styles.sectionTitle}>Global metrics</h2>
                 <div className={styles.globalGrid}>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Turnos médio por partida</span>
+                    <span className={styles.globalLabel}>Avg turns per match</span>
                     <span className={styles.globalValue}>
                       {metrics.global.total_matches > 0
                         ? metrics.global.avg_turns_per_match.toFixed(1)
@@ -176,7 +176,7 @@ export function TelemetryPage() {
                     </span>
                   </div>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Point swing médio por turno</span>
+                    <span className={styles.globalLabel}>Avg point swing per turn</span>
                     <span className={styles.globalValue}>
                       {metrics.global.total_turns > 0
                         ? metrics.global.avg_net_point_swing_per_turn.toFixed(2)
@@ -185,9 +185,9 @@ export function TelemetryPage() {
                   </div>
                   <div
                     className={styles.globalCard}
-                    title="Variação do placar do momento do uso da carta até o fim do turno"
+                    title="Score change from card use until end of turn"
                   >
-                    <span className={styles.globalLabel}>Point swing médio por carta</span>
+                    <span className={styles.globalLabel}>Avg point swing per card</span>
                     <span className={styles.globalValue}>
                       {metrics.global.avg_net_point_swing_per_card != null
                         ? metrics.global.avg_net_point_swing_per_card.toFixed(2)
@@ -195,20 +195,20 @@ export function TelemetryPage() {
                     </span>
                   </div>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Cartas por turno (média)</span>
+                    <span className={styles.globalLabel}>Cards per turn (avg)</span>
                     <span className={styles.globalValue}>
                       {metrics.global.cards_per_turn_avg.toFixed(2)}
                     </span>
                   </div>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Cartas por turno (máx)</span>
+                    <span className={styles.globalLabel}>Cards per turn (max)</span>
                     <span className={styles.globalValue}>{metrics.global.cards_per_turn_max}</span>
                   </div>
                 </div>
               </section>
 
               <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Métricas por carta</h2>
+                <h2 className={styles.sectionTitle}>Metrics by card</h2>
                 <div className={styles.cardGrid}>
                   {metrics.by_card.map((card) => (
                     <ArcanaCard
@@ -221,16 +221,16 @@ export function TelemetryPage() {
               </section>
 
               <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Métricas por combo</h2>
+                <h2 className={styles.sectionTitle}>Metrics by combo</h2>
                 <ul className={styles.comboList}>
                   {metrics.by_combo.length === 0 && (
-                    <li className={styles.comboEmpty}>Nenhum combo com 6 cartas registrado.</li>
+                    <li className={styles.comboEmpty}>No 6-card combo recorded.</li>
                   )}
                   {metrics.by_combo.map((combo, i) => (
                     <li key={combo.combo_key} className={styles.comboItem}>
                       <span className={styles.comboKey}>{combo.combo_key}</span>
                       <span className={styles.comboStats}>
-                        {combo.total_matches} partidas, {combo.wins} vitórias (
+                        {combo.total_matches} matches, {combo.wins} wins (
                         {combo.win_rate_pct.toFixed(1)}%)
                       </span>
                     </li>
@@ -281,13 +281,13 @@ function ArcanaCard({
         </span>
         <span
           className={styles.arcanaStat}
-          title="Variação líquida (jogador − oponente) do momento do uso da carta até o fim do turno; mesma métrica do global"
+          title="Net change (player − opponent) from card use until end of turn"
         >
           <span className={styles.arcanaStatLabel}>Point swing</span>{" "}
           {(card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1)}
         </span>
         <span className={styles.arcanaStat}>
-          <span className={styles.arcanaStatLabel}>Usos</span> {card.use_count}
+          <span className={styles.arcanaStatLabel}>Uses</span> {card.use_count}
         </span>
       </div>
     </button>
@@ -310,52 +310,51 @@ function ArcanaDetailModal({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h2 id="arcana-modal-title" className={styles.modalTitle}>{label}</h2>
-          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar">
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>
         <p className={styles.modalDescription}>{description}</p>
         <div className={styles.modalMetrics}>
-          <h3 className={styles.modalSubtitle}>Métricas principais</h3>
+          <h3 className={styles.modalSubtitle}>Main metrics</h3>
           <p className={styles.modalHelper}>
-            Point swing = variação do placar do momento do uso até o fim do turno (impacto direto e indireto da carta). O valor líquido (jogador − oponente) é a mesma métrica do global.
+            Point swing = score change from card use until end of turn (direct and indirect impact of the card).
           </p>
           <div className={styles.modalMetricsGrid}>
             <span className={styles.modalMetric}>
               Win rate: {card.total_matches > 0 ? card.win_rate_pct.toFixed(1) : "—"}%
             </span>
             <span className={styles.modalMetric}>
-              Point swing líquido: {(card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1)}
+              Net point swing: {(card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1)}
             </span>
             <span className={styles.modalMetric}>
-              Point swing (jogador): {card.avg_point_swing_player.toFixed(1)}
+              Point swing (player): {card.avg_point_swing_player.toFixed(1)}
             </span>
             <span className={styles.modalMetric}>
-              Point swing (oponente): {card.avg_point_swing_opponent.toFixed(1)}
+              Point swing (opponent): {card.avg_point_swing_opponent.toFixed(1)}
             </span>
-            <span className={styles.modalMetric}>Usos: {card.use_count}</span>
+            <span className={styles.modalMetric}>Uses: {card.use_count}</span>
           </div>
         </div>
         <div className={styles.modalExtra}>
-          <h3 className={styles.modalSubtitle}>Turno em que a carta é usada</h3>
+          <h3 className={styles.modalSubtitle}>Game stage at use</h3>
+          <p className={styles.modalText}>
+            <strong>Turn (histogram):</strong>
+          </p>
           {card.turn_histogram.length === 0 ? (
-            <p className={styles.modalEmpty}>Sem dados.</p>
+            <p className={styles.modalEmpty}>No data.</p>
           ) : (
             <div className={styles.histogram}>
               {card.turn_histogram.map((b) => (
                 <div key={b.round} className={styles.histogramBar}>
-                  <span className={styles.histogramLabel}>Turno {b.round}</span>
+                  <span className={styles.histogramLabel}>Turn {b.round}</span>
                   <span className={styles.histogramCount}>{b.count}</span>
                 </div>
               ))}
             </div>
           )}
-        </div>
-        <div className={styles.modalExtra}>
-          <h3 className={styles.modalSubtitle}>Matches após uso</h3>
           <p className={styles.modalText}>
-            Média de pares já feitos no momento do uso:{" "}
-            {card.use_count > 0 ? card.avg_pairs_matched_before.toFixed(1) : "—"}
+            <strong>Pairs already matched:</strong> {card.use_count > 0 ? card.avg_pairs_matched_before.toFixed(1) : "—"} on average
           </p>
         </div>
       </div>
