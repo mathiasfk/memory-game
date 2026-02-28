@@ -222,7 +222,7 @@ export function TelemetryPage() {
               </section>
 
               <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Metrics by combo (same turn)</h2>
+                <h2 className={styles.sectionTitle}>Metrics by combo</h2>
                 <p className={styles.comboHelp}>
                   Combos of 2+ cards played together in the same turn (synergy).
                 </p>
@@ -234,6 +234,22 @@ export function TelemetryPage() {
                   )}
                   {metrics.by_combo.map((combo) => (
                     <li key={combo.combo_key} className={styles.comboItem}>
+                      <div className={styles.comboCardArts}>
+                        {combo.combo_key.split(",").map((powerUpId, idx) => {
+                          const id = powerUpId.trim();
+                          const display = POWER_UP_DISPLAY[id];
+                          return display?.imagePath ? (
+                            <img
+                              key={`${id}-${idx}`}
+                              className={styles.comboCardArt}
+                              src={display.imagePath}
+                              alt=""
+                              title={display.label}
+                              aria-hidden
+                            />
+                          ) : null;
+                        })}
+                      </div>
                       <span className={styles.comboKey}>
                         {combo.combo_key}
                         <span className={styles.comboCardCount}> ({combo.card_count} cards)</span>
@@ -271,7 +287,6 @@ function ArcanaCard({
 }) {
   const display = POWER_UP_DISPLAY[card.power_up_id];
   const label = display?.label ?? card.power_up_id;
-  const icon = display?.icon ?? "?";
 
   return (
     <button
@@ -279,8 +294,15 @@ function ArcanaCard({
       className={styles.arcanaCard}
       onClick={onClick}
     >
+      {display?.imagePath && (
+        <img
+          className={styles.arcanaCardArt}
+          src={display.imagePath}
+          alt=""
+          aria-hidden
+        />
+      )}
       <div className={styles.arcanaCardHeader}>
-        <span className={styles.arcanaCardIcon}>{icon}</span>
         <span className={styles.arcanaCardName}>{label}</span>
       </div>
       <div className={styles.arcanaCardStats}>
@@ -323,6 +345,14 @@ function ArcanaDetailModal({
             ×
           </button>
         </div>
+        {display?.imagePath && (
+          <img
+            className={styles.modalCardArt}
+            src={display.imagePath}
+            alt=""
+            aria-hidden
+          />
+        )}
         <p className={styles.modalDescription}>{description}</p>
         <div className={styles.modalMetrics}>
           <h3 className={styles.modalSubtitle}>Main metrics</h3>
