@@ -5,6 +5,7 @@ interface LobbyScreenProps {
   firstName: string;
   connected: boolean;
   authReady: boolean;
+  isAdmin?: boolean;
   onFindMatch: () => void;
   onSignOut: () => void;
 }
@@ -13,6 +14,7 @@ export default function LobbyScreen({
   firstName,
   connected,
   authReady,
+  isAdmin = false,
   onFindMatch,
   onSignOut,
 }: LobbyScreenProps) {
@@ -47,6 +49,15 @@ export default function LobbyScreen({
         >
           Leaderboard
         </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => navigate("/telemetry")}
+            className={styles.historyButton}
+          >
+            Telemetria
+          </button>
+        )}
         <button type="button" onClick={onSignOut} className={styles.signOut}>
           Log out
         </button>

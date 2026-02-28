@@ -82,6 +82,7 @@ func main() {
 	apiHandler := api.NewHandler(cfg, historyStore)
 	http.HandleFunc("/api/history", apiHandler.History)
 	http.HandleFunc("/api/leaderboard", apiHandler.Leaderboard)
+	http.HandleFunc("/api/telemetry/metrics", apiHandler.TelemetryMetrics)
 
 	addr := fmt.Sprintf(":%d", cfg.WSPort)
 	srv := &http.Server{Addr: addr}

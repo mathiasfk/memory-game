@@ -31,6 +31,7 @@ export function GameShell() {
   const navigate = useNavigate();
   const playerNameRef = useRef<string>("");
   const [userName, setUserName] = useState<string>("Player");
+  const [userRole, setUserRole] = useState<string>("");
   const [screen, setScreen] = useState<ScreenName>("lobby");
   const [matchInfo, setMatchInfo] = useState<MatchFoundMsg | null>(null);
   const [gameState, setGameState] = useState<GameStateMsg | null>(null);
@@ -144,7 +145,7 @@ export function GameShell() {
 
   const { connected, send } = useGameSocket(WS_URL, { onMessage: handleMessage });
 
-  // Load session user and derive display name
+  // Load session user (display name and role for admin menu)
   useEffect(() => {
     authClient.getSession().then((result) => {
       const user = result.data?.user;
@@ -152,6 +153,8 @@ export function GameShell() {
         const displayName = getDisplayNameFromUser(user.name, user.email);
         setUserName(displayName);
         playerNameRef.current = displayName;
+        const role = (user as { role?: string }).role ?? "";
+        setUserRole(role);
       }
     });
   }, []);
@@ -344,6 +347,7 @@ export function GameShell() {
           firstName={userName}
           connected={connected}
           authReady={authSent}
+          isAdmin={userRole === "admin"}
           onFindMatch={handleFindMatch}
           onSignOut={handleSignOut}
         />

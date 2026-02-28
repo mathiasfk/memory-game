@@ -3,6 +3,7 @@ import { Account } from "./pages/Account";
 import { Auth } from "./pages/Auth";
 import { HistoryPage } from "./pages/History";
 import { LeaderboardPage } from "./pages/Leaderboard";
+import { TelemetryPage } from "./pages/Telemetry";
 import { Home } from "./pages/Home";
 
 export default function App() {
@@ -29,6 +30,14 @@ export default function App() {
         element={
           <div className="appTheme">
             <LeaderboardPage />
+          </div>
+        }
+      />
+      <Route
+        path="/telemetry"
+        element={
+          <div className="appTheme">
+            <TelemetryPage />
           </div>
         }
       />

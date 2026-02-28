@@ -154,3 +154,43 @@ func (h *Handler) Leaderboard(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Encode leaderboard response: %v", err)
 	}
 }
+
+// TelemetryMetrics returns aggregated telemetry metrics. Requires admin role (from neon_auth.user).
+func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
+	if CORS(w, r) {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	userID := h.extractUserID(r)
+	if userID == "" {
+		http.Error(w, "authorization required", http.StatusUnauthorized)
+		return
+	}
+	if h.HistoryStore == nil {
+		http.Error(w, "telemetry not available", http.StatusServiceUnavailable)
+		return
+	}
+	role, err := h.HistoryStore.GetUserRole(r.Context(), userID)
+	if err != nil {
+		log.Printf("GetUserRole: %v", err)
+		http.Error(w, "failed to verify role", http.StatusInternalServerError)
+		return
+	}
+	if role != "admin" {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	metrics, err := h.HistoryStore.GetTelemetryMetrics(r.Context())
+	if err != nil {
+		log.Printf("GetTelemetryMetrics: %v", err)
+		http.Error(w, "failed to load metrics", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(metrics); err != nil {
+		log.Printf("Encode telemetry response: %v", err)
+	}
+}

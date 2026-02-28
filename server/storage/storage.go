@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -421,4 +422,279 @@ func (s *Store) GetLeaderboardEntryByUserID(ctx context.Context, userID string) 
 	}
 	e.IsBot = strings.HasPrefix(e.UserID, aiUserIDPrefix)
 	return &e, nil
+}
+
+// GetUserRole returns the role for the user from neon_auth.user (e.g. "admin", "user"). Empty string if not found.
+// Neon Auth manages the role in schema neon_auth, table "user", column role.
+func (s *Store) GetUserRole(ctx context.Context, userID string) (string, error) {
+	if s == nil || s.pool == nil || userID == "" {
+		return "", nil
+	}
+	var role string
+	// Table name "user" is reserved in PostgreSQL, so quote it.
+	err := s.pool.QueryRow(ctx, `SELECT role FROM neon_auth."user" WHERE id = $1`, userID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", err
+	}
+	return role, nil
+}
+
+// TelemetryMetrics holds aggregated metrics for the admin telemetry dashboard.
+type TelemetryMetrics struct {
+	Global  TelemetryGlobal   `json:"global"`
+	ByCard  []TelemetryByCard `json:"by_card"`
+	ByCombo []TelemetryByCombo `json:"by_combo"`
+}
+
+type TelemetryGlobal struct {
+	TotalMatches        int     `json:"total_matches"`
+	TotalTurns           int     `json:"total_turns"`
+	AvgDeltaPlayer       float64 `json:"avg_delta_player"`
+	AvgDeltaOpponent     float64 `json:"avg_delta_opponent"`
+	CardsPerTurnAvg      float64 `json:"cards_per_turn_avg"`
+	CardsPerTurnMax      int     `json:"cards_per_turn_max"`
+}
+
+type TelemetryByCard struct {
+	PowerUpID            string                 `json:"power_up_id"`
+	TotalMatches         int                    `json:"total_matches"`
+	WinsWithCard         int                    `json:"wins_with_card"`
+	WinRatePct           float64                `json:"win_rate_pct"`
+	UseCount             int                    `json:"use_count"`
+	AvgPointSwingPlayer  float64                `json:"avg_point_swing_player"`
+	AvgPointSwingOpponent float64                `json:"avg_point_swing_opponent"`
+	AvgPairsMatchedBefore float64                `json:"avg_pairs_matched_before"`
+	TurnHistogram        []TelemetryTurnBucket  `json:"turn_histogram"`
+}
+
+type TelemetryTurnBucket struct {
+	Round int `json:"round"`
+	Count int `json:"count"`
+}
+
+type TelemetryByCombo struct {
+	ComboKey    string  `json:"combo_key"`
+	TotalMatches int    `json:"total_matches"`
+	Wins        int    `json:"wins"`
+	WinRatePct  float64 `json:"win_rate_pct"`
+}
+
+// GetTelemetryMetrics returns aggregated metrics from game_history, match_arcana, turn, arcana_use.
+func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, error) {
+	if s == nil || s.pool == nil {
+		return &TelemetryMetrics{}, nil
+	}
+	out := &TelemetryMetrics{}
+
+	// Global: total matches
+	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM game_history`).Scan(&out.Global.TotalMatches); err != nil {
+		return nil, err
+	}
+	// Global: total turns
+	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM turn`).Scan(&out.Global.TotalTurns); err != nil {
+		return nil, err
+	}
+	// Global: avg point delta per turn
+	if out.Global.TotalTurns > 0 {
+		if err := s.pool.QueryRow(ctx, `
+			SELECT AVG(point_delta_player)::float, AVG(point_delta_opponent)::float FROM turn
+		`).Scan(&out.Global.AvgDeltaPlayer, &out.Global.AvgDeltaOpponent); err != nil {
+			return nil, err
+		}
+	}
+	// Global: cards per turn (count arcana_use per match_id, round)
+	var cardsPerTurnAvg *float64
+	var cardsPerTurnMax *int
+	if err := s.pool.QueryRow(ctx, `
+		SELECT AVG(cnt)::float, MAX(cnt)::int FROM (
+			SELECT match_id, round, COUNT(*) AS cnt FROM arcana_use GROUP BY match_id, round
+		) t
+	`).Scan(&cardsPerTurnAvg, &cardsPerTurnMax); err != nil {
+		return nil, err
+	}
+	if cardsPerTurnAvg != nil {
+		out.Global.CardsPerTurnAvg = *cardsPerTurnAvg
+	}
+	if cardsPerTurnMax != nil {
+		out.Global.CardsPerTurnMax = *cardsPerTurnMax
+	}
+
+	// By card: win rate and use stats per power_up_id
+	// Win rate: matches where this power_up_id was in match_arcana and winner_index = player who had it (we consider "wins with card" as matches where the card was in the set and the match was won by either side; plan says "win rate when the card was in the game")
+	// So: for each power_up_id, count matches that have this card in match_arcana; of those, count where winner_index is not null (we don't have "which player had the card" in match_arcana, so "wins with card" = matches where that card was in the set and someone won). Actually re-reading the plan: "Win rate por carta" = game_history JOIN match_arcana, winner_index + power_up_id. So it's: of all matches that included this card, what % were won (by either player). So total_matches = count of distinct match_id in match_arcana for this power_up_id; wins = count where that match has winner_index IS NOT NULL (a draw has winner_index null). So "wins with card" = number of matches (that have this card) that ended in a win (not draw).
+	rows, err := s.pool.Query(ctx, `
+		SELECT ma.power_up_id,
+			COUNT(DISTINCT gh.id) AS total_matches,
+			COUNT(DISTINCT gh.id) FILTER (WHERE gh.winner_index IS NOT NULL) AS wins_with_card
+		FROM match_arcana ma
+		JOIN game_history gh ON gh.id = ma.match_id
+		GROUP BY ma.power_up_id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	cardWins := make(map[string]struct{ TotalMatches, WinsWithCard int })
+	for rows.Next() {
+		var powerUpID string
+		var total, wins int
+		if err := rows.Scan(&powerUpID, &total, &wins); err != nil {
+			return nil, err
+		}
+		cardWins[powerUpID] = struct{ TotalMatches, WinsWithCard int }{total, wins}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Arcana use aggregates per power_up_id: use_count, avg point_delta, avg pairs_matched_before, turn histogram
+	useRows, err := s.pool.Query(ctx, `
+		SELECT power_up_id,
+			COUNT(*) AS use_count,
+			AVG(COALESCE(point_delta_player, 0))::float AS avg_delta_player,
+			AVG(COALESCE(point_delta_opponent, 0))::float AS avg_delta_opponent,
+			AVG(pairs_matched_before)::float AS avg_pairs_matched_before
+		FROM arcana_use
+		GROUP BY power_up_id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer useRows.Close()
+	cardUse := make(map[string]struct {
+		UseCount             int
+		AvgDeltaPlayer        float64
+		AvgDeltaOpponent      float64
+		AvgPairsMatchedBefore float64
+	})
+	for useRows.Next() {
+		var pid string
+		var useCount int
+		var avgPlayer, avgOpp, avgPairs float64
+		if err := useRows.Scan(&pid, &useCount, &avgPlayer, &avgOpp, &avgPairs); err != nil {
+			return nil, err
+		}
+		cardUse[pid] = struct {
+			UseCount             int
+			AvgDeltaPlayer        float64
+			AvgDeltaOpponent      float64
+			AvgPairsMatchedBefore float64
+		}{useCount, avgPlayer, avgOpp, avgPairs}
+	}
+	if err := useRows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Turn histogram per power_up_id: round -> count
+	histRows, err := s.pool.Query(ctx, `
+		SELECT power_up_id, round, COUNT(*) AS cnt
+		FROM arcana_use
+		GROUP BY power_up_id, round
+		ORDER BY power_up_id, round
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer histRows.Close()
+	histogramByCard := make(map[string][]TelemetryTurnBucket)
+	for histRows.Next() {
+		var pid string
+		var round, cnt int
+		if err := histRows.Scan(&pid, &round, &cnt); err != nil {
+			return nil, err
+		}
+		histogramByCard[pid] = append(histogramByCard[pid], TelemetryTurnBucket{Round: round, Count: cnt})
+	}
+	if err := histRows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Build by_card list: all power_up_id that appear in match_arcana or arcana_use
+	seenPowerUp := make(map[string]bool)
+	for pid := range cardWins {
+		seenPowerUp[pid] = true
+	}
+	for pid := range cardUse {
+		seenPowerUp[pid] = true
+	}
+	for pid := range histogramByCard {
+		seenPowerUp[pid] = true
+	}
+	var powerUpIDs []string
+	for pid := range seenPowerUp {
+		powerUpIDs = append(powerUpIDs, pid)
+	}
+	sort.Strings(powerUpIDs) // deterministic order
+	for _, pid := range powerUpIDs {
+		w := cardWins[pid]
+		u := cardUse[pid]
+		winRatePct := 0.0
+		if w.TotalMatches > 0 {
+			winRatePct = 100.0 * float64(w.WinsWithCard) / float64(w.TotalMatches)
+		}
+		hist := histogramByCard[pid]
+		if hist == nil {
+			hist = []TelemetryTurnBucket{}
+		}
+		out.ByCard = append(out.ByCard, TelemetryByCard{
+			PowerUpID:             pid,
+			TotalMatches:          w.TotalMatches,
+			WinsWithCard:          w.WinsWithCard,
+			WinRatePct:            winRatePct,
+			UseCount:              u.UseCount,
+			AvgPointSwingPlayer:   u.AvgDeltaPlayer,
+			AvgPointSwingOpponent: u.AvgDeltaOpponent,
+			AvgPairsMatchedBefore: u.AvgPairsMatchedBefore,
+			TurnHistogram:         hist,
+		})
+	}
+
+	// By combo: group matches by sorted set of 6 power_up_ids, then win rate
+	comboRows, err := s.pool.Query(ctx, `
+		WITH match_arcana_list AS (
+			SELECT match_id, array_agg(power_up_id ORDER BY power_up_id) AS arr
+			FROM match_arcana
+			GROUP BY match_id
+		),
+		combo_keys AS (
+			SELECT match_id, array_to_string(arr, ',') AS combo_key FROM match_arcana_list WHERE array_length(arr, 1) = 6
+		)
+		SELECT c.combo_key, COUNT(*), COUNT(*) FILTER (WHERE gh.winner_index IS NOT NULL)
+		FROM combo_keys c
+		JOIN game_history gh ON gh.id = c.match_id
+		GROUP BY c.combo_key
+		ORDER BY COUNT(*) DESC
+		LIMIT 50
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer comboRows.Close()
+	for comboRows.Next() {
+		var comboKey string
+		var total, wins int
+		if err := comboRows.Scan(&comboKey, &total, &wins); err != nil {
+			return nil, err
+		}
+		winRatePct := 0.0
+		if total > 0 {
+			winRatePct = 100.0 * float64(wins) / float64(total)
+		}
+		out.ByCombo = append(out.ByCombo, TelemetryByCombo{
+			ComboKey:     comboKey,
+			TotalMatches: total,
+			Wins:         wins,
+			WinRatePct:   winRatePct,
+		})
+	}
+	if err := comboRows.Err(); err != nil {
+		return nil, err
+	}
+	if out.ByCombo == nil {
+		out.ByCombo = []TelemetryByCombo{}
+	}
+	return out, nil
 }
