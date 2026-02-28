@@ -4,6 +4,14 @@ import {
   RedirectToSignIn,
   SignedIn,
 } from "@neondatabase/neon-js/auth/react/ui";
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { authClient } from "../lib/auth";
 import { POWER_UP_DISPLAY } from "../powerups/registry";
 import styles from "../styles/Telemetry.module.css";
@@ -18,8 +26,8 @@ function apiBase(): string {
   return base;
 }
 
-export interface TelemetryTurnBucket {
-  round: number;
+export interface TelemetryHistogramBucket {
+  label: string;
   count: number;
 }
 
@@ -32,7 +40,9 @@ export interface TelemetryByCard {
   avg_point_swing_player: number;
   avg_point_swing_opponent: number;
   avg_pairs_matched_before: number;
-  turn_histogram: TelemetryTurnBucket[];
+  avg_turn_at_use: number;
+  turn_histogram: TelemetryHistogramBucket[];
+  pairs_histogram: TelemetryHistogramBucket[];
 }
 
 export interface TelemetryByCombo {
@@ -365,24 +375,42 @@ function ArcanaDetailModal({
         </div>
         <div className={styles.modalExtra}>
           <h3 className={styles.modalSubtitle}>Game stage at use</h3>
+          <p className={styles.modalMetricLabel}>Turn</p>
           <p className={styles.modalText}>
-            <strong>Turn (histogram):</strong>
+            Average: {card.use_count > 0 ? Math.round(card.avg_turn_at_use) : "—"}
           </p>
-          {card.turn_histogram.length === 0 ? (
+          {!card.turn_histogram?.length ? (
             <p className={styles.modalEmpty}>No data.</p>
           ) : (
-            <div className={styles.histogram}>
-              {card.turn_histogram.map((b) => (
-                <div key={b.round} className={styles.histogramBar}>
-                  <span className={styles.histogramLabel}>Turn {b.round}</span>
-                  <span className={styles.histogramCount}>{b.count}</span>
-                </div>
-              ))}
+            <div className={styles.histogramChart}>
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={card.turn_histogram} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="rgba(148, 163, 184, 0.6)" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
+          <p className={styles.modalMetricLabel}>Pairs already matched</p>
           <p className={styles.modalText}>
-            <strong>Pairs already matched:</strong> {card.use_count > 0 ? card.avg_pairs_matched_before.toFixed(1) : "—"} on average
+            Average: {card.use_count > 0 ? card.avg_pairs_matched_before.toFixed(1) : "—"}
           </p>
+          {!card.pairs_histogram?.length ? (
+            <p className={styles.modalEmpty}>No data.</p>
+          ) : (
+            <div className={styles.histogramChart}>
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={card.pairs_histogram} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="rgba(148, 163, 184, 0.6)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
     </div>

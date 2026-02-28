@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"sort"
@@ -469,21 +470,32 @@ type TelemetryGlobal struct {
 	CardsPerTurnMax         int      `json:"cards_per_turn_max"`
 }
 
-type TelemetryByCard struct {
-	PowerUpID            string                 `json:"power_up_id"`
-	TotalMatches         int                    `json:"total_matches"`
-	WinsWithCard         int                    `json:"wins_with_card"`
-	WinRatePct           float64                `json:"win_rate_pct"`
-	UseCount             int                    `json:"use_count"`
-	AvgPointSwingPlayer  float64                `json:"avg_point_swing_player"`
-	AvgPointSwingOpponent float64                `json:"avg_point_swing_opponent"`
-	AvgPairsMatchedBefore float64                `json:"avg_pairs_matched_before"`
-	TurnHistogram        []TelemetryTurnBucket  `json:"turn_histogram"`
+// TelemetryBinConfig defines histogram bin bounds for turn and pairs (used by GetTelemetryMetrics).
+type TelemetryBinConfig struct {
+	TurnMax      int
+	TurnNumBins  int
+	PairsMax     int
+	PairsNumBins int
 }
 
-type TelemetryTurnBucket struct {
-	Round int `json:"round"`
-	Count int `json:"count"`
+// TelemetryHistogramBucket is one bin in a histogram (label + count).
+type TelemetryHistogramBucket struct {
+	Label string `json:"label"`
+	Count int    `json:"count"`
+}
+
+type TelemetryByCard struct {
+	PowerUpID             string                    `json:"power_up_id"`
+	TotalMatches          int                       `json:"total_matches"`
+	WinsWithCard          int                       `json:"wins_with_card"`
+	WinRatePct            float64                   `json:"win_rate_pct"`
+	UseCount              int                       `json:"use_count"`
+	AvgPointSwingPlayer   float64                   `json:"avg_point_swing_player"`
+	AvgPointSwingOpponent float64                   `json:"avg_point_swing_opponent"`
+	AvgPairsMatchedBefore float64                   `json:"avg_pairs_matched_before"`
+	AvgTurnAtUse          float64                   `json:"avg_turn_at_use"`
+	TurnHistogram         []TelemetryHistogramBucket `json:"turn_histogram"`
+	PairsHistogram        []TelemetryHistogramBucket `json:"pairs_histogram"`
 }
 
 type TelemetryByCombo struct {
@@ -496,10 +508,63 @@ type TelemetryByCombo struct {
 	AvgPointSwingOpponent  float64 `json:"avg_point_swing_opponent"`
 }
 
+// defaultTelemetryBinConfig is used when GetTelemetryMetrics is called with nil binConfig.
+var defaultTelemetryBinConfig = TelemetryBinConfig{TurnMax: 100, TurnNumBins: 6, PairsMax: 36, PairsNumBins: 6}
+
+// buildTurnHistogramLabels returns labels for turn bins: [0-step), [step-2*step), ..., "TurnMax+".
+func buildTurnHistogramLabels(cfg TelemetryBinConfig) []string {
+	if cfg.TurnNumBins < 2 || cfg.TurnMax <= 0 {
+		return nil
+	}
+	step := cfg.TurnMax / (cfg.TurnNumBins - 1)
+	labels := make([]string, 0, cfg.TurnNumBins)
+	for i := 0; i < cfg.TurnNumBins-1; i++ {
+		labels = append(labels, fmt.Sprintf("%d-%d", i*step, (i+1)*step))
+	}
+	labels = append(labels, fmt.Sprintf("%d+", cfg.TurnMax))
+	return labels
+}
+
+// buildPairsHistogramLabels returns labels for pairs bins (equal width in [0, PairsMax]).
+func buildPairsHistogramLabels(cfg TelemetryBinConfig) []string {
+	if cfg.PairsNumBins <= 0 || cfg.PairsMax <= 0 {
+		return nil
+	}
+	step := cfg.PairsMax / cfg.PairsNumBins
+	if step < 1 {
+		step = 1
+	}
+	labels := make([]string, 0, cfg.PairsNumBins)
+	for i := 0; i < cfg.PairsNumBins; i++ {
+		lo, hi := i*step, (i+1)*step
+		if i == cfg.PairsNumBins-1 {
+			hi = cfg.PairsMax
+		}
+		labels = append(labels, fmt.Sprintf("%d-%d", lo, hi))
+	}
+	return labels
+}
+
 // GetTelemetryMetrics returns aggregated metrics from game_history, match_arcana, turn, arcana_use.
-func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, error) {
+func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBinConfig) (*TelemetryMetrics, error) {
 	if s == nil || s.pool == nil {
 		return &TelemetryMetrics{}, nil
+	}
+	cfg := defaultTelemetryBinConfig
+	if binConfig != nil {
+		cfg = *binConfig
+	}
+	if cfg.TurnNumBins < 2 {
+		cfg.TurnNumBins = 6
+	}
+	if cfg.TurnMax <= 0 {
+		cfg.TurnMax = 100
+	}
+	if cfg.PairsNumBins <= 0 {
+		cfg.PairsNumBins = 6
+	}
+	if cfg.PairsMax <= 0 {
+		cfg.PairsMax = 36
 	}
 	out := &TelemetryMetrics{}
 
@@ -594,13 +659,14 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 		return nil, err
 	}
 
-	// Arcana use aggregates per power_up_id: use_count, avg point_delta, avg pairs_matched_before, turn histogram
+	// Arcana use aggregates per power_up_id: use_count, avg point_delta, avg pairs_matched_before, avg_turn_at_use
 	useRows, err := s.pool.Query(ctx, `
 		SELECT power_up_id,
 			COUNT(*) AS use_count,
 			AVG(COALESCE(point_delta_player, 0))::float AS avg_delta_player,
 			AVG(COALESCE(point_delta_opponent, 0))::float AS avg_delta_opponent,
-			AVG(pairs_matched_before)::float AS avg_pairs_matched_before
+			AVG(pairs_matched_before)::float AS avg_pairs_matched_before,
+			AVG(round)::float AS avg_turn_at_use
 		FROM arcana_use
 		GROUP BY power_up_id
 	`)
@@ -610,29 +676,37 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 	defer useRows.Close()
 	cardUse := make(map[string]struct {
 		UseCount             int
-		AvgDeltaPlayer        float64
-		AvgDeltaOpponent      float64
+		AvgDeltaPlayer       float64
+		AvgDeltaOpponent     float64
 		AvgPairsMatchedBefore float64
+		AvgTurnAtUse         float64
 	})
 	for useRows.Next() {
 		var pid string
 		var useCount int
-		var avgPlayer, avgOpp, avgPairs float64
-		if err := useRows.Scan(&pid, &useCount, &avgPlayer, &avgOpp, &avgPairs); err != nil {
+		var avgPlayer, avgOpp, avgPairs, avgTurn float64
+		if err := useRows.Scan(&pid, &useCount, &avgPlayer, &avgOpp, &avgPairs, &avgTurn); err != nil {
 			return nil, err
 		}
 		cardUse[pid] = struct {
-			UseCount             int
+			UseCount              int
 			AvgDeltaPlayer        float64
 			AvgDeltaOpponent      float64
 			AvgPairsMatchedBefore float64
-		}{useCount, avgPlayer, avgOpp, avgPairs}
+			AvgTurnAtUse          float64
+		}{useCount, avgPlayer, avgOpp, avgPairs, avgTurn}
 	}
 	if err := useRows.Err(); err != nil {
 		return nil, err
 	}
 
-	// Turn histogram per power_up_id: round -> count
+	// Turn histogram: raw (power_up_id, round, cnt) then bin per card
+	turnStep := cfg.TurnMax / (cfg.TurnNumBins - 1)
+	if turnStep < 1 {
+		turnStep = 1
+	}
+	turnLabels := buildTurnHistogramLabels(cfg)
+	turnBinsByCard := make(map[string][]int)
 	histRows, err := s.pool.Query(ctx, `
 		SELECT power_up_id, round, COUNT(*) AS cnt
 		FROM arcana_use
@@ -642,17 +716,59 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 	if err != nil {
 		return nil, err
 	}
-	defer histRows.Close()
-	histogramByCard := make(map[string][]TelemetryTurnBucket)
 	for histRows.Next() {
 		var pid string
 		var round, cnt int
 		if err := histRows.Scan(&pid, &round, &cnt); err != nil {
+			histRows.Close()
 			return nil, err
 		}
-		histogramByCard[pid] = append(histogramByCard[pid], TelemetryTurnBucket{Round: round, Count: cnt})
+		if turnBinsByCard[pid] == nil {
+			turnBinsByCard[pid] = make([]int, len(turnLabels))
+		}
+		binIdx := cfg.TurnNumBins - 1
+		if round < cfg.TurnMax {
+			binIdx = round / turnStep
+			if binIdx >= cfg.TurnNumBins-1 {
+				binIdx = cfg.TurnNumBins - 2
+			}
+		}
+		turnBinsByCard[pid][binIdx] += cnt
 	}
+	histRows.Close()
 	if err := histRows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Pairs histogram: raw (power_up_id, pairs_matched_before) then bin per card
+	pairsStep := cfg.PairsMax / cfg.PairsNumBins
+	if pairsStep < 1 {
+		pairsStep = 1
+	}
+	pairsLabels := buildPairsHistogramLabels(cfg)
+	pairsBinsByCard := make(map[string][]int)
+	pairsRows, err := s.pool.Query(ctx, `SELECT power_up_id, pairs_matched_before FROM arcana_use`)
+	if err != nil {
+		return nil, err
+	}
+	for pairsRows.Next() {
+		var pid string
+		var pairs int
+		if err := pairsRows.Scan(&pid, &pairs); err != nil {
+			pairsRows.Close()
+			return nil, err
+		}
+		if pairsBinsByCard[pid] == nil {
+			pairsBinsByCard[pid] = make([]int, len(pairsLabels))
+		}
+		binIdx := pairs / pairsStep
+		if binIdx >= cfg.PairsNumBins {
+			binIdx = cfg.PairsNumBins - 1
+		}
+		pairsBinsByCard[pid][binIdx]++
+	}
+	pairsRows.Close()
+	if err := pairsRows.Err(); err != nil {
 		return nil, err
 	}
 
@@ -664,7 +780,10 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 	for pid := range cardUse {
 		seenPowerUp[pid] = true
 	}
-	for pid := range histogramByCard {
+	for pid := range turnBinsByCard {
+		seenPowerUp[pid] = true
+	}
+	for pid := range pairsBinsByCard {
 		seenPowerUp[pid] = true
 	}
 	var powerUpIDs []string
@@ -679,9 +798,21 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 		if w.TotalMatches > 0 {
 			winRatePct = 100.0 * float64(w.WinsWithCard) / float64(w.TotalMatches)
 		}
-		hist := histogramByCard[pid]
-		if hist == nil {
-			hist = []TelemetryTurnBucket{}
+		// Turn histogram with fixed labels (same order for all cards)
+		turnHist := make([]TelemetryHistogramBucket, len(turnLabels))
+		for i, label := range turnLabels {
+			turnHist[i] = TelemetryHistogramBucket{Label: label, Count: 0}
+			if bins := turnBinsByCard[pid]; i < len(bins) {
+				turnHist[i].Count = bins[i]
+			}
+		}
+		// Pairs histogram with fixed labels
+		pairsHist := make([]TelemetryHistogramBucket, len(pairsLabels))
+		for i, label := range pairsLabels {
+			pairsHist[i] = TelemetryHistogramBucket{Label: label, Count: 0}
+			if bins := pairsBinsByCard[pid]; i < len(bins) {
+				pairsHist[i].Count = bins[i]
+			}
 		}
 		out.ByCard = append(out.ByCard, TelemetryByCard{
 			PowerUpID:             pid,
@@ -692,7 +823,9 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, err
 			AvgPointSwingPlayer:   u.AvgDeltaPlayer,
 			AvgPointSwingOpponent: u.AvgDeltaOpponent,
 			AvgPairsMatchedBefore: u.AvgPairsMatchedBefore,
-			TurnHistogram:         hist,
+			AvgTurnAtUse:          u.AvgTurnAtUse,
+			TurnHistogram:         turnHist,
+			PairsHistogram:        pairsHist,
 		})
 	}
 

@@ -10,7 +10,7 @@ type HistoryStore interface {
 	ListLeaderboard(ctx context.Context, limit, offset int) ([]LeaderboardEntry, error)
 	GetLeaderboardEntryByUserID(ctx context.Context, userID string) (*LeaderboardEntry, error)
 	GetUserRole(ctx context.Context, userID string) (string, error)
-	GetTelemetryMetrics(ctx context.Context) (*TelemetryMetrics, error)
+	GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBinConfig) (*TelemetryMetrics, error)
 
 	// Write
 	InsertGameResult(ctx context.Context, matchID, player0UserID, player1UserID, player0Name, player1Name string, player0Score, player1Score int, winnerIndex int, endReason string, elo0Before, elo0After, elo1Before, elo1After *int) error

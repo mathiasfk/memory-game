@@ -33,6 +33,14 @@ type PowerUpsConfig struct {
 	Clairvoyance ClairvoyancePowerUpConfig `json:"clairvoyance"`
 }
 
+// TelemetryHistogramConfig holds bin settings for telemetry histograms (turn and pairs at card use).
+type TelemetryHistogramConfig struct {
+	TurnMax      int `json:"turn_max"`       // max turn for equal bins; last bin is "TurnMax+"
+	TurnNumBins  int `json:"turn_num_bins"`  // e.g. 6 = 5 equal bins in [0,TurnMax) + 1 for TurnMax+
+	PairsMax     int `json:"pairs_max"`      // max pairs for equal bins (e.g. 36)
+	PairsNumBins int `json:"pairs_num_bins"` // e.g. 6 equal bins in [0,PairsMax]
+}
+
 // Config holds all configurable game parameters.
 type Config struct {
 	BoardRows         int    `json:"board_rows"`
@@ -57,6 +65,9 @@ type Config struct {
 
 	// AIProfiles lists available AI opponents; one is chosen at random when pairing vs AI.
 	AIProfiles []AIParams `json:"ai_profiles"`
+
+	// TelemetryHistogram defines histogram bins for "game stage at use" (turn and pairs already matched).
+	TelemetryHistogram TelemetryHistogramConfig `json:"telemetry_histogram"`
 }
 
 // Defaults returns a Config with all default values from the spec.
@@ -80,6 +91,12 @@ func Defaults() *Config {
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2500, UseKnownPairChance: 90, ForgetChance: 1},
 			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 87, ForgetChance: 15},
 			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 85, ForgetChance: 30},
+		},
+		TelemetryHistogram: TelemetryHistogramConfig{
+			TurnMax:      100,
+			TurnNumBins: 6,
+			PairsMax:    36,
+			PairsNumBins: 6,
 		},
 	}
 }
@@ -126,6 +143,10 @@ func Load() *Config {
 		overrideInt(&cfg.AIProfiles[0].UseKnownPairChance, "AI_USE_KNOWN_PAIR_CHANCE")
 		overrideInt(&cfg.AIProfiles[0].ForgetChance, "AI_FORGET_CHANCE")
 	}
+	overrideInt(&cfg.TelemetryHistogram.TurnMax, "TELEMETRY_TURN_MAX")
+	overrideInt(&cfg.TelemetryHistogram.TurnNumBins, "TELEMETRY_TURN_NUM_BINS")
+	overrideInt(&cfg.TelemetryHistogram.PairsMax, "TELEMETRY_PAIRS_MAX")
+	overrideInt(&cfg.TelemetryHistogram.PairsNumBins, "TELEMETRY_PAIRS_NUM_BINS")
 
 	return cfg
 }

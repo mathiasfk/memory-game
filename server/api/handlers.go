@@ -183,7 +183,14 @@ func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	metrics, err := h.HistoryStore.GetTelemetryMetrics(r.Context())
+	th := h.Config.TelemetryHistogram
+	binConfig := &storage.TelemetryBinConfig{
+		TurnMax:      th.TurnMax,
+		TurnNumBins:  th.TurnNumBins,
+		PairsMax:     th.PairsMax,
+		PairsNumBins: th.PairsNumBins,
+	}
+	metrics, err := h.HistoryStore.GetTelemetryMetrics(r.Context(), binConfig)
 	if err != nil {
 		log.Printf("GetTelemetryMetrics: %v", err)
 		http.Error(w, "failed to load metrics", http.StatusInternalServerError)
