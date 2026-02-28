@@ -20,9 +20,8 @@ const (
 
 const createTableSQL = `
 CREATE TABLE IF NOT EXISTS game_history (
-	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	id UUID PRIMARY KEY,
 	played_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-	game_id TEXT,
 	player0_user_id TEXT NOT NULL,
 	player1_user_id TEXT NOT NULL,
 	player0_name TEXT NOT NULL,
@@ -48,6 +47,41 @@ CREATE TABLE IF NOT EXISTS player_ratings (
 	updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_player_ratings_elo ON player_ratings(elo DESC);
+CREATE TABLE IF NOT EXISTS match_arcana (
+	match_id    UUID NOT NULL REFERENCES game_history(id),
+	power_up_id TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_match_arcana_match_id ON match_arcana(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_arcana_power_up_id ON match_arcana(power_up_id);
+CREATE TABLE IF NOT EXISTS turn (
+	id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	match_id                UUID NOT NULL REFERENCES game_history(id),
+	round                   INT NOT NULL,
+	player_idx              SMALLINT NOT NULL,
+	player_score_after_turn INT NOT NULL,
+	opponent_score_after_turn INT NOT NULL,
+	point_delta_player      INT NOT NULL,
+	point_delta_opponent    INT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_turn_match_id ON turn(match_id);
+CREATE INDEX IF NOT EXISTS idx_turn_match_round ON turn(match_id, round);
+CREATE TABLE IF NOT EXISTS arcana_use (
+	id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	match_id               UUID NOT NULL REFERENCES game_history(id),
+	round                  INT NOT NULL,
+	played_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+	player_idx             SMALLINT NOT NULL,
+	power_up_id            TEXT NOT NULL,
+	target_card_index      INT NOT NULL,
+	player_score_before    INT NOT NULL,
+	opponent_score_before  INT NOT NULL,
+	pairs_matched_before   INT NOT NULL,
+	point_delta_player     INT,
+	point_delta_opponent   INT
+);
+CREATE INDEX IF NOT EXISTS idx_arcana_use_match_id ON arcana_use(match_id);
+CREATE INDEX IF NOT EXISTS idx_arcana_use_power_up_id ON arcana_use(power_up_id);
+CREATE INDEX IF NOT EXISTS idx_arcana_use_match_round ON arcana_use(match_id, round);
 `
 
 // alterGameHistoryAddEloColumns adds elo columns to game_history for existing DBs (no-op if already present).
@@ -56,6 +90,11 @@ ALTER TABLE game_history ADD COLUMN IF NOT EXISTS player0_elo_before INT;
 ALTER TABLE game_history ADD COLUMN IF NOT EXISTS player0_elo_after INT;
 ALTER TABLE game_history ADD COLUMN IF NOT EXISTS player1_elo_before INT;
 ALTER TABLE game_history ADD COLUMN IF NOT EXISTS player1_elo_after INT;
+`
+
+// alterGameHistoryDropGameID removes game_id column for existing DBs (no-op if already dropped).
+const alterGameHistoryDropGameID = `
+ALTER TABLE game_history DROP COLUMN IF EXISTS game_id;
 `
 
 // Store persists and retrieves game history.
@@ -82,6 +121,16 @@ func NewStore(ctx context.Context, databaseURL string) (*Store, error) {
 		return nil, err
 	}
 	for _, q := range strings.Split(strings.TrimSpace(alterGameHistoryAddEloColumns), "\n") {
+		q = strings.TrimSpace(q)
+		if q == "" {
+			continue
+		}
+		if _, err := pool.Exec(ctx, q); err != nil {
+			pool.Close()
+			return nil, err
+		}
+	}
+	for _, q := range strings.Split(strings.TrimSpace(alterGameHistoryDropGameID), "\n") {
 		q = strings.TrimSpace(q)
 		if q == "" {
 			continue
@@ -185,9 +234,10 @@ func (s *Store) UpdateRatingsAfterGame(ctx context.Context, p0UserID, p1UserID, 
 	return elo0Before, elo0After, elo1Before, elo1After, nil
 }
 
-// InsertGameResult records a finished game. winnerIndex is 0 or 1, or -1 for draw (stored as NULL).
+// InsertGameResult records a finished game. matchID is the UUID of the match (used as game_history.id).
+// winnerIndex is 0 or 1, or -1 for draw (stored as NULL).
 // For completed games pass elo before/after; for abandonos pass nil for all four.
-func (s *Store) InsertGameResult(ctx context.Context, gameID, player0UserID, player1UserID, player0Name, player1Name string, player0Score, player1Score int, winnerIndex int, endReason string, elo0Before, elo0After, elo1Before, elo1After *int) error {
+func (s *Store) InsertGameResult(ctx context.Context, matchID, player0UserID, player1UserID, player0Name, player1Name string, player0Score, player1Score int, winnerIndex int, endReason string, elo0Before, elo0After, elo1Before, elo1After *int) error {
 	if s == nil || s.pool == nil {
 		return nil
 	}
@@ -196,17 +246,56 @@ func (s *Store) InsertGameResult(ctx context.Context, gameID, player0UserID, pla
 		winner = &winnerIndex
 	}
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO game_history (game_id, player0_user_id, player1_user_id, player0_name, player1_name, player0_score, player1_score, winner_index, end_reason, player0_elo_before, player0_elo_after, player1_elo_before, player1_elo_after)
+		INSERT INTO game_history (id, player0_user_id, player1_user_id, player0_name, player1_name, player0_score, player1_score, winner_index, end_reason, player0_elo_before, player0_elo_after, player1_elo_before, player1_elo_after)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-		gameID, player0UserID, player1UserID, player0Name, player1Name, player0Score, player1Score, winner, endReason, elo0Before, elo0After, elo1Before, elo1After)
+		matchID, player0UserID, player1UserID, player0Name, player1Name, player0Score, player1Score, winner, endReason, elo0Before, elo0After, elo1Before, elo1After)
+	return err
+}
+
+// InsertMatchArcana inserts one row per arcana in the match (typically 6). Call after InsertGameResult for the same matchID.
+func (s *Store) InsertMatchArcana(ctx context.Context, matchID string, powerUpIDs []string) error {
+	if s == nil || s.pool == nil {
+		return nil
+	}
+	for _, pid := range powerUpIDs {
+		_, err := s.pool.Exec(ctx, `INSERT INTO match_arcana (match_id, power_up_id) VALUES ($1, $2)`, matchID, pid)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InsertTurn inserts a turn record for telemetry. Deltas are the score change for the player who had the turn and the opponent.
+func (s *Store) InsertTurn(ctx context.Context, matchID string, round, playerIdx int, playerScoreAfter, opponentScoreAfter, deltaPlayer, deltaOpponent int) error {
+	if s == nil || s.pool == nil {
+		return nil
+	}
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO turn (match_id, round, player_idx, player_score_after_turn, opponent_score_after_turn, point_delta_player, point_delta_opponent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		matchID, round, playerIdx, playerScoreAfter, opponentScoreAfter, deltaPlayer, deltaOpponent)
+	return err
+}
+
+// InsertArcanaUse records a power-up use. point_delta_* are optional (nullable).
+func (s *Store) InsertArcanaUse(ctx context.Context, matchID string, round, playerIdx int, powerUpID string, targetCardIndex int, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore int) error {
+	if s == nil || s.pool == nil {
+		return nil
+	}
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO arcana_use (match_id, round, player_idx, power_up_id, target_card_index, player_score_before, opponent_score_before, pairs_matched_before)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		matchID, round, playerIdx, powerUpID, targetCardIndex, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore)
 	return err
 }
 
 // GameRecord is a single row returned for the history API.
+// GameID is set to ID (match UUID) for client compatibility.
 type GameRecord struct {
 	ID               string  `json:"id"`
 	PlayedAt         string  `json:"played_at"` // ISO8601
-	GameID           string  `json:"game_id"`
+	GameID           string  `json:"game_id"`   // same as ID for backward compatibility
 	Player0UserID    string  `json:"player0_user_id"`
 	Player1UserID    string  `json:"player1_user_id"`
 	Player0Name      string  `json:"player0_name"`
@@ -229,7 +318,7 @@ func (s *Store) ListByUserID(ctx context.Context, userID string) ([]GameRecord, 
 		return []GameRecord{}, nil
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, played_at, COALESCE(game_id,''), player0_user_id, player1_user_id, player0_name, player1_name, player0_score, player1_score, winner_index, COALESCE(end_reason,''),
+		SELECT id, played_at, player0_user_id, player1_user_id, player0_name, player1_name, player0_score, player1_score, winner_index, COALESCE(end_reason,''),
 			player0_elo_before, player0_elo_after, player1_elo_before, player1_elo_after
 		FROM game_history
 		WHERE player0_user_id = $1 OR player1_user_id = $1
@@ -245,9 +334,10 @@ func (s *Store) ListByUserID(ctx context.Context, userID string) ([]GameRecord, 
 		var winnerIndex *int
 		var playedAt time.Time
 		var elo0Before, elo0After, elo1Before, elo1After *int
-		if err := rows.Scan(&r.ID, &playedAt, &r.GameID, &r.Player0UserID, &r.Player1UserID, &r.Player0Name, &r.Player1Name, &r.Player0Score, &r.Player1Score, &winnerIndex, &r.EndReason, &elo0Before, &elo0After, &elo1Before, &elo1After); err != nil {
+		if err := rows.Scan(&r.ID, &playedAt, &r.Player0UserID, &r.Player1UserID, &r.Player0Name, &r.Player1Name, &r.Player0Score, &r.Player1Score, &winnerIndex, &r.EndReason, &elo0Before, &elo0After, &elo1Before, &elo1After); err != nil {
 			return nil, err
 		}
+		r.GameID = r.ID // backward compatibility for clients expecting game_id
 		r.PlayedAt = playedAt.UTC().Format(time.RFC3339)
 		r.WinnerIndex = winnerIndex
 		r.Player0EloBefore = elo0Before

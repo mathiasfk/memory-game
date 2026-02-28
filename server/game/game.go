@@ -70,6 +70,12 @@ type PowerUpProvider interface {
 	PickArcanaForMatch(n int) []PowerUpDef
 }
 
+// TelemetrySink is called to record turn and arcana use events. Optional; may be nil.
+type TelemetrySink interface {
+	RecordTurn(matchID string, round, playerIdx int, playerScoreAfter, opponentScoreAfter, deltaPlayer, deltaOpponent int)
+	RecordArcanaUse(matchID string, round, playerIdx int, powerUpID string, targetCardIndex int, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore int)
+}
+
 // PowerUpContext is passed to power-up Apply when the game has context (e.g. which pairID is the power-up tile).
 type PowerUpContext struct {
 	// SelfPairID is the pairID of the power-up tile on the board for the power-up being used; -1 if not applicable.
@@ -108,9 +114,15 @@ type Game struct {
 	// Round increments each time the turn passes after a mismatch (used for Second Chance duration).
 	Round int
 
+	// TurnStartScores are the scores at the start of the current turn (for telemetry deltas).
+	TurnStartScores [2]int
+
 	// turnEndsAt is when the current turn ends (zero = timer disabled).
 	turnEndsAt        time.Time
 	turnTimerCancel   chan struct{}
+
+	// TelemetrySink records turn and arcana use events; optional, set by matchmaker.
+	TelemetrySink TelemetrySink
 
 	// RejoinTokens allow a disconnected player to rejoin; set by matchmaker.
 	RejoinTokens [2]string
@@ -170,6 +182,8 @@ func (g *Game) Run() {
 
 	// Broadcast initial game state to both players
 	g.broadcastState()
+	g.TurnStartScores[0] = g.Players[0].Score
+	g.TurnStartScores[1] = g.Players[1].Score
 	g.startTurnTimer()
 
 	for {
@@ -370,9 +384,20 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	}
 
 	g.FlippedIndices = g.FlippedIndices[:0]
+	// Record turn telemetry for the turn that just ended (before advancing Round/CurrentTurn)
+	if g.TelemetrySink != nil {
+		pidx := g.CurrentTurn
+		scoreAfter := g.Players[pidx].Score
+		oppScoreAfter := g.Players[1-pidx].Score
+		deltaPlayer := scoreAfter - g.TurnStartScores[pidx]
+		deltaOpponent := oppScoreAfter - g.TurnStartScores[1-pidx]
+		g.TelemetrySink.RecordTurn(g.ID, g.Round, pidx, scoreAfter, oppScoreAfter, deltaPlayer, deltaOpponent)
+	}
 	g.Round++
 	g.CurrentTurn = 1 - g.CurrentTurn
 	g.TurnPhase = FirstFlip
+	g.TurnStartScores[0] = g.Players[0].Score
+	g.TurnStartScores[1] = g.Players[1].Score
 
 	g.clearHandCooldownForPlayer(g.CurrentTurn)
 	g.cancelTurnTimer()
@@ -485,6 +510,10 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 			break
 		}
 	}
+	playerScoreBefore := g.Players[playerIdx].Score
+	opponentScoreBefore := g.Players[1-playerIdx].Score
+	pairsMatchedBefore := CountMatchedPairs(g.Board)
+
 	ctx := &PowerUpContext{SelfPairID: selfPairID}
 	if err := pup.Apply(g.Board, player, opponent, ctx); err != nil {
 		// Revert Clairvoyance reveals if any; power-up already consumed
@@ -493,6 +522,14 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		}
 		g.sendError(playerIdx, "Power-up failed: "+err.Error())
 		return
+	}
+
+	if g.TelemetrySink != nil {
+		targetIdx := cardIndex
+		if powerUpID != "clairvoyance" && powerUpID != "oblivion" {
+			targetIdx = -1
+		}
+		g.TelemetrySink.RecordArcanaUse(g.ID, g.Round, playerIdx, powerUpID, targetIdx, playerScoreBefore, opponentScoreBefore, pairsMatchedBefore)
 	}
 
 	// Chaos: clear known indices and highlight for both players
@@ -684,9 +721,20 @@ func (g *Game) handleTurnTimeout() {
 		}
 	}
 	g.FlippedIndices = g.FlippedIndices[:0]
+	// Record turn telemetry for the turn that just ended (before advancing Round/CurrentTurn)
+	if g.TelemetrySink != nil {
+		pidx := g.CurrentTurn
+		scoreAfter := g.Players[pidx].Score
+		oppScoreAfter := g.Players[1-pidx].Score
+		deltaPlayer := scoreAfter - g.TurnStartScores[pidx]
+		deltaOpponent := oppScoreAfter - g.TurnStartScores[1-pidx]
+		g.TelemetrySink.RecordTurn(g.ID, g.Round, pidx, scoreAfter, oppScoreAfter, deltaPlayer, deltaOpponent)
+	}
 	g.Round++
 	g.CurrentTurn = 1 - g.CurrentTurn
 	g.TurnPhase = FirstFlip
+	g.TurnStartScores[0] = g.Players[0].Score
+	g.TurnStartScores[1] = g.Players[1].Score
 
 	g.clearHandCooldownForPlayer(g.CurrentTurn)
 	g.startTurnTimer()

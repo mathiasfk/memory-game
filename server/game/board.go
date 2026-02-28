@@ -175,6 +175,17 @@ func AllMatched(board *Board) bool {
 	return true
 }
 
+// CountMatchedPairs returns the number of pairs currently in Matched state (each pair counted once).
+func CountMatchedPairs(board *Board) int {
+	n := 0
+	for _, card := range board.Cards {
+		if card.State == Matched {
+			n++
+		}
+	}
+	return n / 2
+}
+
 // RadarRegionIndices returns the board indices of the 3x3 region centered on the given card index.
 // Indices are clipped to board bounds, so corners yield 4 indices, edges 6, center 9.
 func RadarRegionIndices(board *Board, centerIndex int) []int {
