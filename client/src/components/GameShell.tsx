@@ -46,6 +46,8 @@ export function GameShell() {
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   const gameOverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const powerUpMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Index we just flipped (so we don't play tile sound again when server confirms). */
+  const lastFlipIndexByUsRef = useRef<number | null>(null);
 
   const addToast = useCallback((message: string) => {
     setToasts((prev) => [...prev, { id: crypto.randomUUID(), message }]);
@@ -55,31 +57,56 @@ export function GameShell() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const handleMessage = useCallback((msg: import("../types/messages").ServerMessage) => {
-    switch (msg.type) {
-      case "waiting_for_match":
-        setScreen("waiting");
-        setGameResult(null);
-        setOpponentDisconnected(false);
-        setOpponentReconnecting(null);
-        break;
-      case "match_found":
-        setMatchInfo(msg);
-        setScreen("game");
-        setGameResult(null);
-        setOpponentDisconnected(false);
-        setOpponentReconnecting(null);
-        if (msg.gameId && msg.rejoinToken) {
-          saveGameSession({
-            gameId: msg.gameId,
-            rejoinToken: msg.rejoinToken,
-            playerName: playerNameRef.current || "",
-          });
+  const handleMessage = useCallback(
+    (msg: import("../types/messages").ServerMessage) => {
+      switch (msg.type) {
+        case "waiting_for_match":
+          setScreen("waiting");
+          setGameResult(null);
+          setOpponentDisconnected(false);
+          setOpponentReconnecting(null);
+          break;
+        case "match_found":
+          setMatchInfo(msg);
+          setScreen("game");
+          setGameResult(null);
+          setOpponentDisconnected(false);
+          setOpponentReconnecting(null);
+          if (msg.gameId && msg.rejoinToken) {
+            saveGameSession({
+              gameId: msg.gameId,
+              rejoinToken: msg.rejoinToken,
+              playerName: playerNameRef.current || "",
+            });
+          }
+          break;
+        case "game_state": {
+          const prevCards = gameState?.cards ?? [];
+          const prevByIndex = new Map(prevCards.map((c) => [c.index, c.state]));
+          const newlyRevealed = msg.cards.filter(
+            (c) =>
+              prevByIndex.get(c.index) === "hidden" &&
+              (c.state === "revealed" || c.state === "matched"),
+          );
+          const newlyHidden = msg.cards.filter(
+            (c) =>
+              c.state === "hidden" &&
+              (prevByIndex.get(c.index) === "revealed" || prevByIndex.get(c.index) === "matched"),
+          );
+          const ourFlip = lastFlipIndexByUsRef.current;
+          const onlyFlipWasOurs =
+            newlyRevealed.length === 1 && newlyRevealed[0]?.index === ourFlip;
+          const opponentFlipped = newlyRevealed.length > 0 && !onlyFlipWasOurs;
+          if (opponentFlipped) {
+            playSound("tileFlip");
+          }
+          if (newlyHidden.length > 0) {
+            playSound("tileFlipBack");
+          }
+          lastFlipIndexByUsRef.current = null;
+          setGameState(msg);
+          break;
         }
-        break;
-      case "game_state":
-        setGameState(msg);
-        break;
       case "turn_timeout":
         break;
       case "game_over":
@@ -143,7 +170,7 @@ export function GameShell() {
         void _exhaustiveCheck;
       }
     }
-  }, [addToast]);
+  }, [addToast, gameState]);
 
   const { connected, send } = useGameSocket(WS_URL, { onMessage: handleMessage });
 
@@ -287,6 +314,7 @@ export function GameShell() {
 
   const handleFlipCard = useCallback(
     (index: number) => {
+      lastFlipIndexByUsRef.current = index;
       playSound("tileFlip");
       send({ type: "flip_card", index });
     },

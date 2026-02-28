@@ -3,7 +3,7 @@
  * Add new events in SOUND_REGISTRY and call playSound() from handlers/screens.
  */
 
-export type SoundEvent = "tileFlip";
+export type SoundEvent = "tileFlip" | "tileFlipBack";
 
 interface SoundEntry {
   path: string;
@@ -13,6 +13,9 @@ interface SoundEntry {
 const SOUND_REGISTRY: Record<SoundEvent, SoundEntry> = {
   tileFlip: {
     path: "/sounds/tile-flip__484965.mp3",
+  },
+  tileFlipBack: {
+    path: "/sounds/tile-flip-back__484965.mp3",
   },
 };
 
