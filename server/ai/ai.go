@@ -8,51 +8,22 @@ import (
 	"strings"
 	"time"
 
+	"memory-game-server/ai/heuristic"
 	"memory-game-server/config"
 	"memory-game-server/game"
-)
-
-// Element names for normal pairs (must match game board logic: pairID >= ArcanaPairs → (pairID-arcanaPairs)/3).
-const (
-	elementFire  = "fire"
-	elementWater = "water"
-	elementAir   = "air"
-	elementEarth = "earth"
 )
 
 // powerUpIDToElement returns the element for an elemental power-up ID, or "" if not an elemental.
 func powerUpIDToElement(powerUpID string) string {
 	switch powerUpID {
 	case "fire_elemental":
-		return elementFire
+		return game.ElementFire
 	case "water_elemental":
-		return elementWater
+		return game.ElementWater
 	case "air_elemental":
-		return elementAir
+		return game.ElementAir
 	case "earth_elemental":
-		return elementEarth
-	default:
-		return ""
-	}
-}
-
-// elementForNormalPair returns the element for a normal pair (pairID >= arcanaPairs).
-// Matches game board: 3 pairs per element → fire, water, air, earth.
-func elementForNormalPair(pairID, arcanaPairs int) string {
-	if pairID < arcanaPairs {
-		return ""
-	}
-	normalPairIndex := pairID - arcanaPairs
-	elementIndex := normalPairIndex / 3
-	switch elementIndex {
-	case 0:
-		return elementFire
-	case 1:
-		return elementWater
-	case 2:
-		return elementAir
-	case 3:
-		return elementEarth
+		return game.ElementEarth
 	default:
 		return ""
 	}
@@ -70,269 +41,23 @@ func pairsRemaining(cards []game.CardView) int {
 	return total - matched/2
 }
 
-// randomMatchProb returns the probability of matching a pair by random guess when P pairs remain.
-// Formula: 1/(2P - 1). Returns 0 if P <= 0.
-func randomMatchProb(P int) float64 {
-	if P <= 0 {
-		return 0
-	}
-	denom := 2*P - 1
-	if denom <= 0 {
-		return 0
-	}
-	return 1 / float64(denom)
-}
-
-// binom returns C(n,k) = n!/(k!(n-k)!) as float64 for small n,k to avoid overflow.
-func binom(n, k int) float64 {
-	if k < 0 || k > n {
-		return 0
-	}
-	if k > n/2 {
-		k = n - k
-	}
-	r := 1.0
-	for i := 0; i < k; i++ {
-		r *= float64(n-i) / float64(i+1)
-	}
-	return r
-}
-
-// expectedPairsFromReveal returns the expected number of complete pairs seen when revealing k cards
-// from 2*P cards (P pairs). Formula: P * C(2P-2, k-2) / C(2P, k). Returns 0 if 2P < k or P < 2.
-func expectedPairsFromReveal(P, k int) float64 {
-	n := 2 * P
-	if P < 2 || k < 2 || n < k {
-		return 0
-	}
-	num := binom(n-2, k-2)
-	den := binom(n, k)
-	if den == 0 {
-		return 0
-	}
-	return float64(P) * num / den
-}
-
-// evClairvoyance returns the expected value (in points) of using Clairvoyance when P pairs remain:
-// expected number of complete pairs we learn from revealing a 3x3 (9 cards), as a proxy for future points.
-func evClairvoyance(P int) float64 {
-	return expectedPairsFromReveal(P, 9)
-}
-
-// hasKnownPair returns true if memory contains a complete pair still in hidden (both indices hidden).
-func hasKnownPair(memory map[int]int, hidden []int) bool {
-	pairToIndices := make(map[int][]int)
-	for _, idx := range hidden {
-		if p, ok := memory[idx]; ok {
-			pairToIndices[p] = append(pairToIndices[p], idx)
-		}
-	}
-	for _, indices := range pairToIndices {
-		if len(indices) >= 2 {
-			return true
-		}
-	}
-	return false
-}
-
-// knownPairElement returns the element of a known pair (normal pair only), or "" if none or arcana.
-func knownPairElement(memory map[int]int, hidden []int, arcanaPairs int) string {
-	pairToIndices := make(map[int][]int)
-	for _, idx := range hidden {
-		if p, ok := memory[idx]; ok {
-			pairToIndices[p] = append(pairToIndices[p], idx)
-		}
-	}
-	for pairID, indices := range pairToIndices {
-		if len(indices) >= 2 {
-			return elementForNormalPair(pairID, arcanaPairs)
-		}
-	}
-	return ""
-}
-
-// pairsOfElementRemaining returns how many pairs of the given element are still on the board (not matched/removed).
-func pairsOfElementRemaining(state *game.GameStateMsg, element string) int {
-	totalPairs := len(state.Cards) / 2
-	matchedOfElement := make(map[int]struct{})
-	for _, c := range state.Cards {
-		if c.State != "matched" || c.PairID == nil {
-			continue
-		}
-		if *c.PairID >= state.ArcanaPairs && elementForNormalPair(*c.PairID, state.ArcanaPairs) == element {
-			matchedOfElement[*c.PairID] = struct{}{}
-		}
-	}
-	// Count total pairIDs of this element (pairIDs >= arcanaPairs with this element)
-	totalOfElement := 0
-	for pairID := state.ArcanaPairs; pairID < totalPairs; pairID++ {
-		if elementForNormalPair(pairID, state.ArcanaPairs) == element {
-			totalOfElement++
-		}
-	}
-	remaining := totalOfElement - len(matchedOfElement)
-	if remaining < 0 {
-		return 0
-	}
-	return remaining
-}
-
-// hasPartialKnownOfElement returns true if we have at least one hidden tile of this element in memory,
-// but we do not have a complete pair of this element (both tiles) in memory.
-func hasPartialKnownOfElement(memory map[int]int, hidden []int, arcanaPairs int, element string) bool {
-	pairToIndices := make(map[int][]int)
-	for _, idx := range hidden {
-		if p, ok := memory[idx]; ok && elementForNormalPair(p, arcanaPairs) == element {
-			pairToIndices[p] = append(pairToIndices[p], idx)
-		}
-	}
-	// We have partial knowledge if there is at least one tile of this element in memory,
-	// but no pair has both tiles known.
-	hasAny := false
-	for _, indices := range pairToIndices {
-		if len(indices) >= 2 {
-			return false // full pair known, not partial
-		}
-		if len(indices) >= 1 {
-			hasAny = true
-		}
-	}
-	return hasAny
-}
-
 // evNoCard returns expected value (points) for this turn without using any arcana.
 // When we have a known pair we get 1 point and keep the turn, so we include the EV of the extra flip.
 func evNoCard(state *game.GameStateMsg, memory map[int]int, hidden []int, P int) float64 {
-	if hasKnownPair(memory, hidden) {
-		// 1 point from matching the known pair + EV of the bonus turn (one more flip with P-1 pairs left)
+	if heuristic.HasKnownPair(memory, hidden) {
 		PAfter := P - 1
 		if PAfter <= 0 {
 			return 1
 		}
-		return 1 + randomMatchProb(PAfter)
+		return 1 + heuristic.RandomMatchProb(PAfter)
 	}
-	return randomMatchProb(P)
+	return heuristic.RandomMatchProb(P)
 }
 
 // evWithCard returns expected value when using the given power-up. Returns a negative value if the card
-// is not evaluated in v1 (e.g. Clairvoyance, Oblivion). Only elementals and chaos are considered.
+// has no registered heuristic (e.g. Oblivion, Necromancy). Uses the heuristic registry.
 func evWithCard(state *game.GameStateMsg, memory map[int]int, hidden []int, powerUpID string, P int) float64 {
-	switch powerUpID {
-	case "fire_elemental", "water_elemental", "air_elemental", "earth_elemental":
-		var need string
-		switch powerUpID {
-		case "fire_elemental":
-			need = elementFire
-		case "water_elemental":
-			need = elementWater
-		case "air_elemental":
-			need = elementAir
-		case "earth_elemental":
-			need = elementEarth
-		default:
-			return 0
-		}
-		// Full known pair of this element: we can match without elemental; using it gives same EV (we don't prefer it).
-		elem := knownPairElement(memory, hidden, state.ArcanaPairs)
-		if elem == need {
-			PAfter := P - 1
-			if PAfter <= 0 {
-				return 1
-			}
-			return 1 + randomMatchProb(PAfter)
-		}
-		// Partial knowledge: we know at least one tile of this element but not its pair. Elemental reveals
-		// all tiles of that element; we flip our known tile then pick among the other (2*K-1) highlighted; 1 is the match.
-		if hasPartialKnownOfElement(memory, hidden, state.ArcanaPairs, need) {
-			K := pairsOfElementRemaining(state, need)
-			if K <= 0 {
-				return 0
-			}
-			otherTiles := 2*K - 1 // one is our known tile, the rest are the other positions of that element
-			if otherTiles <= 0 {
-				return 1 // only one pair left of this element: guaranteed match
-			}
-			matchProb := 1.0 / float64(otherTiles)
-			// If we match we get 1 point and keep the turn
-			PAfter := P - 1
-			if PAfter <= 0 {
-				return matchProb
-			}
-			return matchProb * (1 + randomMatchProb(PAfter))
-		}
-		return 0
-	case "chaos":
-		// Chaos clears memory; EV is random guess only. Use only when we have no known pair.
-		return randomMatchProb(P)
-	case "clairvoyance":
-		return evClairvoyance(P)
-	default:
-		return -1
-	}
-}
-
-// radarRegionIndices returns the board indices of the 3x3 region centered on the given card index.
-// Same logic as game.RadarRegionIndices; used by the AI to choose Clairvoyance target (no access to board).
-func radarRegionIndices(centerIndex, rows, cols int) []int {
-	total := rows * cols
-	if centerIndex < 0 || centerIndex >= total {
-		return nil
-	}
-	centerRow := centerIndex / cols
-	centerCol := centerIndex % cols
-	minR := centerRow - 1
-	if minR < 0 {
-		minR = 0
-	}
-	maxR := centerRow + 1
-	if maxR >= rows {
-		maxR = rows - 1
-	}
-	minC := centerCol - 1
-	if minC < 0 {
-		minC = 0
-	}
-	maxC := centerCol + 1
-	if maxC >= cols {
-		maxC = cols - 1
-	}
-	var out []int
-	for r := minR; r <= maxR; r++ {
-		for c := minC; c <= maxC; c++ {
-			out = append(out, r*cols+c)
-		}
-	}
-	return out
-}
-
-// pickClairvoyanceTarget returns a hidden card index to center the 3x3 on, maximizing the number of
-// hidden cards in that region. Ties are broken randomly.
-func pickClairvoyanceTarget(state *game.GameStateMsg, memory map[int]int, hidden []int, rows, cols int) int {
-	hiddenSet := make(map[int]struct{}, len(hidden))
-	for _, idx := range hidden {
-		hiddenSet[idx] = struct{}{}
-	}
-	var bestIndices []int
-	bestCount := -1
-	for _, center := range hidden {
-		region := radarRegionIndices(center, rows, cols)
-		count := 0
-		for _, idx := range region {
-			if _, ok := hiddenSet[idx]; ok {
-				count++
-			}
-		}
-		if count > bestCount {
-			bestCount = count
-			bestIndices = []int{center}
-		} else if count == bestCount && bestCount >= 0 {
-			bestIndices = append(bestIndices, center)
-		}
-	}
-	if len(bestIndices) == 0 {
-		return -1
-	}
-	return bestIndices[rand.Intn(len(bestIndices))]
+	return heuristic.EV(powerUpID, state, memory, hidden, P)
 }
 
 // arcanaDecision holds the result of pickArcanaToUse. Reason is "ev" (maximize EV), "random" (randomness applied), or "no_improvement" (no card improved EV).
@@ -397,26 +122,31 @@ func pickArcanaToUse(state *game.GameStateMsg, memory map[int]int, hidden []int,
 		if rand.Intn(2) == 0 {
 			return arcanaDecision{reason: "random"}
 		}
-		// Pick randomly among candidates instead of best
 		best = candidates[rand.Intn(len(candidates))]
 		dec := arcanaDecision{powerUpID: best.powerUpID, use: true, reason: "random"}
-		if best.powerUpID == "clairvoyance" {
-			dec.CardIndex = pickClairvoyanceTarget(state, memory, hidden, rows, cols)
-			if dec.CardIndex < 0 {
-				return arcanaDecision{reason: "no_improvement"}
-			}
+		dec.CardIndex = heuristic.PickTarget(best.powerUpID, state, memory, hidden, rows, cols)
+		if dec.CardIndex == -1 && needsTarget(best.powerUpID) {
+			return arcanaDecision{reason: "no_improvement"}
 		}
 		return dec
 	}
 
 	dec := arcanaDecision{powerUpID: best.powerUpID, use: true, reason: "ev"}
-	if best.powerUpID == "clairvoyance" {
-		dec.CardIndex = pickClairvoyanceTarget(state, memory, hidden, rows, cols)
-		if dec.CardIndex < 0 {
-			return arcanaDecision{reason: "no_improvement"}
-		}
+	dec.CardIndex = heuristic.PickTarget(best.powerUpID, state, memory, hidden, rows, cols)
+	if dec.CardIndex == -1 && needsTarget(best.powerUpID) {
+		return arcanaDecision{reason: "no_improvement"}
 	}
 	return dec
+}
+
+// needsTarget returns true if the power-up requires a card target (e.g. Clairvoyance, Oblivion).
+func needsTarget(powerUpID string) bool {
+	switch powerUpID {
+	case "clairvoyance", "oblivion":
+		return true
+	default:
+		return false
+	}
 }
 
 // formatHand returns a short description of the AI hand for logging (e.g. "fire_elemental(1), chaos(2, 1 usable)").
@@ -585,11 +315,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 					if dec.powerUpID == "chaos" {
 						clearElementMemoryNext = true
 					}
-					cardIndex := -1
-					if dec.powerUpID == "clairvoyance" {
-						cardIndex = dec.CardIndex
-					}
-					sendUsePowerUp(g, playerIdx, dec.powerUpID, cardIndex)
+					sendUsePowerUp(g, playerIdx, dec.powerUpID, dec.CardIndex)
 					continue
 				}
 				slog.Debug("decided not to use arcana", "tag", "ai", "name", params.Name, "reason", dec.reason, "hand", handStr)

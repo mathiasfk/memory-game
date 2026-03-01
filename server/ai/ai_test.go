@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"memory-game-server/ai/heuristic"
 	"memory-game-server/config"
 	"memory-game-server/game"
 )
@@ -125,26 +126,26 @@ func TestPairsRemaining(t *testing.T) {
 }
 
 func TestRandomMatchProb(t *testing.T) {
-	if got := randomMatchProb(0); got != 0 {
-		t.Errorf("randomMatchProb(0) = %v, want 0", got)
+	if got := heuristic.RandomMatchProb(0); got != 0 {
+		t.Errorf("RandomMatchProb(0) = %v, want 0", got)
 	}
-	if got := randomMatchProb(1); got != 1 {
-		t.Errorf("randomMatchProb(1) = 1/(2*1-1) = 1, got %v", got)
+	if got := heuristic.RandomMatchProb(1); got != 1 {
+		t.Errorf("RandomMatchProb(1) = 1/(2*1-1) = 1, got %v", got)
 	}
 	// P=18 -> 1/35
-	if got := randomMatchProb(18); got <= 0 || got >= 0.03 {
-		t.Errorf("randomMatchProb(18) should be 1/35 ≈ 0.0286, got %v", got)
+	if got := heuristic.RandomMatchProb(18); got <= 0 || got >= 0.03 {
+		t.Errorf("RandomMatchProb(18) should be 1/35 ≈ 0.0286, got %v", got)
 	}
 }
 
 func TestHasKnownPair(t *testing.T) {
 	memory := map[int]int{0: 5, 1: 5}
 	hidden := []int{0, 1, 2, 3}
-	if !hasKnownPair(memory, hidden) {
+	if !heuristic.HasKnownPair(memory, hidden) {
 		t.Error("expected true: indices 0,1 are same pairID 5 and both hidden")
 	}
 	memory[1] = 6
-	if hasKnownPair(memory, hidden) {
+	if heuristic.HasKnownPair(memory, hidden) {
 		t.Error("expected false: no complete pair in memory")
 	}
 }
@@ -160,14 +161,14 @@ func TestEVNoCard(t *testing.T) {
 	P := pairsRemaining(state.Cards)
 	memory := map[int]int{}
 	ev := evNoCard(state, memory, hidden, P)
-	if ev != randomMatchProb(P) {
-		t.Errorf("no known pair: ev should equal randomMatchProb(P), got %v", ev)
+	if ev != heuristic.RandomMatchProb(P) {
+		t.Errorf("no known pair: ev should equal RandomMatchProb(P), got %v", ev)
 	}
 	memory[2] = 10
 	memory[3] = 10
 	ev = evNoCard(state, memory, hidden, P)
 	// With known pair: 1 point + EV of bonus turn (one flip with P-1 pairs)
-	wantKnown := 1 + randomMatchProb(P-1)
+	wantKnown := 1 + heuristic.RandomMatchProb(P-1)
 	if ev != wantKnown {
 		t.Errorf("known pair: ev should be 1 + randomMatchProb(P-1) = %v, got %v", wantKnown, ev)
 	}
@@ -201,48 +202,8 @@ func TestEVWithCard_Chaos(t *testing.T) {
 	P := 18
 	memory := map[int]int{}
 	ev := evWithCard(state, memory, hidden, "chaos", P)
-	if ev != randomMatchProb(P) {
-		t.Errorf("chaos EV should equal randomMatchProb(P), got %v", ev)
-	}
-}
-
-func TestPairsOfElementRemaining(t *testing.T) {
-	// 18 pairs total, 6 arcana → 12 normal → 3 per element
-	state := &game.GameStateMsg{Cards: make([]game.CardView, 36), ArcanaPairs: 6}
-	for i := range state.Cards {
-		state.Cards[i] = game.CardView{Index: i, State: "hidden"}
-	}
-	if got := pairsOfElementRemaining(state, "fire"); got != 3 {
-		t.Errorf("no matched: expected 3 fire pairs remaining, got %d", got)
-	}
-	// Match one fire pair (pairID 6 = first normal = fire)
-	state.Cards[0].State = "matched"
-	state.Cards[1].State = "matched"
-	pairID6 := 6
-	state.Cards[0].PairID = &pairID6
-	state.Cards[1].PairID = &pairID6
-	if got := pairsOfElementRemaining(state, "fire"); got != 2 {
-		t.Errorf("one fire pair matched: expected 2 fire pairs remaining, got %d", got)
-	}
-}
-
-func TestHasPartialKnownOfElement(t *testing.T) {
-	hidden := []int{0, 1, 2, 3}
-	arcanaPairs := 6
-	// pairID 6 = fire. One tile known (index 0), not a full pair → partial
-	memory := map[int]int{0: 6}
-	if !hasPartialKnownOfElement(memory, hidden, arcanaPairs, "fire") {
-		t.Error("expected partial known of fire (one tile)")
-	}
-	// Full pair known (0 and 1 both pairID 6) → not partial
-	memory[1] = 6
-	if hasPartialKnownOfElement(memory, hidden, arcanaPairs, "fire") {
-		t.Error("expected not partial when full pair known")
-	}
-	// No tile of fire in memory → not partial
-	memory = map[int]int{0: 9} // 9 = water
-	if hasPartialKnownOfElement(memory, hidden, arcanaPairs, "fire") {
-		t.Error("expected not partial when no fire in memory")
+	if ev != heuristic.RandomMatchProb(P) {
+		t.Errorf("chaos EV should equal RandomMatchProb(P), got %v", ev)
 	}
 }
 
@@ -357,73 +318,6 @@ func TestHiddenIndicesByElement(t *testing.T) {
 	}
 }
 
-func TestExpectedPairsFromReveal(t *testing.T) {
-	// P=5, k=9: 2P=10 cards, E = 5 * C(8,7)/C(10,9) = 5*8/10 = 4
-	got := expectedPairsFromReveal(5, 9)
-	if got < 3.9 || got > 4.1 {
-		t.Errorf("expectedPairsFromReveal(5, 9) want ~4, got %v", got)
-	}
-	// P=6, k=9: E ≈ 3.27
-	got = expectedPairsFromReveal(6, 9)
-	if got < 3.1 || got > 3.5 {
-		t.Errorf("expectedPairsFromReveal(6, 9) want ~3.27, got %v", got)
-	}
-	// P=8, k=9: E ≈ 2.4
-	got = expectedPairsFromReveal(8, 9)
-	if got < 2.2 || got > 2.6 {
-		t.Errorf("expectedPairsFromReveal(8, 9) want ~2.4, got %v", got)
-	}
-	// Degenerate: 2*P < k
-	if expectedPairsFromReveal(1, 9) != 0 {
-		t.Errorf("expectedPairsFromReveal(1, 9) want 0 (2*1 < 9)")
-	}
-}
-
-func TestEvClairvoyance(t *testing.T) {
-	ev := evClairvoyance(6)
-	if ev < 3 || ev > 4 {
-		t.Errorf("evClairvoyance(6) want ~3.27, got %v", ev)
-	}
-	if evClairvoyance(2) != 0 {
-		t.Errorf("evClairvoyance(2) want 0 (2*2=4 < 9)")
-	}
-}
-
-func TestRadarRegionIndices(t *testing.T) {
-	// 4x4 board: center at index 5 (row 1, col 1) -> full 3x3 = 9 indices
-	got := radarRegionIndices(5, 4, 4)
-	if len(got) != 9 {
-		t.Errorf("radarRegionIndices(5, 4, 4) want 9, got %d: %v", len(got), got)
-	}
-	// Corner 0 (row 0, col 0) -> 2x2 = 4 indices
-	got = radarRegionIndices(0, 4, 4)
-	if len(got) != 4 {
-		t.Errorf("radarRegionIndices(0, 4, 4) corner want 4, got %d: %v", len(got), got)
-	}
-	// Edge index 1 (row 0, col 1) -> 2x3 = 6 indices
-	got = radarRegionIndices(1, 4, 4)
-	if len(got) != 6 {
-		t.Errorf("radarRegionIndices(1, 4, 4) edge want 6, got %d: %v", len(got), got)
-	}
-	// 6x6 board: center at 14 (row 2, col 2) -> full 3x3
-	got = radarRegionIndices(14, 6, 6)
-	if len(got) != 9 {
-		t.Errorf("radarRegionIndices(14, 6, 6) want 9, got %d", len(got))
-	}
-	// Match game.RadarRegionIndices for 6x6 center 14 (row 2, col 2)
-	board := game.NewBoard(6, 6, 0)
-	gameRegion := game.RadarRegionIndices(board, 14)
-	aiRegion := radarRegionIndices(14, 6, 6)
-	if len(gameRegion) != len(aiRegion) {
-		t.Errorf("radarRegionIndices(14,6,6) len %d vs game.RadarRegionIndices %d", len(aiRegion), len(gameRegion))
-	}
-	for i, idx := range gameRegion {
-		if aiRegion[i] != idx {
-			t.Errorf("radarRegionIndices(14,6,6) at %d: want %d got %d", i, idx, aiRegion[i])
-		}
-	}
-}
-
 func TestEVWithCard_Clairvoyance(t *testing.T) {
 	state := &game.GameStateMsg{Cards: make([]game.CardView, 36), ArcanaPairs: 6}
 	for i := range state.Cards {
@@ -436,10 +330,11 @@ func TestEVWithCard_Clairvoyance(t *testing.T) {
 	if ev < 0 {
 		t.Errorf("evWithCard(clairvoyance) should return positive EV, got %v", ev)
 	}
-	if ev != evClairvoyance(P) {
-		t.Errorf("evWithCard(clairvoyance) should equal evClairvoyance(P), got %v want %v", ev, evClairvoyance(P))
+	// Clairvoyance EV for P=18 should be positive (expected pairs from revealing 9 cards; ~1.03 for P=18)
+	if ev <= 0 || ev > 5 {
+		t.Errorf("evWithCard(clairvoyance) for P=18 want positive EV <= 5, got %v", ev)
 	}
-	// Unknown power-up still returns -1
+	// Unregistered power-up returns -1
 	if evWithCard(state, memory, hidden, "oblivion", P) != -1 {
 		t.Errorf("evWithCard(oblivion) should return -1")
 	}

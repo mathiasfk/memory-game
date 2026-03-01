@@ -54,9 +54,9 @@ type Board struct {
 	ArcanaPairs  int // number of arcana pairs (pairIDs 0..ArcanaPairs-1); used to assign Element for normal pairs
 }
 
-// elementForNormalPair returns the element for a normal pair (pairID >= arcanaPairs).
+// ElementForNormalPair returns the element for a normal pair (pairID >= arcanaPairs).
 // 3 pairs per element: 6,7,8->fire; 9,10,11->water; 12,13,14->air; 15,16,17->earth.
-func elementForNormalPair(pairID, arcanaPairs int) string {
+func ElementForNormalPair(pairID, arcanaPairs int) string {
 	normalPairIndex := pairID - arcanaPairs
 	if normalPairIndex < 0 {
 		return ""
@@ -80,7 +80,7 @@ func elementForNormalPair(pairID, arcanaPairs int) string {
 func assignElementsForNormalPairs(board *Board, arcanaPairs int) {
 	for i := range board.Cards {
 		if board.Cards[i].PairID >= arcanaPairs {
-			board.Cards[i].Element = elementForNormalPair(board.Cards[i].PairID, arcanaPairs)
+			board.Cards[i].Element = ElementForNormalPair(board.Cards[i].PairID, arcanaPairs)
 		}
 	}
 }
