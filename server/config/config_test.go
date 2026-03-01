@@ -47,20 +47,20 @@ func TestDefaults(t *testing.T) {
 	if cfg.AIProfiles[0].Name != "Mnemosyne" {
 		t.Errorf("expected first AI name Mnemosyne, got %q", cfg.AIProfiles[0].Name)
 	}
-	if cfg.AIProfiles[0].DelayMinMS != 1000 || cfg.AIProfiles[0].DelayMaxMS != 2500 || cfg.AIProfiles[0].UseKnownPairChance != 90 || cfg.AIProfiles[0].ForgetChance != 1 {
-		t.Errorf("expected Mnemosyne 1000/2500/90 ForgetChance=1, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[0].DelayMinMS, cfg.AIProfiles[0].DelayMaxMS, cfg.AIProfiles[0].UseKnownPairChance, cfg.AIProfiles[0].ForgetChance)
+	if cfg.AIProfiles[0].DelayMinMS != 1000 || cfg.AIProfiles[0].DelayMaxMS != 2000 || cfg.AIProfiles[0].UseKnownPairChance != 90 || cfg.AIProfiles[0].ForgetChance != 1 || cfg.AIProfiles[0].ArcanaRandomness != 10 {
+		t.Errorf("expected Mnemosyne 1000/2000/90 ForgetChance=1 ArcanaRandomness=10, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[0].DelayMinMS, cfg.AIProfiles[0].DelayMaxMS, cfg.AIProfiles[0].UseKnownPairChance, cfg.AIProfiles[0].ForgetChance, cfg.AIProfiles[0].ArcanaRandomness)
 	}
 	if cfg.AIProfiles[1].Name != "Calliope" {
 		t.Errorf("expected second AI name Calliope, got %q", cfg.AIProfiles[1].Name)
 	}
-	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 87 || cfg.AIProfiles[1].ForgetChance != 15 {
-		t.Errorf("expected Calliope 500/1100/87 ForgetChance=15, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance)
+	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 87 || cfg.AIProfiles[1].ForgetChance != 15 || cfg.AIProfiles[1].ArcanaRandomness != 20 {
+		t.Errorf("expected Calliope 500/1100/87 ForgetChance=15 ArcanaRandomness=20, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance, cfg.AIProfiles[1].ArcanaRandomness)
 	}
 	if cfg.AIProfiles[2].Name != "Thalia" {
 		t.Errorf("expected third AI name Thalia, got %q", cfg.AIProfiles[2].Name)
 	}
-	if cfg.AIProfiles[2].DelayMinMS != 500 || cfg.AIProfiles[2].DelayMaxMS != 2000 || cfg.AIProfiles[2].UseKnownPairChance != 85 || cfg.AIProfiles[2].ForgetChance != 30 {
-		t.Errorf("expected Thalia 500/2000/85 ForgetChance=30, got %d/%d/%d ForgetChance=%d", cfg.AIProfiles[2].DelayMinMS, cfg.AIProfiles[2].DelayMaxMS, cfg.AIProfiles[2].UseKnownPairChance, cfg.AIProfiles[2].ForgetChance)
+	if cfg.AIProfiles[2].DelayMinMS != 500 || cfg.AIProfiles[2].DelayMaxMS != 2000 || cfg.AIProfiles[2].UseKnownPairChance != 85 || cfg.AIProfiles[2].ForgetChance != 30 || cfg.AIProfiles[2].ArcanaRandomness != 25 {
+		t.Errorf("expected Thalia 500/2000/85 ForgetChance=30 ArcanaRandomness=25, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[2].DelayMinMS, cfg.AIProfiles[2].DelayMaxMS, cfg.AIProfiles[2].UseKnownPairChance, cfg.AIProfiles[2].ForgetChance, cfg.AIProfiles[2].ArcanaRandomness)
 	}
 }
 

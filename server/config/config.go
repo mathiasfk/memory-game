@@ -14,6 +14,7 @@ type AIParams struct {
 	DelayMaxMS         int    `json:"delay_max_ms"`
 	UseKnownPairChance int    `json:"use_known_pair_chance"` // 0-100, probability to use a memorized pair when available
 	ForgetChance       int    `json:"forget_chance"`         // 0-100, probability to forget (delete from memory) a known card each turn
+	ArcanaRandomness   int    `json:"arcana_randomness"`     // 0-100, probability to randomize arcana use decision (avoids robotic play)
 }
 
 // ChaosPowerUpConfig holds configuration for the Chaos power-up.
@@ -43,8 +44,8 @@ type TelemetryHistogramConfig struct {
 
 // Config holds all configurable game parameters.
 type Config struct {
-	BoardRows         int    `json:"board_rows"`
-	BoardCols         int    `json:"board_cols"`
+	BoardRows        int    `json:"board_rows"`
+	BoardCols        int    `json:"board_cols"`
 	RevealDurationMS int    `json:"reveal_duration_ms"`
 	MaxNameLength    int    `json:"max_name_length"`
 	WSPort           int    `json:"ws_port"`
@@ -73,9 +74,9 @@ type Config struct {
 // Defaults returns a Config with all default values from the spec.
 func Defaults() *Config {
 	return &Config{
-		BoardRows:        6,
-		BoardCols:        6,
-		RevealDurationMS: 1000,
+		BoardRows:            6,
+		BoardCols:            6,
+		RevealDurationMS:     1000,
 		MaxNameLength:        24,
 		WSPort:               8080,
 		MaxLatencyMS:         500,
@@ -88,14 +89,14 @@ func Defaults() *Config {
 			Clairvoyance: ClairvoyancePowerUpConfig{RevealDurationMS: 3000},
 		},
 		AIProfiles: []AIParams{
-			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseKnownPairChance: 90, ForgetChance: 1},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 87, ForgetChance: 15},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 85, ForgetChance: 30},
+			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseKnownPairChance: 90, ForgetChance: 1, ArcanaRandomness: 10},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 87, ForgetChance: 10, ArcanaRandomness: 20},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 85, ForgetChance: 25, ArcanaRandomness: 25},
 		},
 		TelemetryHistogram: TelemetryHistogramConfig{
 			TurnMax:      100,
-			TurnNumBins: 6,
-			PairsMax:    36,
+			TurnNumBins:  6,
+			PairsMax:     36,
 			PairsNumBins: 6,
 		},
 	}
@@ -142,6 +143,7 @@ func Load() *Config {
 		overrideInt(&cfg.AIProfiles[0].DelayMaxMS, "AI_DELAY_MAX_MS")
 		overrideInt(&cfg.AIProfiles[0].UseKnownPairChance, "AI_USE_KNOWN_PAIR_CHANCE")
 		overrideInt(&cfg.AIProfiles[0].ForgetChance, "AI_FORGET_CHANCE")
+		overrideInt(&cfg.AIProfiles[0].ArcanaRandomness, "AI_ARCANA_RANDOMNESS")
 	}
 	overrideInt(&cfg.TelemetryHistogram.TurnMax, "TELEMETRY_TURN_MAX")
 	overrideInt(&cfg.TelemetryHistogram.TurnNumBins, "TELEMETRY_TURN_NUM_BINS")
