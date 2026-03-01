@@ -4,6 +4,7 @@ package ai
 const (
 	PowerUpChaos          = "chaos"
 	PowerUpClairvoyance   = "clairvoyance"
+	PowerUpLeech          = "leech"
 	PowerUpOblivion       = "oblivion"
 	PowerUpFireElemental  = "fire_elemental"
 	PowerUpWaterElemental = "water_elemental"
