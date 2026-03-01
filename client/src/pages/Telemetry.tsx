@@ -179,6 +179,18 @@ export function TelemetryPage() {
                     <span className={styles.globalLabel}>Total matches</span>
                     <span className={styles.globalValue}>{metrics.players?.total_matches ?? metrics.global.total_matches ?? "—"}</span>
                   </div>
+                  <div className={styles.globalCard}>
+                    <span className={styles.globalLabel}>Avg matches per player</span>
+                    <span className={styles.globalValue}>
+                      {metrics.players?.registered_count != null &&
+                      metrics.players.registered_count > 0
+                        ? (
+                            (metrics.players.total_matches ?? metrics.global.total_matches ?? 0) /
+                            metrics.players.registered_count
+                          ).toFixed(1)
+                        : "—"}
+                    </span>
+                  </div>
                 </div>
               </section>
 
