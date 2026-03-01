@@ -83,6 +83,42 @@ func randomMatchProb(P int) float64 {
 	return 1 / float64(denom)
 }
 
+// binom returns C(n,k) = n!/(k!(n-k)!) as float64 for small n,k to avoid overflow.
+func binom(n, k int) float64 {
+	if k < 0 || k > n {
+		return 0
+	}
+	if k > n/2 {
+		k = n - k
+	}
+	r := 1.0
+	for i := 0; i < k; i++ {
+		r *= float64(n-i) / float64(i+1)
+	}
+	return r
+}
+
+// expectedPairsFromReveal returns the expected number of complete pairs seen when revealing k cards
+// from 2*P cards (P pairs). Formula: P * C(2P-2, k-2) / C(2P, k). Returns 0 if 2P < k or P < 2.
+func expectedPairsFromReveal(P, k int) float64 {
+	n := 2 * P
+	if P < 2 || k < 2 || n < k {
+		return 0
+	}
+	num := binom(n-2, k-2)
+	den := binom(n, k)
+	if den == 0 {
+		return 0
+	}
+	return float64(P) * num / den
+}
+
+// evClairvoyance returns the expected value (in points) of using Clairvoyance when P pairs remain:
+// expected number of complete pairs we learn from revealing a 3x3 (9 cards), as a proxy for future points.
+func evClairvoyance(P int) float64 {
+	return expectedPairsFromReveal(P, 9)
+}
+
 // hasKnownPair returns true if memory contains a complete pair still in hidden (both indices hidden).
 func hasKnownPair(memory map[int]int, hidden []int) bool {
 	pairToIndices := make(map[int][]int)
@@ -228,21 +264,90 @@ func evWithCard(state *game.GameStateMsg, memory map[int]int, hidden []int, powe
 	case "chaos":
 		// Chaos clears memory; EV is random guess only. Use only when we have no known pair.
 		return randomMatchProb(P)
+	case "clairvoyance":
+		return evClairvoyance(P)
 	default:
 		return -1
 	}
 }
 
+// radarRegionIndices returns the board indices of the 3x3 region centered on the given card index.
+// Same logic as game.RadarRegionIndices; used by the AI to choose Clairvoyance target (no access to board).
+func radarRegionIndices(centerIndex, rows, cols int) []int {
+	total := rows * cols
+	if centerIndex < 0 || centerIndex >= total {
+		return nil
+	}
+	centerRow := centerIndex / cols
+	centerCol := centerIndex % cols
+	minR := centerRow - 1
+	if minR < 0 {
+		minR = 0
+	}
+	maxR := centerRow + 1
+	if maxR >= rows {
+		maxR = rows - 1
+	}
+	minC := centerCol - 1
+	if minC < 0 {
+		minC = 0
+	}
+	maxC := centerCol + 1
+	if maxC >= cols {
+		maxC = cols - 1
+	}
+	var out []int
+	for r := minR; r <= maxR; r++ {
+		for c := minC; c <= maxC; c++ {
+			out = append(out, r*cols+c)
+		}
+	}
+	return out
+}
+
+// pickClairvoyanceTarget returns a hidden card index to center the 3x3 on, maximizing the number of
+// hidden cards in that region. Ties are broken randomly.
+func pickClairvoyanceTarget(state *game.GameStateMsg, memory map[int]int, hidden []int, rows, cols int) int {
+	hiddenSet := make(map[int]struct{}, len(hidden))
+	for _, idx := range hidden {
+		hiddenSet[idx] = struct{}{}
+	}
+	var bestIndices []int
+	bestCount := -1
+	for _, center := range hidden {
+		region := radarRegionIndices(center, rows, cols)
+		count := 0
+		for _, idx := range region {
+			if _, ok := hiddenSet[idx]; ok {
+				count++
+			}
+		}
+		if count > bestCount {
+			bestCount = count
+			bestIndices = []int{center}
+		} else if count == bestCount && bestCount >= 0 {
+			bestIndices = append(bestIndices, center)
+		}
+	}
+	if len(bestIndices) == 0 {
+		return -1
+	}
+	return bestIndices[rand.Intn(len(bestIndices))]
+}
+
 // arcanaDecision holds the result of pickArcanaToUse. Reason is "ev" (maximize EV), "random" (randomness applied), or "no_improvement" (no card improved EV).
+// CardIndex is the target for power-ups that need it (e.g. Clairvoyance); -1 otherwise.
 type arcanaDecision struct {
 	powerUpID string
 	use       bool
 	reason    string
+	CardIndex int
 }
 
 // pickArcanaToUse decides whether to use an arcana this turn and which one.
 // Applies ArcanaRandomness: with that probability we may skip using a good card or randomize.
-func pickArcanaToUse(state *game.GameStateMsg, memory map[int]int, hidden []int, params *config.AIParams) arcanaDecision {
+// rows and cols are the board dimensions (for Clairvoyance target choice).
+func pickArcanaToUse(state *game.GameStateMsg, memory map[int]int, hidden []int, rows, cols int, params *config.AIParams) arcanaDecision {
 	P := pairsRemaining(state.Cards)
 	if P <= 0 {
 		return arcanaDecision{reason: "no_improvement"}
@@ -294,10 +399,24 @@ func pickArcanaToUse(state *game.GameStateMsg, memory map[int]int, hidden []int,
 		}
 		// Pick randomly among candidates instead of best
 		best = candidates[rand.Intn(len(candidates))]
-		return arcanaDecision{powerUpID: best.powerUpID, use: true, reason: "random"}
+		dec := arcanaDecision{powerUpID: best.powerUpID, use: true, reason: "random"}
+		if best.powerUpID == "clairvoyance" {
+			dec.CardIndex = pickClairvoyanceTarget(state, memory, hidden, rows, cols)
+			if dec.CardIndex < 0 {
+				return arcanaDecision{reason: "no_improvement"}
+			}
+		}
+		return dec
 	}
 
-	return arcanaDecision{powerUpID: best.powerUpID, use: true, reason: "ev"}
+	dec := arcanaDecision{powerUpID: best.powerUpID, use: true, reason: "ev"}
+	if best.powerUpID == "clairvoyance" {
+		dec.CardIndex = pickClairvoyanceTarget(state, memory, hidden, rows, cols)
+		if dec.CardIndex < 0 {
+			return arcanaDecision{reason: "no_improvement"}
+		}
+	}
+	return dec
 }
 
 // formatHand returns a short description of the AI hand for logging (e.g. "fire_elemental(1), chaos(2, 1 usable)").
@@ -452,7 +571,11 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				}
 			}
 			if hasUsableArcana {
-				dec := pickArcanaToUse(&state, memory, hidden, params)
+				rows, cols := 0, 0
+				if g.Config != nil {
+					rows, cols = g.Config.BoardRows, g.Config.BoardCols
+				}
+				dec := pickArcanaToUse(&state, memory, hidden, rows, cols, params)
 				handStr := formatHand(state.Hand)
 				if dec.use && dec.powerUpID != "" {
 					slog.Debug("decided to use arcana", "tag", "ai", "name", params.Name, "arcana", dec.powerUpID, "reason", dec.reason, "hand", handStr)
@@ -462,7 +585,11 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 					if dec.powerUpID == "chaos" {
 						clearElementMemoryNext = true
 					}
-					sendUsePowerUp(g, playerIdx, dec.powerUpID)
+					cardIndex := -1
+					if dec.powerUpID == "clairvoyance" {
+						cardIndex = dec.CardIndex
+					}
+					sendUsePowerUp(g, playerIdx, dec.powerUpID, cardIndex)
 					continue
 				}
 				slog.Debug("decided not to use arcana", "tag", "ai", "name", params.Name, "reason", dec.reason, "hand", handStr)
@@ -599,9 +726,9 @@ func sendAction(g *game.Game, playerIdx int, cardIndex int) {
 	}
 }
 
-func sendUsePowerUp(g *game.Game, playerIdx int, powerUpID string) {
+func sendUsePowerUp(g *game.Game, playerIdx int, powerUpID string, cardIndex int) {
 	select {
-	case g.Actions <- game.Action{Type: game.ActionUsePowerUp, PlayerIdx: playerIdx, PowerUpID: powerUpID, CardIndex: -1}:
+	case g.Actions <- game.Action{Type: game.ActionUsePowerUp, PlayerIdx: playerIdx, PowerUpID: powerUpID, CardIndex: cardIndex}:
 	case <-g.Done:
 	}
 }
