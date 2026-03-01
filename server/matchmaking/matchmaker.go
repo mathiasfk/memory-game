@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log/slog"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -262,6 +263,7 @@ func (m *Matchmaker) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			m.abandonAIGames()
 			slog.Info("shutdown signal received, stopping", "tag", "matchmaking")
 			return
 		case <-m.notify:
@@ -305,6 +307,7 @@ func (m *Matchmaker) Run(ctx context.Context) {
 			m.pendingClient = nil
 			m.pendingCancel = nil
 			m.pendingMu.Unlock()
+			m.abandonAIGames()
 			return
 		case <-m.notify:
 			m.pendingMu.Lock()
@@ -505,6 +508,27 @@ func (m *Matchmaker) removeGame(gameID string) {
 		if cl != nil {
 			cl.Game = nil
 			cl.PlayerID = 0
+		}
+	}
+}
+
+// abandonAIGames makes the AI abandon all active AI-vs-human games on server shutdown,
+// so the human player wins (opponent_disconnected) instead of being left in a broken state.
+func (m *Matchmaker) abandonAIGames() {
+	m.mu.Lock()
+	games := make([]*game.Game, 0, len(m.activeGames))
+	for _, g := range m.activeGames {
+		if g != nil && !g.Finished && strings.HasPrefix(g.PlayerUserIDs[1], "ai:") {
+			games = append(games, g)
+		}
+	}
+	m.mu.Unlock()
+	for _, g := range games {
+		select {
+		case g.Actions <- game.Action{Type: game.ActionDisconnect, PlayerIdx: 1}:
+			slog.Info("AI abandoned match on shutdown", "tag", "matchmaking", "game_id", g.ID)
+		default:
+			slog.Warn("could not send AI abandon to game (channel busy)", "tag", "matchmaking", "game_id", g.ID)
 		}
 	}
 }
