@@ -173,6 +173,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 	elementMemory := make(map[int]string) // index -> element (tiles we know the element of, e.g. from elemental highlight)
 	var lastElementalUsed string          // element of the elemental we just used; next state's HighlightIndices will be that element
 	var clearElementMemoryNext bool       // true after we use Chaos (board shuffles, so element-by-index is stale)
+	var useBestMoveForSecondFlip bool     // when in second_flip, use same decision as first_flip so we complete known pairs
 
 	for data := range aiSend {
 		var typeEnvelope struct {
@@ -224,6 +225,11 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 
 			hidden := hiddenIndices(state.Cards)
 			if len(hidden) == 0 {
+				continue
+			}
+
+			// Do not act during resolve phase (wait for next state after mismatch timer or turn switch)
+			if state.Phase == "resolve" {
 				continue
 			}
 
@@ -280,11 +286,15 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			useBestMove := rand.Intn(100) < chance
 
 			hiddenByElement := hiddenIndicesByElement(elementMemory, hidden)
+			knownIndicesSet := make(map[int]struct{}, len(state.KnownIndices))
+			for _, idx := range state.KnownIndices {
+				knownIndicesSet[idx] = struct{}{}
+			}
 
 			if state.Phase == "second_flip" && len(state.FlippedIndices) > 0 {
-				// We already flipped one card; choose the second
+				// We already flipped one card; choose the second (use same useBestMove as when we chose the first, so we complete known pairs)
 				firstIdx := state.FlippedIndices[0]
-				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useBestMove, hiddenHighlighted, elementMemory, hiddenByElement)
+				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useBestMoveForSecondFlip, hiddenHighlighted, elementMemory, hiddenByElement, knownIndicesSet)
 				if secondIdx >= 0 {
 					slog.Debug("flipping tile (second)", "tag", "ai", "name", params.Name, "tile", secondIdx, "reason", flipReason)
 					sendAction(g, playerIdx, secondIdx)
@@ -322,10 +332,12 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			}
 
 			// Phase is first_flip: choose first card
-			firstIdx, _, flipReason := pickPair(memory, hidden, useBestMove, hiddenHighlighted, hiddenByElement)
+			firstIdx, _, flipReason := pickPair(memory, hidden, useBestMove, hiddenHighlighted, hiddenByElement, knownIndicesSet)
 			if firstIdx < 0 {
 				continue
 			}
+			// Persist useBestMove for second flip so we complete known pairs (set only when we actually send the first flip)
+			useBestMoveForSecondFlip = useBestMove
 			slog.Debug("flipping tile (first)", "tag", "ai", "name", params.Name, "tile", firstIdx, "reason", flipReason)
 			sendAction(g, playerIdx, firstIdx)
 		}
@@ -342,22 +354,23 @@ func hiddenIndices(cards []game.CardView) []int {
 	return out
 }
 
-// unknownHiddenIndices returns hidden indices we have never seen (not in memory). Used to prefer flipping unknown tiles when guessing.
-func unknownHiddenIndices(memory map[int]int, hidden []int) []int {
+// unseenHiddenIndices returns hidden indices that have never been revealed by any player (not in knownIndicesSet).
+// Used to prefer flipping truly unseen tiles; considers opponent's reveals via the game's KnownIndices.
+func unseenHiddenIndices(hidden []int, knownIndicesSet map[int]struct{}) []int {
 	var out []int
 	for _, idx := range hidden {
-		if _, ok := memory[idx]; !ok {
+		if _, known := knownIndicesSet[idx]; !known {
 			out = append(out, idx)
 		}
 	}
 	return out
 }
 
-// unknownFromCandidates returns candidates that are not in memory (unknown positions).
-func unknownFromCandidates(memory map[int]int, candidates []int) []int {
+// unseenFromCandidates returns candidates that have never been revealed by any player (not in knownIndicesSet).
+func unseenFromCandidates(candidates []int, knownIndicesSet map[int]struct{}) []int {
 	var out []int
 	for _, idx := range candidates {
-		if _, ok := memory[idx]; !ok {
+		if _, known := knownIndicesSet[idx]; !known {
 			out = append(out, idx)
 		}
 	}
@@ -392,7 +405,8 @@ const (
 // pickPair returns (firstIndex, secondIndex, reason). secondIndex may be -1 if we're guessing (we'll pick on next state).
 // hiddenHighlighted: hidden indices currently highlighted (e.g. after an elemental).
 // hiddenByElement: hidden indices we know per element (from element memory); used to prefer flipping within same element.
-func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighlighted []int, hiddenByElement map[string][]int) (first, second int, reason string) {
+// knownIndicesSet: indices ever revealed by any player (from game state); used so "unseen" excludes opponent's reveals.
+func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighlighted []int, hiddenByElement map[string][]int, knownIndicesSet map[int]struct{}) (first, second int, reason string) {
 	if !useBestMove {
 		if len(hidden) == 0 {
 			return -1, -1, flipReasonRandom
@@ -430,13 +444,13 @@ func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighligh
 			return first, -1, flipReasonElementKnown
 		}
 	}
-	// Roll passed but no best move: prefer unseen tiles (never revealed), then any hidden
+	// Roll passed but no best move: prefer unseen tiles (never revealed by any player), then any hidden
 	if len(hidden) == 0 {
 		return -1, -1, flipReasonRandom
 	}
-	unknown := unknownHiddenIndices(memory, hidden)
-	if len(unknown) > 0 {
-		first = unknown[rand.Intn(len(unknown))]
+	unseen := unseenHiddenIndices(hidden, knownIndicesSet)
+	if len(unseen) > 0 {
+		first = unseen[rand.Intn(len(unseen))]
 		return first, -1, flipReasonUnseen
 	}
 	first = hidden[rand.Intn(len(hidden))]
@@ -446,7 +460,17 @@ func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighligh
 // pickSecondCard chooses the second card to flip. Returns (index, reason).
 // hiddenHighlighted: hidden indices currently highlighted (e.g. after elemental).
 // elementMemory and hiddenByElement: tiles we know the element of; if first card is one of them, prefer second from same element.
-func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int) (int, string) {
+// knownIndicesSet: indices ever revealed by any player; used so "unseen" excludes opponent's reveals.
+func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int, knownIndicesSet map[int]struct{}) (int, string) {
+	// Always complete a known pair when we can (first card's pairID known and the other tile still hidden)
+	pairID, known := memory[firstIdx]
+	if known {
+		for _, idx := range hidden {
+			if idx != firstIdx && memory[idx] == pairID {
+				return idx, flipReasonKnownPair
+			}
+		}
+	}
 	if !useBestMove {
 		var candidates []int
 		for _, idx := range hidden {
@@ -459,14 +483,6 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove 
 		}
 		return candidates[rand.Intn(len(candidates))], flipReasonRandom
 	}
-	pairID, known := memory[firstIdx]
-	if known {
-		for _, idx := range hidden {
-			if idx != firstIdx && memory[idx] == pairID {
-				return idx, flipReasonKnownPair
-			}
-		}
-	}
 	// Current-turn highlight: first card was from that element; pick second from other still-hidden highlighted tiles.
 	if len(hiddenHighlighted) > 0 {
 		return hiddenHighlighted[rand.Intn(len(hiddenHighlighted))], flipReasonHighlight
@@ -478,7 +494,7 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove 
 			return candidates[rand.Intn(len(candidates))], flipReasonElementKnown
 		}
 	}
-	// Roll passed but no best move: prefer unseen tiles (never revealed), then any candidate
+	// Roll passed but no best move: prefer unseen tiles (never revealed by any player), then any candidate
 	var candidates []int
 	for _, idx := range hidden {
 		if idx != firstIdx {
@@ -488,9 +504,9 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove 
 	if len(candidates) == 0 {
 		return -1, flipReasonRandom
 	}
-	unknown := unknownFromCandidates(memory, candidates)
-	if len(unknown) > 0 {
-		return unknown[rand.Intn(len(unknown))], flipReasonUnseen
+	unseen := unseenFromCandidates(candidates, knownIndicesSet)
+	if len(unseen) > 0 {
+		return unseen[rand.Intn(len(unseen))], flipReasonUnseen
 	}
 	return candidates[rand.Intn(len(candidates))], flipReasonUnseen
 }
