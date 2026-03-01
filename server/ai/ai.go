@@ -2,8 +2,10 @@ package ai
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
 	"memory-game-server/config"
@@ -17,6 +19,22 @@ const (
 	elementAir   = "air"
 	elementEarth = "earth"
 )
+
+// powerUpIDToElement returns the element for an elemental power-up ID, or "" if not an elemental.
+func powerUpIDToElement(powerUpID string) string {
+	switch powerUpID {
+	case "fire_elemental":
+		return elementFire
+	case "water_elemental":
+		return elementWater
+	case "air_elemental":
+		return elementAir
+	case "earth_elemental":
+		return elementEarth
+	default:
+		return ""
+	}
+}
 
 // elementForNormalPair returns the element for a normal pair (pairID >= arcanaPairs).
 // Matches game board: 3 pairs per element → fire, water, air, earth.
@@ -97,10 +115,65 @@ func knownPairElement(memory map[int]int, hidden []int, arcanaPairs int) string 
 	return ""
 }
 
+// pairsOfElementRemaining returns how many pairs of the given element are still on the board (not matched/removed).
+func pairsOfElementRemaining(state *game.GameStateMsg, element string) int {
+	totalPairs := len(state.Cards) / 2
+	matchedOfElement := make(map[int]struct{})
+	for _, c := range state.Cards {
+		if c.State != "matched" || c.PairID == nil {
+			continue
+		}
+		if *c.PairID >= state.ArcanaPairs && elementForNormalPair(*c.PairID, state.ArcanaPairs) == element {
+			matchedOfElement[*c.PairID] = struct{}{}
+		}
+	}
+	// Count total pairIDs of this element (pairIDs >= arcanaPairs with this element)
+	totalOfElement := 0
+	for pairID := state.ArcanaPairs; pairID < totalPairs; pairID++ {
+		if elementForNormalPair(pairID, state.ArcanaPairs) == element {
+			totalOfElement++
+		}
+	}
+	remaining := totalOfElement - len(matchedOfElement)
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
+}
+
+// hasPartialKnownOfElement returns true if we have at least one hidden tile of this element in memory,
+// but we do not have a complete pair of this element (both tiles) in memory.
+func hasPartialKnownOfElement(memory map[int]int, hidden []int, arcanaPairs int, element string) bool {
+	pairToIndices := make(map[int][]int)
+	for _, idx := range hidden {
+		if p, ok := memory[idx]; ok && elementForNormalPair(p, arcanaPairs) == element {
+			pairToIndices[p] = append(pairToIndices[p], idx)
+		}
+	}
+	// We have partial knowledge if there is at least one tile of this element in memory,
+	// but no pair has both tiles known.
+	hasAny := false
+	for _, indices := range pairToIndices {
+		if len(indices) >= 2 {
+			return false // full pair known, not partial
+		}
+		if len(indices) >= 1 {
+			hasAny = true
+		}
+	}
+	return hasAny
+}
+
 // evNoCard returns expected value (points) for this turn without using any arcana.
+// When we have a known pair we get 1 point and keep the turn, so we include the EV of the extra flip.
 func evNoCard(state *game.GameStateMsg, memory map[int]int, hidden []int, P int) float64 {
 	if hasKnownPair(memory, hidden) {
-		return 1
+		// 1 point from matching the known pair + EV of the bonus turn (one more flip with P-1 pairs left)
+		PAfter := P - 1
+		if PAfter <= 0 {
+			return 1
+		}
+		return 1 + randomMatchProb(PAfter)
 	}
 	return randomMatchProb(P)
 }
@@ -110,7 +183,6 @@ func evNoCard(state *game.GameStateMsg, memory map[int]int, hidden []int, P int)
 func evWithCard(state *game.GameStateMsg, memory map[int]int, hidden []int, powerUpID string, P int) float64 {
 	switch powerUpID {
 	case "fire_elemental", "water_elemental", "air_elemental", "earth_elemental":
-		elem := knownPairElement(memory, hidden, state.ArcanaPairs)
 		var need string
 		switch powerUpID {
 		case "fire_elemental":
@@ -124,15 +196,35 @@ func evWithCard(state *game.GameStateMsg, memory map[int]int, hidden []int, powe
 		default:
 			return 0
 		}
-		if elem != need {
-			return 0
+		// Full known pair of this element: we can match without elemental; using it gives same EV (we don't prefer it).
+		elem := knownPairElement(memory, hidden, state.ArcanaPairs)
+		if elem == need {
+			PAfter := P - 1
+			if PAfter <= 0 {
+				return 1
+			}
+			return 1 + randomMatchProb(PAfter)
 		}
-		// We have a known pair of this element: guaranteed 1 point + bonus term (P-1 pairs after).
-		PAfter := P - 1
-		if PAfter <= 0 {
-			return 1
+		// Partial knowledge: we know at least one tile of this element but not its pair. Elemental reveals
+		// all tiles of that element; we flip our known tile then pick among the other (2*K-1) highlighted; 1 is the match.
+		if hasPartialKnownOfElement(memory, hidden, state.ArcanaPairs, need) {
+			K := pairsOfElementRemaining(state, need)
+			if K <= 0 {
+				return 0
+			}
+			otherTiles := 2*K - 1 // one is our known tile, the rest are the other positions of that element
+			if otherTiles <= 0 {
+				return 1 // only one pair left of this element: guaranteed match
+			}
+			matchProb := 1.0 / float64(otherTiles)
+			// If we match we get 1 point and keep the turn
+			PAfter := P - 1
+			if PAfter <= 0 {
+				return matchProb
+			}
+			return matchProb * (1 + randomMatchProb(PAfter))
 		}
-		return 1 + randomMatchProb(PAfter)
+		return 0
 	case "chaos":
 		// Chaos clears memory; EV is random guess only. Use only when we have no known pair.
 		return randomMatchProb(P)
@@ -208,11 +300,30 @@ func pickArcanaToUse(state *game.GameStateMsg, memory map[int]int, hidden []int,
 	return arcanaDecision{powerUpID: best.powerUpID, use: true, reason: "ev"}
 }
 
+// formatHand returns a short description of the AI hand for logging (e.g. "fire_elemental(1), chaos(2, 1 usable)").
+func formatHand(hand []game.PowerUpInHand) string {
+	if len(hand) == 0 {
+		return "none"
+	}
+	var parts []string
+	for _, slot := range hand {
+		if slot.UsableCount == slot.Count {
+			parts = append(parts, fmt.Sprintf("%s(%d)", slot.PowerUpID, slot.Count))
+		} else {
+			parts = append(parts, fmt.Sprintf("%s(%d, %d usable)", slot.PowerUpID, slot.Count, slot.UsableCount))
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
 // Run receives game state messages from the given channel and sends actions to the game
 // when it is the AI's turn. It only uses information from the game_state payload (no
 // access to board internals). It runs until the channel is closed or a game_over is received.
 func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIParams) {
-	memory := make(map[int]int) // index -> pairID (what we've seen at each position)
+	memory := make(map[int]int)       // index -> pairID (what we've seen at each position)
+	elementMemory := make(map[int]string) // index -> element (tiles we know the element of, e.g. from elemental highlight)
+	var lastElementalUsed string          // element of the elemental we just used; next state's HighlightIndices will be that element
+	var clearElementMemoryNext bool       // true after we use Chaos (board shuffles, so element-by-index is stale)
 
 	for data := range aiSend {
 		var typeEnvelope struct {
@@ -267,6 +378,39 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				continue
 			}
 
+			// After Chaos the board is shuffled; element memory by index is no longer valid.
+			if clearElementMemoryNext {
+				elementMemory = make(map[int]string)
+				clearElementMemoryNext = false
+			}
+			// Prune element memory: only keep indices that are still hidden (matched/removed/revealed no longer useful).
+			hiddenSet := make(map[int]struct{}, len(hidden))
+			for _, idx := range hidden {
+				hiddenSet[idx] = struct{}{}
+			}
+			for idx := range elementMemory {
+				if _, ok := hiddenSet[idx]; !ok {
+					delete(elementMemory, idx)
+				}
+			}
+			// When we just used an elemental, this state's HighlightIndices are tiles of that element — store in element memory.
+			if len(state.HighlightIndices) > 0 && lastElementalUsed != "" {
+				for _, idx := range state.HighlightIndices {
+					elementMemory[idx] = lastElementalUsed
+				}
+				lastElementalUsed = ""
+			}
+
+			// Hidden indices that are currently highlighted (e.g. after using an elemental — those tiles are of that element).
+			var hiddenHighlighted []int
+			if len(state.HighlightIndices) > 0 {
+				for _, idx := range state.HighlightIndices {
+					if _, inHidden := hiddenSet[idx]; inHidden {
+						hiddenHighlighted = append(hiddenHighlighted, idx)
+					}
+				}
+			}
+
 			// Human-like delay before acting
 			delayMS := params.DelayMinMS
 			if params.DelayMaxMS > params.DelayMinMS {
@@ -286,11 +430,14 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			}
 			useKnownPair := rand.Intn(100) < chance
 
+			hiddenByElement := hiddenIndicesByElement(elementMemory, hidden)
+
 			if state.Phase == "second_flip" && len(state.FlippedIndices) > 0 {
 				// We already flipped one card; choose the second
 				firstIdx := state.FlippedIndices[0]
-				secondIdx := pickSecondCard(memory, hidden, firstIdx, useKnownPair)
+				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useKnownPair, hiddenHighlighted, elementMemory, hiddenByElement)
 				if secondIdx >= 0 {
+					log.Printf("[AI] %s flipping tile %d (second) — reason: %s", params.Name, secondIdx, flipReason)
 					sendAction(g, playerIdx, secondIdx)
 				}
 				continue
@@ -306,19 +453,27 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			}
 			if hasUsableArcana {
 				dec := pickArcanaToUse(&state, memory, hidden, params)
+				handStr := formatHand(state.Hand)
 				if dec.use && dec.powerUpID != "" {
-					log.Printf("[AI] %s decided to use arcana: %s (reason: %s)", params.Name, dec.powerUpID, dec.reason)
+					log.Printf("[AI] %s decided to use arcana: %s (reason: %s) hand: [%s]", params.Name, dec.powerUpID, dec.reason, handStr)
+					if elem := powerUpIDToElement(dec.powerUpID); elem != "" {
+						lastElementalUsed = elem
+					}
+					if dec.powerUpID == "chaos" {
+						clearElementMemoryNext = true
+					}
 					sendUsePowerUp(g, playerIdx, dec.powerUpID)
 					continue
 				}
-				log.Printf("[AI] %s decided not to use arcana (reason: %s)", params.Name, dec.reason)
+				log.Printf("[AI] %s decided not to use arcana (reason: %s) hand: [%s]", params.Name, dec.reason, handStr)
 			}
 
 			// Phase is first_flip: choose first card
-			firstIdx, _ := pickPair(memory, hidden, useKnownPair)
+			firstIdx, _, flipReason := pickPair(memory, hidden, useKnownPair, hiddenHighlighted, hiddenByElement)
 			if firstIdx < 0 {
 				continue
 			}
+			log.Printf("[AI] %s flipping tile %d (first) — reason: %s", params.Name, firstIdx, flipReason)
 			sendAction(g, playerIdx, firstIdx)
 		}
 	}
@@ -334,8 +489,34 @@ func hiddenIndices(cards []game.CardView) []int {
 	return out
 }
 
-// pickPair returns (firstIndex, secondIndex). secondIndex may be -1 if we're guessing (we'll pick on next state).
-func pickPair(memory map[int]int, hidden []int, useKnownPair bool) (first, second int) {
+// hiddenIndicesByElement returns, for each element, the hidden indices that we know (from elementMemory) have that element.
+// Used to prefer flipping among tiles of the same element when we don't have a full known pair.
+func hiddenIndicesByElement(elementMemory map[int]string, hidden []int) map[string][]int {
+	hiddenSet := make(map[int]struct{}, len(hidden))
+	for _, idx := range hidden {
+		hiddenSet[idx] = struct{}{}
+	}
+	out := make(map[string][]int)
+	for idx, elem := range elementMemory {
+		if _, ok := hiddenSet[idx]; ok && elem != "" {
+			out[elem] = append(out[elem], idx)
+		}
+	}
+	return out
+}
+
+// flipReason describes why the AI chose to flip a given tile (for logging).
+const (
+	flipReasonKnownPair     = "known_pair"
+	flipReasonHighlight     = "highlight_elemental"
+	flipReasonElementKnown  = "element_known"
+	flipReasonRandom        = "random"
+)
+
+// pickPair returns (firstIndex, secondIndex, reason). secondIndex may be -1 if we're guessing (we'll pick on next state).
+// hiddenHighlighted: hidden indices currently highlighted (e.g. after an elemental).
+// hiddenByElement: hidden indices we know per element (from element memory); used to prefer flipping within same element.
+func pickPair(memory map[int]int, hidden []int, useKnownPair bool, hiddenHighlighted []int, hiddenByElement map[string][]int) (first, second int, reason string) {
 	// Build pairID -> list of hidden indices we know
 	pairToIndices := make(map[int][]int)
 	for _, idx := range hidden {
@@ -346,24 +527,56 @@ func pickPair(memory map[int]int, hidden []int, useKnownPair bool) (first, secon
 	// Find a complete known pair (both cards still hidden)
 	for _, indices := range pairToIndices {
 		if len(indices) >= 2 && useKnownPair {
-			return indices[0], indices[1]
+			return indices[0], indices[1], flipReasonKnownPair
 		}
 	}
-	// No known pair or chose to guess: pick two random hidden indices (we only send first now)
+	// If we have current-turn highlight, pick first from the highlighted set.
+	if len(hiddenHighlighted) > 0 {
+		first = hiddenHighlighted[rand.Intn(len(hiddenHighlighted))]
+		return first, -1, flipReasonHighlight
+	}
+	// No highlight: prefer flipping among tiles we know are the same element (from previous elemental use), to increase match chance.
+	if len(hiddenByElement) > 0 {
+		var best []int
+		for _, indices := range hiddenByElement {
+			if len(indices) >= 2 && (best == nil || len(indices) > len(best)) {
+				best = indices
+			}
+		}
+		if len(best) > 0 {
+			first = best[rand.Intn(len(best))]
+			return first, -1, flipReasonElementKnown
+		}
+	}
+	// No known pair or chose to guess: pick random hidden index
 	if len(hidden) == 0 {
-		return -1, -1
+		return -1, -1, flipReasonRandom
 	}
 	first = hidden[rand.Intn(len(hidden))]
-	return first, -1
+	return first, -1, flipReasonRandom
 }
 
-func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair bool) int {
+// pickSecondCard chooses the second card to flip. Returns (index, reason).
+// hiddenHighlighted: hidden indices currently highlighted (e.g. after elemental).
+// elementMemory and hiddenByElement: tiles we know the element of; if first card is one of them, prefer second from same element.
+func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int) (int, string) {
 	pairID, known := memory[firstIdx]
 	if known && useKnownPair {
 		for _, idx := range hidden {
 			if idx != firstIdx && memory[idx] == pairID {
-				return idx
+				return idx, flipReasonKnownPair
 			}
+		}
+	}
+	// Current-turn highlight: first card was from that element; pick second from other still-hidden highlighted tiles.
+	if len(hiddenHighlighted) > 0 {
+		return hiddenHighlighted[rand.Intn(len(hiddenHighlighted))], flipReasonHighlight
+	}
+	// We know the first card's element (from element memory): prefer second from other hidden tiles of that element.
+	if elementMemory != nil && hiddenByElement != nil {
+		if elem, ok := elementMemory[firstIdx]; ok && len(hiddenByElement[elem]) > 0 {
+			candidates := hiddenByElement[elem]
+			return candidates[rand.Intn(len(candidates))], flipReasonElementKnown
 		}
 	}
 	// Guess: any hidden except firstIdx
@@ -374,9 +587,9 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair
 		}
 	}
 	if len(candidates) == 0 {
-		return -1
+		return -1, flipReasonRandom
 	}
-	return candidates[rand.Intn(len(candidates))]
+	return candidates[rand.Intn(len(candidates))], flipReasonRandom
 }
 
 func sendAction(g *game.Game, playerIdx int, cardIndex int) {
