@@ -24,6 +24,34 @@
   text-decoration: none;
 }
 
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.filterLabel {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.matchTypeSelect {
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  color: #f8fafc;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  min-width: 12rem;
+}
+
+.matchTypeSelect:focus {
+  outline: none;
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
 @media (hover: hover) {
   .backLink:hover {
     color: #cbd5e1;

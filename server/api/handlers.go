@@ -183,12 +183,17 @@ func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
+	matchType := r.URL.Query().Get("match_type")
+	if matchType != "all" && matchType != "pvp" && matchType != "vs_ai" {
+		matchType = "all"
+	}
 	th := h.Config.TelemetryHistogram
 	binConfig := &storage.TelemetryBinConfig{
 		TurnMax:      th.TurnMax,
 		TurnNumBins:  th.TurnNumBins,
 		PairsMax:     th.PairsMax,
 		PairsNumBins: th.PairsNumBins,
+		MatchType:    matchType,
 	}
 	metrics, err := h.HistoryStore.GetTelemetryMetrics(r.Context(), binConfig)
 	if err != nil {

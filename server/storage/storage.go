@@ -471,11 +471,13 @@ type TelemetryGlobal struct {
 }
 
 // TelemetryBinConfig defines histogram bin bounds for turn and pairs (used by GetTelemetryMetrics).
+// MatchType filters by game type: "all", "pvp" (human vs human), "vs_ai" (human vs AI).
 type TelemetryBinConfig struct {
 	TurnMax      int
 	TurnNumBins  int
 	PairsMax     int
 	PairsNumBins int
+	MatchType    string // "all", "pvp", "vs_ai"
 }
 
 // TelemetryHistogramBucket is one bin in a histogram (label + count).
@@ -549,6 +551,35 @@ func buildPairsHistogramLabels(cfg TelemetryBinConfig) []string {
 	return labels
 }
 
+// gameHistoryMatchTypeCondition returns the SQL condition for filtering game_history by match type.
+// Use as "WHERE " + condition when querying game_history (e.g. "gh.player0_user_id NOT LIKE 'ai:%' AND ...").
+// For "all" returns "true". Caller must use table alias "gh" when joining game_history.
+func gameHistoryMatchTypeCondition(matchType string) string {
+	switch matchType {
+	case "pvp":
+		return "gh.player0_user_id NOT LIKE 'ai:%' AND gh.player1_user_id NOT LIKE 'ai:%'"
+	case "vs_ai":
+		return "((gh.player0_user_id LIKE 'ai:%' AND gh.player1_user_id NOT LIKE 'ai:%') OR (gh.player0_user_id NOT LIKE 'ai:%' AND gh.player1_user_id LIKE 'ai:%'))"
+	default:
+		return "true"
+	}
+}
+
+// filteredMatchIDsSubquery returns a subquery "SELECT id FROM game_history WHERE <match_type condition>"
+// for use in WHERE match_id IN (...). When matchType is "all" returns "SELECT id FROM game_history" so no filtering.
+func filteredMatchIDsSubquery(matchType string) string {
+	cond := gameHistoryMatchTypeCondition(matchType)
+	// Condition uses "gh" alias; for the subquery we need unaliased column names
+	condNoAlias := strings.ReplaceAll(cond, "gh.", "")
+	return "SELECT id FROM game_history WHERE " + condNoAlias
+}
+
+// getGameHistoryCondForDirectQuery returns the condition for a query that already has game_history (aliased as gh).
+// For "all" returns "true".
+func getGameHistoryCondForDirectQuery(matchType string) string {
+	return gameHistoryMatchTypeCondition(matchType)
+}
+
 // GetTelemetryMetrics returns aggregated metrics from game_history, match_arcana, turn, arcana_use.
 func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBinConfig) (*TelemetryMetrics, error) {
 	if s == nil || s.pool == nil {
@@ -570,30 +601,34 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	if cfg.PairsMax <= 0 {
 		cfg.PairsMax = 36
 	}
+	matchType := cfg.MatchType
+	ghCond := getGameHistoryCondForDirectQuery(matchType)
+	matchIDsSubq := filteredMatchIDsSubquery(matchType)
+
 	out := &TelemetryMetrics{}
 
 	// Players: registered count (players with a rating row)
 	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM player_ratings`).Scan(&out.Players.RegisteredCount); err != nil {
 		return nil, err
 	}
-	// Players: active in last 7 days (distinct users who played a match)
-	if err := s.pool.QueryRow(ctx, `
+	// Players: active in last 7 days (distinct users who played a match of the selected type)
+	if err := s.pool.QueryRow(ctx, fmt.Sprintf(`
 		SELECT COUNT(DISTINCT user_id) FROM (
-			SELECT player0_user_id AS user_id FROM game_history WHERE played_at >= now() - interval '7 days'
+			SELECT player0_user_id AS user_id FROM game_history gh WHERE gh.played_at >= now() - interval '7 days' AND %s
 			UNION
-			SELECT player1_user_id FROM game_history WHERE played_at >= now() - interval '7 days'
+			SELECT player1_user_id FROM game_history gh WHERE gh.played_at >= now() - interval '7 days' AND %s
 		) t
-	`).Scan(&out.Players.ActiveLastWeek); err != nil {
+	`, ghCond, ghCond)).Scan(&out.Players.ActiveLastWeek); err != nil {
 		return nil, err
 	}
 	// Global: total matches (also used for Players.TotalMatches)
-	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM game_history`).Scan(&out.Global.TotalMatches); err != nil {
+	if err := s.pool.QueryRow(ctx, fmt.Sprintf(`SELECT COUNT(*) FROM game_history gh WHERE %s`, ghCond)).Scan(&out.Global.TotalMatches); err != nil {
 		return nil, err
 	}
 	out.Players.TotalMatches = out.Global.TotalMatches
 
-	// Global: total turns
-	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM turn`).Scan(&out.Global.TotalTurns); err != nil {
+	// Global: total turns (only in filtered matches)
+	if err := s.pool.QueryRow(ctx, fmt.Sprintf(`SELECT COUNT(*) FROM turn WHERE match_id IN (%s)`, matchIDsSubq)).Scan(&out.Global.TotalTurns); err != nil {
 		return nil, err
 	}
 	// Global: avg turns per match
@@ -602,30 +637,30 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	}
 	// Global: avg net point swing per turn (player gain + opponent loss = point_delta_player - point_delta_opponent)
 	if out.Global.TotalTurns > 0 {
-		if err := s.pool.QueryRow(ctx, `
-			SELECT AVG((point_delta_player - point_delta_opponent))::float FROM turn
-		`).Scan(&out.Global.AvgNetPointSwingPerTurn); err != nil {
+		if err := s.pool.QueryRow(ctx, fmt.Sprintf(`
+			SELECT AVG((point_delta_player - point_delta_opponent))::float FROM turn WHERE match_id IN (%s)
+		`, matchIDsSubq)).Scan(&out.Global.AvgNetPointSwingPerTurn); err != nil {
 			return nil, err
 		}
 	}
 	// Global: avg net point swing per card (arcana uses only; only rows with deltas)
 	var avgNetPerCard *float64
-	if err := s.pool.QueryRow(ctx, `
+	if err := s.pool.QueryRow(ctx, fmt.Sprintf(`
 		SELECT AVG((COALESCE(point_delta_player, 0) - COALESCE(point_delta_opponent, 0)))::float
 		FROM arcana_use
-		WHERE point_delta_player IS NOT NULL AND point_delta_opponent IS NOT NULL
-	`).Scan(&avgNetPerCard); err != nil {
+		WHERE match_id IN (%s) AND point_delta_player IS NOT NULL AND point_delta_opponent IS NOT NULL
+	`, matchIDsSubq)).Scan(&avgNetPerCard); err != nil {
 		return nil, err
 	}
 	out.Global.AvgNetPointSwingPerCard = avgNetPerCard
 	// Global: cards per turn (count arcana_use per match_id, round)
 	var cardsPerTurnAvg *float64
 	var cardsPerTurnMax *int
-	if err := s.pool.QueryRow(ctx, `
+	if err := s.pool.QueryRow(ctx, fmt.Sprintf(`
 		SELECT AVG(cnt)::float, MAX(cnt)::int FROM (
-			SELECT match_id, round, COUNT(*) AS cnt FROM arcana_use GROUP BY match_id, round
+			SELECT match_id, round, COUNT(*) AS cnt FROM arcana_use WHERE match_id IN (%s) GROUP BY match_id, round
 		) t
-	`).Scan(&cardsPerTurnAvg, &cardsPerTurnMax); err != nil {
+	`, matchIDsSubq)).Scan(&cardsPerTurnAvg, &cardsPerTurnMax); err != nil {
 		return nil, err
 	}
 	if cardsPerTurnAvg != nil {
@@ -638,14 +673,14 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	// By card: win rate and use stats per power_up_id
 	// Win rate: matches where this power_up_id was in match_arcana and winner_index = player who had it (we consider "wins with card" as matches where the card was in the set and the match was won by either side; plan says "win rate when the card was in the game")
 	// So: for each power_up_id, count matches that have this card in match_arcana; of those, count where winner_index is not null (we don't have "which player had the card" in match_arcana, so "wins with card" = matches where that card was in the set and someone won). Actually re-reading the plan: "Win rate por carta" = game_history JOIN match_arcana, winner_index + power_up_id. So it's: of all matches that included this card, what % were won (by either player). So total_matches = count of distinct match_id in match_arcana for this power_up_id; wins = count where that match has winner_index IS NOT NULL (a draw has winner_index null). So "wins with card" = number of matches (that have this card) that ended in a win (not draw).
-	rows, err := s.pool.Query(ctx, `
+	rows, err := s.pool.Query(ctx, fmt.Sprintf(`
 		SELECT ma.power_up_id,
 			COUNT(DISTINCT gh.id) AS total_matches,
 			COUNT(DISTINCT gh.id) FILTER (WHERE gh.winner_index IS NOT NULL) AS wins_with_card
 		FROM match_arcana ma
-		JOIN game_history gh ON gh.id = ma.match_id
+		JOIN game_history gh ON gh.id = ma.match_id AND %s
 		GROUP BY ma.power_up_id
-	`)
+	`, ghCond))
 	if err != nil {
 		return nil, err
 	}
@@ -664,7 +699,7 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	}
 
 	// Arcana use aggregates per power_up_id: use_count, avg point_delta, avg pairs_matched_before, avg_turn_at_use
-	useRows, err := s.pool.Query(ctx, `
+	useRows, err := s.pool.Query(ctx, fmt.Sprintf(`
 		SELECT power_up_id,
 			COUNT(*) AS use_count,
 			AVG(COALESCE(point_delta_player, 0))::float AS avg_delta_player,
@@ -672,8 +707,9 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 			AVG(pairs_matched_before)::float AS avg_pairs_matched_before,
 			AVG(round)::float AS avg_turn_at_use
 		FROM arcana_use
+		WHERE match_id IN (%s)
 		GROUP BY power_up_id
-	`)
+	`, matchIDsSubq))
 	if err != nil {
 		return nil, err
 	}
@@ -711,12 +747,13 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	}
 	turnLabels := buildTurnHistogramLabels(cfg)
 	turnBinsByCard := make(map[string][]int)
-	histRows, err := s.pool.Query(ctx, `
+	histRows, err := s.pool.Query(ctx, fmt.Sprintf(`
 		SELECT power_up_id, round, COUNT(*) AS cnt
 		FROM arcana_use
+		WHERE match_id IN (%s)
 		GROUP BY power_up_id, round
 		ORDER BY power_up_id, round
-	`)
+	`, matchIDsSubq))
 	if err != nil {
 		return nil, err
 	}
@@ -751,7 +788,7 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	}
 	pairsLabels := buildPairsHistogramLabels(cfg)
 	pairsBinsByCard := make(map[string][]int)
-	pairsRows, err := s.pool.Query(ctx, `SELECT power_up_id, pairs_matched_before FROM arcana_use`)
+	pairsRows, err := s.pool.Query(ctx, fmt.Sprintf(`SELECT power_up_id, pairs_matched_before FROM arcana_use WHERE match_id IN (%s)`, matchIDsSubq))
 	if err != nil {
 		return nil, err
 	}
@@ -834,10 +871,11 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	}
 
 	// Combo "game stage at use": (combo_key, round, pairs_matched_before) per combo use for histograms.
-	comboUseRows, err := s.pool.Query(ctx, `
+	comboUseRows, err := s.pool.Query(ctx, fmt.Sprintf(`
 		WITH turn_cards AS (
 			SELECT match_id, round, player_idx, array_agg(DISTINCT power_up_id ORDER BY power_up_id) AS arr
 			FROM arcana_use
+			WHERE match_id IN (%s)
 			GROUP BY match_id, round, player_idx
 		),
 		turn_combos AS (
@@ -850,7 +888,7 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 		FROM turn_combos tc
 		JOIN arcana_use au ON au.match_id = tc.match_id AND au.round = tc.round AND au.player_idx = tc.player_idx
 		GROUP BY tc.combo_key, tc.match_id, tc.round, tc.player_idx
-	`)
+	`, matchIDsSubq))
 	if err != nil {
 		return nil, err
 	}
@@ -873,10 +911,11 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	// Combo = sorted set of power_up_ids used in one turn; only combos with 2+ cards (synergy).
 	// Wins = number of times that combo was used and the player who used it won the match.
 	// Point swing = from first card of combo until end of turn (consistent with individual card metric).
-	comboRows, err := s.pool.Query(ctx, `
+	comboRows, err := s.pool.Query(ctx, fmt.Sprintf(`
 		WITH turn_cards AS (
 			SELECT match_id, round, player_idx, array_agg(DISTINCT power_up_id ORDER BY power_up_id) AS arr
 			FROM arcana_use
+			WHERE match_id IN (%s)
 			GROUP BY match_id, round, player_idx
 		),
 		turn_combos AS (
@@ -901,11 +940,11 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 			AVG(t.opponent_score_after_turn - ts.first_opponent_before)::float AS avg_point_swing_opponent
 		FROM turn_swing ts
 		JOIN turn t ON t.match_id = ts.match_id AND t.round = ts.round AND t.player_idx = ts.player_idx
-		JOIN game_history gh ON gh.id = ts.match_id
+		JOIN game_history gh ON gh.id = ts.match_id AND %s
 		GROUP BY ts.combo_key, ts.card_count
 		ORDER BY COUNT(*) DESC
 		LIMIT 50
-	`)
+	`, matchIDsSubq, ghCond))
 	if err != nil {
 		return nil, err
 	}

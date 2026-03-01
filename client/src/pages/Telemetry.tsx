@@ -82,15 +82,25 @@ export interface TelemetryMetrics {
   by_combo: TelemetryByCombo[];
 }
 
+export type MatchTypeFilter = "all" | "pvp" | "vs_ai";
+
+const MATCH_TYPE_OPTIONS: { value: MatchTypeFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "pvp", label: "PVP (human vs human)" },
+  { value: "vs_ai", label: "Human vs AI" },
+];
+
 export function TelemetryPage() {
   const [metrics, setMetrics] = useState<TelemetryMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [matchType, setMatchType] = useState<MatchTypeFilter>("all");
   const [selectedCard, setSelectedCard] = useState<TelemetryByCard | null>(null);
   const [selectedCombo, setSelectedCombo] = useState<TelemetryByCombo | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
 
     async function fetchToken(): Promise<string | null> {
       if (!NEON_AUTH_URL) return null;
@@ -112,7 +122,7 @@ export function TelemetryPage() {
           return;
         }
         const base = apiBase();
-        return fetch(`${base}/api/telemetry/metrics`, {
+        return fetch(`${base}/api/telemetry/metrics?match_type=${encodeURIComponent(matchType)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       })
@@ -150,7 +160,7 @@ export function TelemetryPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [matchType]);
 
   return (
     <>
@@ -160,6 +170,24 @@ export function TelemetryPage() {
           <Link to="/" className={styles.backLink}>
             Back to lobby
           </Link>
+          <div className={styles.filterRow}>
+            <label htmlFor="match-type-filter" className={styles.filterLabel}>
+              Match type
+            </label>
+            <select
+              id="match-type-filter"
+              className={styles.matchTypeSelect}
+              value={matchType}
+              onChange={(e) => setMatchType(e.target.value as MatchTypeFilter)}
+              aria-label="Filter metrics by match type"
+            >
+              {MATCH_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
           {loading && <p className={styles.status}>Loading...</p>}
           {error && <p className={styles.error}>{error}</p>}
           {!loading && !error && metrics && (
