@@ -270,21 +270,21 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			// Re-read state after delay in case game ended (e.g. opponent disconnected)
 			// We don't have a way to re-read; just send. Game will ignore if not our turn.
 
-			chance := params.UseKnownPairChance
+			chance := params.UseBestMoveChance
 			if chance < 0 {
 				chance = 0
 			}
 			if chance > 100 {
 				chance = 100
 			}
-			useKnownPair := rand.Intn(100) < chance
+			useBestMove := rand.Intn(100) < chance
 
 			hiddenByElement := hiddenIndicesByElement(elementMemory, hidden)
 
 			if state.Phase == "second_flip" && len(state.FlippedIndices) > 0 {
 				// We already flipped one card; choose the second
 				firstIdx := state.FlippedIndices[0]
-				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useKnownPair, hiddenHighlighted, elementMemory, hiddenByElement)
+				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useBestMove, hiddenHighlighted, elementMemory, hiddenByElement)
 				if secondIdx >= 0 {
 					slog.Debug("flipping tile (second)", "tag", "ai", "name", params.Name, "tile", secondIdx, "reason", flipReason)
 					sendAction(g, playerIdx, secondIdx)
@@ -322,7 +322,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			}
 
 			// Phase is first_flip: choose first card
-			firstIdx, _, flipReason := pickPair(memory, hidden, useKnownPair, hiddenHighlighted, hiddenByElement)
+			firstIdx, _, flipReason := pickPair(memory, hidden, useBestMove, hiddenHighlighted, hiddenByElement)
 			if firstIdx < 0 {
 				continue
 			}
@@ -385,14 +385,20 @@ const (
 	flipReasonKnownPair    = "known_pair"
 	flipReasonHighlight    = "highlight_elemental"
 	flipReasonElementKnown = "element_known"
-	flipReasonUnknown      = "unknown" // prefer tiles we have never seen (not in memory)
-	flipReasonRandom       = "random"
+	flipReasonUnseen = "unseen" // roll passed but no known pair/highlight/element; reveal an unseen (never-revealed) tile
+	flipReasonRandom = "random"
 )
 
 // pickPair returns (firstIndex, secondIndex, reason). secondIndex may be -1 if we're guessing (we'll pick on next state).
 // hiddenHighlighted: hidden indices currently highlighted (e.g. after an elemental).
 // hiddenByElement: hidden indices we know per element (from element memory); used to prefer flipping within same element.
-func pickPair(memory map[int]int, hidden []int, useKnownPair bool, hiddenHighlighted []int, hiddenByElement map[string][]int) (first, second int, reason string) {
+func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighlighted []int, hiddenByElement map[string][]int) (first, second int, reason string) {
+	if !useBestMove {
+		if len(hidden) == 0 {
+			return -1, -1, flipReasonRandom
+		}
+		return hidden[rand.Intn(len(hidden))], -1, flipReasonRandom
+	}
 	// Build pairID -> list of hidden indices we know
 	pairToIndices := make(map[int][]int)
 	for _, idx := range hidden {
@@ -402,7 +408,7 @@ func pickPair(memory map[int]int, hidden []int, useKnownPair bool, hiddenHighlig
 	}
 	// Find a complete known pair (both cards still hidden)
 	for _, indices := range pairToIndices {
-		if len(indices) >= 2 && useKnownPair {
+		if len(indices) >= 2 {
 			return indices[0], indices[1], flipReasonKnownPair
 		}
 	}
@@ -424,25 +430,37 @@ func pickPair(memory map[int]int, hidden []int, useKnownPair bool, hiddenHighlig
 			return first, -1, flipReasonElementKnown
 		}
 	}
-	// No known pair or chose to guess: prefer unknown tiles (never revealed), then random
+	// Roll passed but no best move: prefer unseen tiles (never revealed), then any hidden
 	if len(hidden) == 0 {
 		return -1, -1, flipReasonRandom
 	}
 	unknown := unknownHiddenIndices(memory, hidden)
 	if len(unknown) > 0 {
 		first = unknown[rand.Intn(len(unknown))]
-		return first, -1, flipReasonUnknown
+		return first, -1, flipReasonUnseen
 	}
 	first = hidden[rand.Intn(len(hidden))]
-	return first, -1, flipReasonRandom
+	return first, -1, flipReasonUnseen
 }
 
 // pickSecondCard chooses the second card to flip. Returns (index, reason).
 // hiddenHighlighted: hidden indices currently highlighted (e.g. after elemental).
 // elementMemory and hiddenByElement: tiles we know the element of; if first card is one of them, prefer second from same element.
-func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int) (int, string) {
+func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int) (int, string) {
+	if !useBestMove {
+		var candidates []int
+		for _, idx := range hidden {
+			if idx != firstIdx {
+				candidates = append(candidates, idx)
+			}
+		}
+		if len(candidates) == 0 {
+			return -1, flipReasonRandom
+		}
+		return candidates[rand.Intn(len(candidates))], flipReasonRandom
+	}
 	pairID, known := memory[firstIdx]
-	if known && useKnownPair {
+	if known {
 		for _, idx := range hidden {
 			if idx != firstIdx && memory[idx] == pairID {
 				return idx, flipReasonKnownPair
@@ -460,7 +478,7 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair
 			return candidates[rand.Intn(len(candidates))], flipReasonElementKnown
 		}
 	}
-	// Guess: prefer unknown tiles (never revealed), then any hidden except firstIdx
+	// Roll passed but no best move: prefer unseen tiles (never revealed), then any candidate
 	var candidates []int
 	for _, idx := range hidden {
 		if idx != firstIdx {
@@ -472,9 +490,9 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair
 	}
 	unknown := unknownFromCandidates(memory, candidates)
 	if len(unknown) > 0 {
-		return unknown[rand.Intn(len(unknown))], flipReasonUnknown
+		return unknown[rand.Intn(len(unknown))], flipReasonUnseen
 	}
-	return candidates[rand.Intn(len(candidates))], flipReasonRandom
+	return candidates[rand.Intn(len(candidates))], flipReasonUnseen
 }
 
 func sendAction(g *game.Game, playerIdx int, cardIndex int) {

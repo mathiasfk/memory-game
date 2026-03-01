@@ -13,7 +13,7 @@ type AIParams struct {
 	Name               string `json:"name"`
 	DelayMinMS         int    `json:"delay_min_ms"`
 	DelayMaxMS         int    `json:"delay_max_ms"`
-	UseKnownPairChance int    `json:"use_known_pair_chance"` // 0-100, probability to use a memorized pair when available
+	UseBestMoveChance int    `json:"use_best_move_chance"` // 0-100, probability to use best move (known pair, highlight, element, or reveal unseen); on fail, random move
 	ForgetChance       int    `json:"forget_chance"`         // 0-100, probability to forget (delete from memory) a known card each turn
 	ArcanaRandomness   int    `json:"arcana_randomness"`     // 0-100, probability to randomize arcana use decision (avoids robotic play)
 }
@@ -93,9 +93,9 @@ func Defaults() *Config {
 			Clairvoyance: ClairvoyancePowerUpConfig{RevealDurationMS: 3000},
 		},
 		AIProfiles: []AIParams{
-			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseKnownPairChance: 90, ForgetChance: 1, ArcanaRandomness: 10},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseKnownPairChance: 87, ForgetChance: 10, ArcanaRandomness: 20},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseKnownPairChance: 85, ForgetChance: 25, ArcanaRandomness: 25},
+			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 1, ArcanaRandomness: 10},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 87, ForgetChance: 10, ArcanaRandomness: 20},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 85, ForgetChance: 25, ArcanaRandomness: 25},
 		},
 		TelemetryHistogram: TelemetryHistogramConfig{
 			TurnMax:      100,
@@ -161,7 +161,7 @@ func Load() *Config {
 		overrideString(&cfg.AIProfiles[0].Name, "AI_NAME")
 		overrideInt(&cfg.AIProfiles[0].DelayMinMS, "AI_DELAY_MIN_MS")
 		overrideInt(&cfg.AIProfiles[0].DelayMaxMS, "AI_DELAY_MAX_MS")
-		overrideInt(&cfg.AIProfiles[0].UseKnownPairChance, "AI_USE_KNOWN_PAIR_CHANCE")
+		overrideInt(&cfg.AIProfiles[0].UseBestMoveChance, "AI_USE_BEST_MOVE_CHANCE")
 		overrideInt(&cfg.AIProfiles[0].ForgetChance, "AI_FORGET_CHANCE")
 		overrideInt(&cfg.AIProfiles[0].ArcanaRandomness, "AI_ARCANA_RANDOMNESS")
 	}

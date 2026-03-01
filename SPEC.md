@@ -373,7 +373,7 @@ This section documents architectural decisions that extend the base specificatio
 
 - **Decision**: When no human opponent is available within `AI_PAIR_TIMEOUT_SEC` seconds, the player is matched against an AI opponent.
 - **Rationale**: Reduces wait time and allows single-player practice.
-- **Implementation**: The AI uses only information from `game_state` messages (no access to board internals). Configurable profiles (e.g., Mnemosyne, Calliope, Thalia) with parameters: `delay_min_ms`, `delay_max_ms`, `use_known_pair_chance`, `forget_chance`. AI players have user IDs prefixed with `ai:` for storage/leaderboard.
+- **Implementation**: The AI uses only information from `game_state` messages (no access to board internals). Configurable profiles (e.g., Mnemosyne, Calliope, Thalia) with parameters: `delay_min_ms`, `delay_max_ms`, `use_best_move_chance`, `forget_chance`. AI players have user IDs prefixed with `ai:` for storage/leaderboard.
 
 ### 11.3 Game History and Persistence
 

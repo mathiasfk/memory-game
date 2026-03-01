@@ -53,7 +53,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 		WSPort:             0, // not used when using httptest
 		AIPairTimeoutSec:   10,
 		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
-		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseKnownPairChance: 85, ArcanaRandomness: 0}},
+		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseBestMoveChance: 85, ArcanaRandomness: 0}},
 	}
 	return setupTestServerWithConfig(t, cfg)
 }
@@ -226,7 +226,7 @@ func TestIntegration_OpponentDisconnect(t *testing.T) {
 		AIPairTimeoutSec:     10,
 		ReconnectTimeoutSec:  1, // 1 second so the test finishes quickly
 		PowerUps:             config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
-		AIProfiles:           []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseKnownPairChance: 85, ArcanaRandomness: 0}},
+		AIProfiles:           []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseBestMoveChance: 85, ArcanaRandomness: 0}},
 	}
 	server, cleanup := setupTestServerWithConfig(t, cfg)
 	defer cleanup()
@@ -335,7 +335,7 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 		WSPort:             0,
 		AIPairTimeoutSec:   1,
 		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
-		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 20, DelayMaxMS: 80, UseKnownPairChance: 85, ArcanaRandomness: 0}},
+		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 20, DelayMaxMS: 80, UseBestMoveChance: 85, ArcanaRandomness: 0}},
 	}
 	server, cleanup := setupTestServerWithConfig(t, cfg)
 	defer cleanup()
