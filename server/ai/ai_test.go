@@ -183,11 +183,11 @@ func TestEVWithCard_Elemental(t *testing.T) {
 	P := 18
 	// pairID 10 -> (10-6)/3 = 1 -> water
 	memory := map[int]int{0: 10, 1: 10}
-	ev := evWithCard(state, memory, hidden, "water_elemental", P)
+	ev := evWithCard(state, memory, hidden, PowerUpWaterElemental, P)
 	if ev < 1 {
 		t.Errorf("water elemental with known water pair: ev should be >= 1, got %v", ev)
 	}
-	ev = evWithCard(state, memory, hidden, "fire_elemental", P)
+	ev = evWithCard(state, memory, hidden, PowerUpFireElemental, P)
 	if ev != 0 {
 		t.Errorf("fire elemental with known water pair: ev should be 0, got %v", ev)
 	}
@@ -201,7 +201,7 @@ func TestEVWithCard_Chaos(t *testing.T) {
 	hidden := hiddenIndices(state.Cards)
 	P := 18
 	memory := map[int]int{}
-	ev := evWithCard(state, memory, hidden, "chaos", P)
+	ev := evWithCard(state, memory, hidden, PowerUpChaos, P)
 	if ev != heuristic.RandomMatchProb(P) {
 		t.Errorf("chaos EV should equal RandomMatchProb(P), got %v", ev)
 	}
@@ -216,7 +216,7 @@ func TestEVWithCard_Elemental_Partial(t *testing.T) {
 	hidden := hiddenIndices(state.Cards)
 	P := 7
 	memory := map[int]int{0: 6} // pairID 6 = fire, only one tile in memory → partial
-	ev := evWithCard(state, memory, hidden, "fire_elemental", P)
+	ev := evWithCard(state, memory, hidden, PowerUpFireElemental, P)
 	// 1 fire pair: otherTiles = 2*1-1 = 1 → matchProb = 1, then bonus turn
 	if ev < 1 {
 		t.Errorf("elemental with 1 fire pair and 1 known tile: EV should be >= 1 (guaranteed match), got %v", ev)
@@ -235,7 +235,7 @@ func TestEVWithCard_Elemental_Partial(t *testing.T) {
 	hidden = hiddenIndices(state.Cards)
 	P = 17
 	memory = map[int]int{14: 6} // one fire tile known (pairID 6), not the matched one
-	ev = evWithCard(state, memory, hidden, "fire_elemental", P)
+	ev = evWithCard(state, memory, hidden, PowerUpFireElemental, P)
 	// 2 fire pairs remaining: otherTiles = 2*2-1 = 3, matchProb = 1/3
 	wantBase := 1.0 / 3.0
 	if ev < wantBase {
@@ -392,7 +392,7 @@ func TestEVWithCard_Clairvoyance(t *testing.T) {
 	hidden := hiddenIndices(state.Cards)
 	P := 18
 	memory := map[int]int{}
-	ev := evWithCard(state, memory, hidden, "clairvoyance", P)
+	ev := evWithCard(state, memory, hidden, PowerUpClairvoyance, P)
 	if ev < 0 {
 		t.Errorf("evWithCard(clairvoyance) should return positive EV, got %v", ev)
 	}
@@ -401,7 +401,7 @@ func TestEVWithCard_Clairvoyance(t *testing.T) {
 		t.Errorf("evWithCard(clairvoyance) for P=18 want positive EV <= 5, got %v", ev)
 	}
 	// Unregistered power-up returns -1
-	if evWithCard(state, memory, hidden, "oblivion", P) != -1 {
+	if evWithCard(state, memory, hidden, PowerUpOblivion, P) != -1 {
 		t.Errorf("evWithCard(oblivion) should return -1")
 	}
 }

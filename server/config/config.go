@@ -10,12 +10,12 @@ import (
 
 // AIParams holds the parameters for one AI profile (name and behavior).
 type AIParams struct {
-	Name               string `json:"name"`
-	DelayMinMS         int    `json:"delay_min_ms"`
-	DelayMaxMS         int    `json:"delay_max_ms"`
+	Name              string `json:"name"`
+	DelayMinMS        int    `json:"delay_min_ms"`
+	DelayMaxMS        int    `json:"delay_max_ms"`
 	UseBestMoveChance int    `json:"use_best_move_chance"` // 0-100, probability to use best move (known pair, highlight, element, or reveal unseen); on fail, random move
-	ForgetChance       int    `json:"forget_chance"`         // 0-100, probability to forget (delete from memory) a known card each turn
-	ArcanaRandomness   int    `json:"arcana_randomness"`     // 0-100, probability to randomize arcana use decision (avoids robotic play)
+	ForgetChance      int    `json:"forget_chance"`        // 0-100, probability to forget (delete from memory) a known card each turn
+	ArcanaRandomness  int    `json:"arcana_randomness"`    // 0-100, probability to randomize arcana use decision (avoids robotic play)
 }
 
 // ChaosPowerUpConfig holds configuration for the Chaos power-up.
@@ -94,8 +94,8 @@ func Defaults() *Config {
 		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 1, ArcanaRandomness: 10},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 87, ForgetChance: 10, ArcanaRandomness: 20},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 85, ForgetChance: 25, ArcanaRandomness: 25},
+			// {Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 87, ForgetChance: 10, ArcanaRandomness: 20},
+			// {Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 85, ForgetChance: 25, ArcanaRandomness: 25},
 		},
 		TelemetryHistogram: TelemetryHistogramConfig{
 			TurnMax:      100,

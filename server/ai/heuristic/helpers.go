@@ -17,15 +17,21 @@ func RandomMatchProb(P int) float64 {
 	return 1 / float64(denom)
 }
 
+// pairToHiddenIndices returns, for each pairID present in memory, the list of hidden indices that have that pairID.
+func pairToHiddenIndices(memory map[int]int, hidden []int) map[int][]int {
+	out := make(map[int][]int)
+	for _, idx := range hidden {
+		if p, ok := memory[idx]; ok {
+			out[p] = append(out[p], idx)
+		}
+	}
+	return out
+}
+
 // HasKnownPair returns true if memory contains a complete pair still in hidden (both indices hidden).
 // Exported for use by ai.evNoCard.
 func HasKnownPair(memory map[int]int, hidden []int) bool {
-	pairToIndices := make(map[int][]int)
-	for _, idx := range hidden {
-		if p, ok := memory[idx]; ok {
-			pairToIndices[p] = append(pairToIndices[p], idx)
-		}
-	}
+	pairToIndices := pairToHiddenIndices(memory, hidden)
 	for _, indices := range pairToIndices {
 		if len(indices) >= 2 {
 			return true
@@ -62,12 +68,7 @@ func expectedPairsFromReveal(P, k int) float64 {
 }
 
 func knownPairElement(memory map[int]int, hidden []int, arcanaPairs int) string {
-	pairToIndices := make(map[int][]int)
-	for _, idx := range hidden {
-		if p, ok := memory[idx]; ok {
-			pairToIndices[p] = append(pairToIndices[p], idx)
-		}
-	}
+	pairToIndices := pairToHiddenIndices(memory, hidden)
 	for pairID, indices := range pairToIndices {
 		if len(indices) >= 2 {
 			return game.ElementForNormalPair(pairID, arcanaPairs)
@@ -101,14 +102,12 @@ func pairsOfElementRemaining(state *game.GameStateMsg, element string) int {
 }
 
 func hasPartialKnownOfElement(memory map[int]int, hidden []int, arcanaPairs int, element string) bool {
-	pairToIndices := make(map[int][]int)
-	for _, idx := range hidden {
-		if p, ok := memory[idx]; ok && game.ElementForNormalPair(p, arcanaPairs) == element {
-			pairToIndices[p] = append(pairToIndices[p], idx)
-		}
-	}
+	pairToIndices := pairToHiddenIndices(memory, hidden)
 	hasAny := false
-	for _, indices := range pairToIndices {
+	for pairID, indices := range pairToIndices {
+		if game.ElementForNormalPair(pairID, arcanaPairs) != element {
+			continue
+		}
 		if len(indices) >= 2 {
 			return false
 		}
