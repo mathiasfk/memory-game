@@ -305,6 +305,36 @@ func TestPickSecondCard_PrefersSameElementFromElementMemory(t *testing.T) {
 	}
 }
 
+func TestPickPair_PrefersUnknownTilesWhenGuessing(t *testing.T) {
+	// hidden 0,1,2,3; we have seen 0 and 1 (memory), so unknown = 2,3. No known pair, no highlight, no element memory.
+	hidden := []int{0, 1, 2, 3}
+	memory := map[int]int{0: 5, 1: 6}
+	for i := 0; i < 30; i++ {
+		first, _, reason := pickPair(memory, hidden, false, nil, nil)
+		if first != 2 && first != 3 {
+			t.Errorf("pickPair should prefer unknown tiles (2 or 3), got %d", first)
+		}
+		if reason != "unknown" {
+			t.Errorf("pickPair with unknown tiles should return reason 'unknown', got %q", reason)
+		}
+	}
+}
+
+func TestPickSecondCard_PrefersUnknownTilesWhenGuessing(t *testing.T) {
+	// firstIdx=0 (we flipped it), candidates = 1,2,3. We have seen 1 (memory), so unknown = 2,3.
+	hidden := []int{1, 2, 3}
+	memory := map[int]int{1: 10}
+	for i := 0; i < 30; i++ {
+		second, reason := pickSecondCard(memory, hidden, 0, false, nil, nil, nil)
+		if second != 2 && second != 3 {
+			t.Errorf("pickSecondCard should prefer unknown tiles (2 or 3), got %d", second)
+		}
+		if reason != "unknown" {
+			t.Errorf("pickSecondCard with unknown tiles should return reason 'unknown', got %q", reason)
+		}
+	}
+}
+
 func TestHiddenIndicesByElement(t *testing.T) {
 	elementMemory := map[int]string{0: "fire", 1: "fire", 2: "water"}
 	hidden := []int{0, 1, 2, 3}

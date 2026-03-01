@@ -342,6 +342,28 @@ func hiddenIndices(cards []game.CardView) []int {
 	return out
 }
 
+// unknownHiddenIndices returns hidden indices we have never seen (not in memory). Used to prefer flipping unknown tiles when guessing.
+func unknownHiddenIndices(memory map[int]int, hidden []int) []int {
+	var out []int
+	for _, idx := range hidden {
+		if _, ok := memory[idx]; !ok {
+			out = append(out, idx)
+		}
+	}
+	return out
+}
+
+// unknownFromCandidates returns candidates that are not in memory (unknown positions).
+func unknownFromCandidates(memory map[int]int, candidates []int) []int {
+	var out []int
+	for _, idx := range candidates {
+		if _, ok := memory[idx]; !ok {
+			out = append(out, idx)
+		}
+	}
+	return out
+}
+
 // hiddenIndicesByElement returns, for each element, the hidden indices that we know (from elementMemory) have that element.
 // Used to prefer flipping among tiles of the same element when we don't have a full known pair.
 func hiddenIndicesByElement(elementMemory map[int]string, hidden []int) map[string][]int {
@@ -360,10 +382,11 @@ func hiddenIndicesByElement(elementMemory map[int]string, hidden []int) map[stri
 
 // flipReason describes why the AI chose to flip a given tile (for logging).
 const (
-	flipReasonKnownPair     = "known_pair"
-	flipReasonHighlight     = "highlight_elemental"
-	flipReasonElementKnown  = "element_known"
-	flipReasonRandom        = "random"
+	flipReasonKnownPair    = "known_pair"
+	flipReasonHighlight    = "highlight_elemental"
+	flipReasonElementKnown = "element_known"
+	flipReasonUnknown      = "unknown" // prefer tiles we have never seen (not in memory)
+	flipReasonRandom       = "random"
 )
 
 // pickPair returns (firstIndex, secondIndex, reason). secondIndex may be -1 if we're guessing (we'll pick on next state).
@@ -401,9 +424,14 @@ func pickPair(memory map[int]int, hidden []int, useKnownPair bool, hiddenHighlig
 			return first, -1, flipReasonElementKnown
 		}
 	}
-	// No known pair or chose to guess: pick random hidden index
+	// No known pair or chose to guess: prefer unknown tiles (never revealed), then random
 	if len(hidden) == 0 {
 		return -1, -1, flipReasonRandom
+	}
+	unknown := unknownHiddenIndices(memory, hidden)
+	if len(unknown) > 0 {
+		first = unknown[rand.Intn(len(unknown))]
+		return first, -1, flipReasonUnknown
 	}
 	first = hidden[rand.Intn(len(hidden))]
 	return first, -1, flipReasonRandom
@@ -432,7 +460,7 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair
 			return candidates[rand.Intn(len(candidates))], flipReasonElementKnown
 		}
 	}
-	// Guess: any hidden except firstIdx
+	// Guess: prefer unknown tiles (never revealed), then any hidden except firstIdx
 	var candidates []int
 	for _, idx := range hidden {
 		if idx != firstIdx {
@@ -441,6 +469,10 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useKnownPair
 	}
 	if len(candidates) == 0 {
 		return -1, flipReasonRandom
+	}
+	unknown := unknownFromCandidates(memory, candidates)
+	if len(unknown) > 0 {
+		return unknown[rand.Intn(len(unknown))], flipReasonUnknown
 	}
 	return candidates[rand.Intn(len(candidates))], flipReasonRandom
 }
