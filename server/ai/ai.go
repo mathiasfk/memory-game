@@ -3,7 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/rand"
 	"strings"
 	"time"
@@ -437,7 +437,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				firstIdx := state.FlippedIndices[0]
 				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useKnownPair, hiddenHighlighted, elementMemory, hiddenByElement)
 				if secondIdx >= 0 {
-					log.Printf("[AI] %s flipping tile %d (second) — reason: %s", params.Name, secondIdx, flipReason)
+					slog.Debug("flipping tile (second)", "tag", "ai", "name", params.Name, "tile", secondIdx, "reason", flipReason)
 					sendAction(g, playerIdx, secondIdx)
 				}
 				continue
@@ -455,7 +455,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				dec := pickArcanaToUse(&state, memory, hidden, params)
 				handStr := formatHand(state.Hand)
 				if dec.use && dec.powerUpID != "" {
-					log.Printf("[AI] %s decided to use arcana: %s (reason: %s) hand: [%s]", params.Name, dec.powerUpID, dec.reason, handStr)
+					slog.Debug("decided to use arcana", "tag", "ai", "name", params.Name, "arcana", dec.powerUpID, "reason", dec.reason, "hand", handStr)
 					if elem := powerUpIDToElement(dec.powerUpID); elem != "" {
 						lastElementalUsed = elem
 					}
@@ -465,7 +465,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 					sendUsePowerUp(g, playerIdx, dec.powerUpID)
 					continue
 				}
-				log.Printf("[AI] %s decided not to use arcana (reason: %s) hand: [%s]", params.Name, dec.reason, handStr)
+				slog.Debug("decided not to use arcana", "tag", "ai", "name", params.Name, "reason", dec.reason, "hand", handStr)
 			}
 
 			// Phase is first_flip: choose first card
@@ -473,7 +473,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			if firstIdx < 0 {
 				continue
 			}
-			log.Printf("[AI] %s flipping tile %d (first) — reason: %s", params.Name, firstIdx, flipReason)
+			slog.Debug("flipping tile (first)", "tag", "ai", "name", params.Name, "tile", firstIdx, "reason", flipReason)
 			sendAction(g, playerIdx, firstIdx)
 		}
 	}

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 )
@@ -53,14 +54,20 @@ func TestDefaults(t *testing.T) {
 	if cfg.AIProfiles[1].Name != "Calliope" {
 		t.Errorf("expected second AI name Calliope, got %q", cfg.AIProfiles[1].Name)
 	}
-	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 87 || cfg.AIProfiles[1].ForgetChance != 15 || cfg.AIProfiles[1].ArcanaRandomness != 20 {
-		t.Errorf("expected Calliope 500/1100/87 ForgetChance=15 ArcanaRandomness=20, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance, cfg.AIProfiles[1].ArcanaRandomness)
+	if cfg.AIProfiles[1].DelayMinMS != 500 || cfg.AIProfiles[1].DelayMaxMS != 1100 || cfg.AIProfiles[1].UseKnownPairChance != 87 || cfg.AIProfiles[1].ForgetChance != 10 || cfg.AIProfiles[1].ArcanaRandomness != 20 {
+		t.Errorf("expected Calliope 500/1100/87 ForgetChance=10 ArcanaRandomness=20, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[1].DelayMinMS, cfg.AIProfiles[1].DelayMaxMS, cfg.AIProfiles[1].UseKnownPairChance, cfg.AIProfiles[1].ForgetChance, cfg.AIProfiles[1].ArcanaRandomness)
 	}
 	if cfg.AIProfiles[2].Name != "Thalia" {
 		t.Errorf("expected third AI name Thalia, got %q", cfg.AIProfiles[2].Name)
 	}
-	if cfg.AIProfiles[2].DelayMinMS != 500 || cfg.AIProfiles[2].DelayMaxMS != 2000 || cfg.AIProfiles[2].UseKnownPairChance != 85 || cfg.AIProfiles[2].ForgetChance != 30 || cfg.AIProfiles[2].ArcanaRandomness != 25 {
-		t.Errorf("expected Thalia 500/2000/85 ForgetChance=30 ArcanaRandomness=25, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[2].DelayMinMS, cfg.AIProfiles[2].DelayMaxMS, cfg.AIProfiles[2].UseKnownPairChance, cfg.AIProfiles[2].ForgetChance, cfg.AIProfiles[2].ArcanaRandomness)
+	if cfg.AIProfiles[2].DelayMinMS != 500 || cfg.AIProfiles[2].DelayMaxMS != 2000 || cfg.AIProfiles[2].UseKnownPairChance != 85 || cfg.AIProfiles[2].ForgetChance != 25 || cfg.AIProfiles[2].ArcanaRandomness != 25 {
+		t.Errorf("expected Thalia 500/2000/85 ForgetChance=25 ArcanaRandomness=25, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[2].DelayMinMS, cfg.AIProfiles[2].DelayMaxMS, cfg.AIProfiles[2].UseKnownPairChance, cfg.AIProfiles[2].ForgetChance, cfg.AIProfiles[2].ArcanaRandomness)
+	}
+	if cfg.LogLevel != "info" {
+		t.Errorf("expected LogLevel=info, got %q", cfg.LogLevel)
+	}
+	if cfg.SlogLevel() != slog.LevelInfo {
+		t.Errorf("expected SlogLevel()=LevelInfo for default, got %v", cfg.SlogLevel())
 	}
 }
 
@@ -147,5 +154,27 @@ func TestLoadWithPowerUpEnvOverrides(t *testing.T) {
 
 	if cfg.PowerUps.Clairvoyance.RevealDurationMS != 3000 {
 		t.Errorf("expected PowerUps.Clairvoyance.RevealDurationMS=3000 after env override, got %d", cfg.PowerUps.Clairvoyance.RevealDurationMS)
+	}
+}
+
+func TestSlogLevel(t *testing.T) {
+	tests := []struct {
+		logLevel string
+		want     slog.Level
+	}{
+		{"info", slog.LevelInfo},
+		{"INFO", slog.LevelInfo},
+		{"debug", slog.LevelDebug},
+		{"DEBUG", slog.LevelDebug},
+		{"warn", slog.LevelWarn},
+		{"error", slog.LevelError},
+		{"invalid", slog.LevelInfo},
+	}
+	for _, tt := range tests {
+		cfg := Defaults()
+		cfg.LogLevel = tt.logLevel
+		if got := cfg.SlogLevel(); got != tt.want {
+			t.Errorf("SlogLevel() for %q = %v, want %v", tt.logLevel, got, tt.want)
+		}
 	}
 }

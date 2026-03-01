@@ -2,7 +2,7 @@ package ws
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -51,17 +51,17 @@ func (h *Hub) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Print("Hub: shutdown signal received, stopping")
+			slog.Info("shutdown signal received, stopping", "tag", "hub")
 			return
 		case client := <-h.Register:
 			h.Clients[client] = true
-			log.Printf("Client connected. Total clients: %d", len(h.Clients))
+			slog.Info("Client connected", "tag", "hub", "total_clients", len(h.Clients))
 
 		case client := <-h.Unregister:
 			if _, ok := h.Clients[client]; ok {
 				delete(h.Clients, client)
 				close(client.Send)
-				log.Printf("Client disconnected. Total clients: %d", len(h.Clients))
+				slog.Info("Client disconnected", "tag", "hub", "total_clients", len(h.Clients))
 
 				// If the client was in a game, start reconnection window (do not end game immediately)
 				if client.Game != nil && !client.Game.Finished {
@@ -82,7 +82,7 @@ func (h *Hub) Run(ctx context.Context) {
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
+		slog.Error("WebSocket upgrade error", "tag", "hub", "err", err)
 		return
 	}
 

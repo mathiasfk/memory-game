@@ -3,7 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -60,7 +60,7 @@ func (c *Client) ReadPump() {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("WebSocket read error: %v", err)
+				slog.Error("WebSocket read error", "tag", "auth", "err", err)
 			}
 			break
 		}
@@ -147,32 +147,32 @@ func (c *Client) handleMessage(data []byte) {
 
 func (c *Client) handleAuth(raw json.RawMessage) {
 	if c.Authenticated {
-		log.Printf("[auth] client already authenticated, rejecting")
+		slog.Info("client already authenticated, rejecting", "tag", "auth")
 		c.sendError("Already authenticated.")
 		return
 	}
 	var msg AuthMsg
 	if err := json.Unmarshal(raw, &msg); err != nil || msg.Token == "" {
-		log.Printf("[auth] invalid auth message: unmarshal err=%v, token empty=%v", err != nil, msg.Token == "")
+		slog.Info("invalid auth message", "tag", "auth", "unmarshal_err", err != nil, "token_empty", msg.Token == "")
 		c.sendError("Invalid auth message.")
 		return
 	}
 	baseURL := c.Hub.Config.NeonAuthBaseURL
 	if baseURL == "" {
-		log.Printf("[auth] NEON_AUTH_BASE_URL not set on server; cannot validate token")
+		slog.Info("NEON_AUTH_BASE_URL not set on server; cannot validate token", "tag", "auth")
 		c.sendError("Server auth not configured.")
 		return
 	}
 	claims, err := auth.ValidateNeonToken(baseURL, msg.Token)
 	if err != nil {
-		log.Printf("[auth] token validation failed: %v", err)
+		slog.Error("token validation failed", "tag", "auth", "err", err)
 		c.sendError("Invalid or expired token.")
 		return
 	}
 	c.UserID = auth.UserIDFromClaims(claims)
 	c.Name = auth.FirstNameFromClaims(claims)
 	c.Authenticated = true
-	log.Printf("[auth] authenticated user id=%s name=%s", c.UserID, c.Name)
+	slog.Info("authenticated user", "tag", "auth", "user_id", c.UserID, "name", c.Name)
 }
 
 func (c *Client) handleSetName(raw json.RawMessage) {

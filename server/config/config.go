@@ -2,9 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // AIParams holds the parameters for one AI profile (name and behavior).
@@ -69,6 +70,9 @@ type Config struct {
 
 	// TelemetryHistogram defines histogram bins for "game stage at use" (turn and pairs already matched).
 	TelemetryHistogram TelemetryHistogramConfig `json:"telemetry_histogram"`
+
+	// LogLevel is the minimum log level: "debug", "info", "warn", "error". Default "info".
+	LogLevel string `json:"log_level"`
 }
 
 // Defaults returns a Config with all default values from the spec.
@@ -99,6 +103,22 @@ func Defaults() *Config {
 			PairsMax:     36,
 			PairsNumBins: 6,
 		},
+		LogLevel: "info",
+	}
+}
+
+// SlogLevel returns the slog.Level for the configured LogLevel string.
+// Accepts "debug", "info", "warn", "error" (case-insensitive). Invalid values default to LevelInfo.
+func (c *Config) SlogLevel() slog.Level {
+	switch strings.ToLower(c.LogLevel) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }
 
@@ -118,7 +138,7 @@ func Load() *Config {
 	}
 	if f, err := os.Open(configPath); err == nil {
 		if err := json.NewDecoder(f).Decode(cfg); err != nil {
-			log.Printf("Warning: failed to parse config file %q: %v", configPath, err)
+			slog.Warn("failed to parse config file", "tag", "config", "path", configPath, "err", err)
 		}
 		f.Close()
 	}
@@ -149,6 +169,7 @@ func Load() *Config {
 	overrideInt(&cfg.TelemetryHistogram.TurnNumBins, "TELEMETRY_TURN_NUM_BINS")
 	overrideInt(&cfg.TelemetryHistogram.PairsMax, "TELEMETRY_PAIRS_MAX")
 	overrideInt(&cfg.TelemetryHistogram.PairsNumBins, "TELEMETRY_PAIRS_NUM_BINS")
+	overrideString(&cfg.LogLevel, "LOG_LEVEL")
 
 	return cfg
 }
@@ -158,7 +179,7 @@ func overrideInt(field *int, envKey string) {
 		if n, err := strconv.Atoi(val); err == nil {
 			*field = n
 		} else {
-			log.Printf("Warning: invalid value for %s: %q", envKey, val)
+			slog.Warn("invalid config value", "tag", "config", "key", envKey, "value", val)
 		}
 	}
 }

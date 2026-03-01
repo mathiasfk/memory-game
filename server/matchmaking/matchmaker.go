@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
@@ -218,7 +218,7 @@ func (m *Matchmaker) Enqueue(c *ws.Client) {
 		return // already in queue
 	}
 	m.waiting[c] = make(chan struct{})
-	log.Printf("[matchmaking] started for player %q (user=%s)", c.Name, c.UserID)
+	slog.Info("started for player", "tag", "matchmaking", "name", c.Name, "user_id", c.UserID)
 	select {
 	case m.notify <- struct{}{}:
 	default:
@@ -234,7 +234,7 @@ func (m *Matchmaker) LeaveQueue(c *ws.Client) {
 		delete(m.waiting, c)
 		m.waitMu.Unlock()
 		close(ch)
-		log.Printf("[matchmaking] cancelled for player %q (user=%s)", c.Name, c.UserID)
+		slog.Info("cancelled for player", "tag", "matchmaking", "name", c.Name, "user_id", c.UserID)
 		return
 	}
 	m.waitMu.Unlock()
@@ -245,7 +245,7 @@ func (m *Matchmaker) LeaveQueue(c *ws.Client) {
 		m.pendingClient = nil
 		m.pendingCancel = nil
 		m.pendingMu.Unlock()
-		log.Printf("[matchmaking] cancelled for player %q (user=%s)", c.Name, c.UserID)
+		slog.Info("cancelled for player", "tag", "matchmaking", "name", c.Name, "user_id", c.UserID)
 		return
 	}
 	m.pendingMu.Unlock()
@@ -262,7 +262,7 @@ func (m *Matchmaker) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Print("Matchmaker: shutdown signal received, stopping")
+			slog.Info("shutdown signal received, stopping", "tag", "matchmaking")
 			return
 		case <-m.notify:
 		}
@@ -390,7 +390,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 	client2.Game = g
 	client2.PlayerID = 1
 
-	log.Printf("Match created: %s — %s vs %s", matchID, client1.Name, client2.Name)
+	slog.Info("Match created", "tag", "matchmaking", "match_id", matchID, "player1", client1.Name, "player2", client2.Name)
 
 	m.sendMatchFound(client1, client2.Name, g, 0)
 	m.sendMatchFound(client2, client1.Name, g, 1)
@@ -455,7 +455,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 	client1.Game = g
 	client1.PlayerID = 0
 
-	log.Printf("Match created: %s — %s vs %s (AI)", matchID, client1.Name, profile.Name)
+	slog.Info("Match created (AI)", "tag", "matchmaking", "match_id", matchID, "player", client1.Name, "ai", profile.Name)
 
 	m.sendMatchFound(client1, profile.Name, g, 0)
 

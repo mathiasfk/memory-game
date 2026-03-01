@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"sort"
 	"strings"
@@ -142,7 +142,7 @@ func NewStore(ctx context.Context, databaseURL string) (*Store, error) {
 			return nil, err
 		}
 	}
-	log.Print("Game history storage: connected to Postgres")
+	slog.Info("connected to Postgres", "tag", "storage")
 	return &Store{pool: pool}, nil
 }
 

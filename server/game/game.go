@@ -2,7 +2,7 @@ package game
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"math/rand"
 	"time"
 
@@ -307,7 +307,7 @@ func (g *Game) broadcastState() {
 		state := g.BuildStateForPlayer(i)
 		data, err := json.Marshal(state)
 		if err != nil {
-			log.Printf("Error marshaling game state: %v", err)
+			slog.Error("marshaling game state", "tag", "game", "err", err)
 			continue
 		}
 		if g.Players[i] != nil && g.Players[i].Send != nil {

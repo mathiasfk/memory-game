@@ -2,7 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -78,7 +78,7 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 		var err error
 		list, err = h.HistoryStore.ListByUserID(r.Context(), userID)
 		if err != nil {
-			log.Printf("ListByUserID: %v", err)
+			slog.Error("ListByUserID", "tag", "api", "err", err)
 			http.Error(w, "failed to load history", http.StatusInternalServerError)
 			return
 		}
@@ -86,7 +86,7 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(list); err != nil {
-		log.Printf("Encode history response: %v", err)
+		slog.Error("Encode history response", "tag", "api", "err", err)
 	}
 }
 
@@ -120,7 +120,7 @@ func (h *Handler) Leaderboard(w http.ResponseWriter, r *http.Request) {
 		var err error
 		entries, err = h.HistoryStore.ListLeaderboard(r.Context(), limit, offset)
 		if err != nil {
-			log.Printf("ListLeaderboard: %v", err)
+			slog.Error("ListLeaderboard", "tag", "api", "err", err)
 			http.Error(w, "failed to load leaderboard", http.StatusInternalServerError)
 			return
 		}
@@ -131,7 +131,7 @@ func (h *Handler) Leaderboard(w http.ResponseWriter, r *http.Request) {
 	if authUserID != "" && h.HistoryStore != nil {
 		cur, err := h.HistoryStore.GetLeaderboardEntryByUserID(r.Context(), authUserID)
 		if err != nil {
-			log.Printf("GetLeaderboardEntryByUserID: %v", err)
+			slog.Error("GetLeaderboardEntryByUserID", "tag", "api", "err", err)
 		} else if cur != nil {
 			inTop := false
 			for i := range entries {
@@ -151,7 +151,7 @@ func (h *Handler) Leaderboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	resp := LeaderboardResponse{Entries: entries, CurrentUserEntry: currentUserEntry}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("Encode leaderboard response: %v", err)
+		slog.Error("Encode leaderboard response", "tag", "api", "err", err)
 	}
 }
 
@@ -175,7 +175,7 @@ func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 	role, err := h.HistoryStore.GetUserRole(r.Context(), userID)
 	if err != nil {
-		log.Printf("GetUserRole: %v", err)
+		slog.Error("GetUserRole", "tag", "api", "err", err)
 		http.Error(w, "failed to verify role", http.StatusInternalServerError)
 		return
 	}
@@ -192,12 +192,12 @@ func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 	metrics, err := h.HistoryStore.GetTelemetryMetrics(r.Context(), binConfig)
 	if err != nil {
-		log.Printf("GetTelemetryMetrics: %v", err)
+		slog.Error("GetTelemetryMetrics", "tag", "api", "err", err)
 		http.Error(w, "failed to load metrics", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(metrics); err != nil {
-		log.Printf("Encode telemetry response: %v", err)
+		slog.Error("Encode telemetry response", "tag", "api", "err", err)
 	}
 }
