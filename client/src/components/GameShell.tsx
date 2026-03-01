@@ -38,7 +38,6 @@ export function GameShell() {
   const [gameState, setGameState] = useState<GameStateMsg | null>(null);
   const [gameResult, setGameResult] = useState<GameOverMsg | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
-  const [opponentReconnecting, setOpponentReconnecting] = useState<number | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [pendingGameOver, setPendingGameOver] = useState<GameOverMsg | null>(null);
   const [powerUpMessage, setPowerUpMessage] = useState<string | null>(null);
@@ -51,10 +50,33 @@ export function GameShell() {
   /** Key for Board so it remounts when we receive the first game_state (new game or rejoin). */
   const [boardKey, setBoardKey] = useState(0);
   const prevHadGameStateRef = useRef(false);
+  /** ID of the "Opponent lost connection..." toast so we can dismiss it when opponent_reconnected. */
+  const reconnectingToastIdRef = useRef<string | null>(null);
 
-  const addToast = useCallback((message: string) => {
-    setToasts((prev) => [...prev, { id: crypto.randomUUID(), message }]);
-  }, []);
+  const addToast = useCallback(
+    (
+      message: string,
+      options?: {
+        durationMs?: number;
+        variant?: "error" | "info" | "success";
+        reconnectionDeadlineUnixMs?: number;
+      },
+    ): string => {
+      const id = crypto.randomUUID();
+      setToasts((prev) => [
+        ...prev,
+        {
+          id,
+          message,
+          durationMs: options?.durationMs,
+          variant: options?.variant,
+          reconnectionDeadlineUnixMs: options?.reconnectionDeadlineUnixMs,
+        },
+      ]);
+      return id;
+    },
+    [],
+  );
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -67,14 +89,12 @@ export function GameShell() {
           setScreen("waiting");
           setGameResult(null);
           setOpponentDisconnected(false);
-          setOpponentReconnecting(null);
           break;
         case "match_found":
           setMatchInfo(msg);
           setScreen("game");
           setGameResult(null);
           setOpponentDisconnected(false);
-          setOpponentReconnecting(null);
           if (msg.gameId && msg.rejoinToken) {
             saveGameSession({
               gameId: msg.gameId,
@@ -116,7 +136,6 @@ export function GameShell() {
         clearGameSession();
         setGameResult(msg);
         setOpponentDisconnected(false);
-        setOpponentReconnecting(null);
         setPendingGameOver(msg);
         if (gameOverTimeoutRef.current) clearTimeout(gameOverTimeoutRef.current);
         gameOverTimeoutRef.current = setTimeout(() => {
@@ -126,18 +145,33 @@ export function GameShell() {
         }, GAME_OVER_DELAY_MS);
         break;
       case "opponent_disconnected":
+        if (reconnectingToastIdRef.current) {
+          dismissToast(reconnectingToastIdRef.current);
+          reconnectingToastIdRef.current = null;
+        }
         clearGameSession();
         setOpponentDisconnected(true);
         setGameResult(null);
-        setOpponentReconnecting(null);
         setScreen("gameover");
         break;
       case "opponent_reconnecting":
-        setOpponentReconnecting(msg.reconnectionDeadlineUnixMs);
+        reconnectingToastIdRef.current = addToast(
+          "Opponent lost connection. Waiting for them to rejoin…",
+          {
+            variant: "info",
+            durationMs: 120_000,
+            reconnectionDeadlineUnixMs: msg.reconnectionDeadlineUnixMs,
+          },
+        );
         break;
-      case "opponent_reconnected":
-        setOpponentReconnecting(null);
+      case "opponent_reconnected": {
+        if (reconnectingToastIdRef.current) {
+          dismissToast(reconnectingToastIdRef.current);
+          reconnectingToastIdRef.current = null;
+        }
+        addToast("Opponent reconnected!", { variant: "success" });
         break;
+      }
       case "powerup_used": {
         const text = msg.noEffect
           ? `${msg.playerName} used ${msg.powerUpLabel} but it had no effect`
@@ -173,7 +207,7 @@ export function GameShell() {
         void _exhaustiveCheck;
       }
     }
-  }, [addToast, gameState]);
+  }, [addToast, dismissToast, gameState]);
 
   // Remount Board when we receive the first game_state (new game or rejoin) so it can show already matched/removed tiles as empty.
   useEffect(() => {
@@ -358,7 +392,6 @@ export function GameShell() {
     setMatchInfo(null);
     setGameState(null);
     setOpponentDisconnected(false);
-    setOpponentReconnecting(null);
     clearGameSession();
     setScreen("lobby");
   }, []);
@@ -379,7 +412,6 @@ export function GameShell() {
     setMatchInfo(null);
     setGameState(null);
     setOpponentDisconnected(false);
-    setOpponentReconnecting(null);
     setScreen("lobby");
   }, [send]);
 
@@ -453,7 +485,6 @@ export function GameShell() {
           matchInfo={matchInfo}
           gameState={gameState}
           boardKey={boardKey}
-          opponentReconnectingDeadlineMs={opponentReconnecting}
           powerUpMessage={powerUpMessage}
           onFlipCard={handleFlipCard}
           onUsePowerUp={handleUsePowerUp}
