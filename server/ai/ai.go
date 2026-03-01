@@ -49,14 +49,35 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			}
 
 			// When Chaos was used the board was shuffled; KnownIndices is cleared by the game. Our index->pairID memory
-			// would be stale (positions now hold different cards), so clear it and repopulate only from current state.
-			if len(state.KnownIndices) == 0 {
+			// would be stale (positions now hold different cards), so clear it in clearElementMemoryNext below.
+			// Only clear at true game start: all cards hidden and no reveal has ever happened (KnownIndices empty).
+			// Do not clear when merely allHidden: after a mismatch all cards are hidden again, so that would wipe
+			// memory every turn and prevent known_pair from ever being used.
+			allHidden := true
+			for _, c := range state.Cards {
+				if c.State != "hidden" {
+					allHidden = false
+					break
+				}
+			}
+			if allHidden && len(state.KnownIndices) == 0 {
 				memory = make(map[int]int)
 			}
-			// Update memory from current view: any revealed or matched card exposes its pairID
-			for _, c := range state.Cards {
+			// Update memory from current view: any revealed or matched card exposes its pairID.
+			// Never overwrite an index with a different pairID than we've already seen (avoids stale/wrong
+			// state from overwriting correct memory, e.g. index 0 already known as pairID 4).
+			// Only allow memory[0] to be set from state.Cards[0] (slice position 0); if any other
+			// card reports Index==0 (e.g. zero value / serialization bug), ignore it so we don't
+			// wrongly associate pairID with tile 0.
+			for i, c := range state.Cards {
 				if (c.State == "revealed" || c.State == "matched") && c.PairID != nil {
-					memory[c.Index] = *c.PairID
+					if c.Index == 0 && i != 0 {
+						continue
+					}
+					pairID := *c.PairID
+					if existing, ok := memory[c.Index]; !ok || existing == pairID {
+						memory[c.Index] = pairID
+					}
 				}
 			}
 
@@ -88,8 +109,9 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				continue
 			}
 
-			// After Chaos the board is shuffled; element memory by index is no longer valid.
+			// After Chaos the board is shuffled; index->pairID and element memory are no longer valid.
 			if clearElementMemoryNext {
+				memory = make(map[int]int)
 				elementMemory = make(map[int]string)
 				clearElementMemoryNext = false
 			}

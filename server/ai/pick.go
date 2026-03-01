@@ -65,7 +65,7 @@ func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighligh
 		return first, -1, flipReasonUnseen
 	}
 	first = hidden[rand.Intn(len(hidden))]
-	return first, -1, flipReasonUnseen
+	return first, -1, flipReasonRandom
 }
 
 // pickSecondCard chooses the second card to flip. Returns (index, reason).
@@ -73,11 +73,14 @@ func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighligh
 // elementMemory and hiddenByElement: tiles we know the element of; if first card is one of them, prefer second from same element.
 // knownIndicesSet: indices ever revealed by any player; used so "unseen" excludes opponent's reveals.
 func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int, knownIndicesSet map[int]struct{}) (int, string) {
-	// Always complete a known pair when we can (first card's pairID known and the other tile still hidden)
+	// Always complete a known pair when we can (first card's pairID known and the other tile still hidden).
+	// Only consider indices we've actually seen revealed (present in memory); otherwise when pairID is 0,
+	// memory[idx] is 0 for any unseen idx (Go zero value) and we'd wrongly treat e.g. index 0 as known_pair.
 	pairID, known := memory[firstIdx]
 	if known {
 		for _, idx := range hidden {
-			if idx != firstIdx && memory[idx] == pairID {
+			stored, learned := memory[idx]
+			if learned && stored == pairID {
 				return idx, flipReasonKnownPair
 			}
 		}
@@ -119,5 +122,5 @@ func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove 
 	if len(unseen) > 0 {
 		return unseen[rand.Intn(len(unseen))], flipReasonUnseen
 	}
-	return candidates[rand.Intn(len(candidates))], flipReasonUnseen
+	return candidates[rand.Intn(len(candidates))], flipReasonRandom
 }
