@@ -350,14 +350,14 @@ function ArcanaCard({
       <div className={styles.arcanaCardStats}>
         <span className={styles.arcanaStat}>
           <span className={styles.arcanaStatLabel}>Win rate</span>{" "}
-          {card.total_matches > 0 ? card.win_rate_pct.toFixed(1) : "—"}%
+          {card.use_count > 0 ? `${card.win_rate_pct.toFixed(1)}%` : "—"}
         </span>
         <span
           className={styles.arcanaStat}
           title="Net change (player − opponent) from card use until end of turn"
         >
           <span className={styles.arcanaStatLabel}>Point swing</span>{" "}
-          {(card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1)}
+          {card.use_count > 0 ? (card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1) : "—"}
         </span>
         <span className={styles.arcanaStat}>
           <span className={styles.arcanaStatLabel}>Uses</span> {card.use_count}
@@ -403,16 +403,16 @@ function ArcanaDetailModal({
           </p>
           <div className={styles.modalMetricsGrid}>
             <span className={styles.modalMetric}>
-              Win rate: {card.total_matches > 0 ? card.win_rate_pct.toFixed(1) : "—"}%
+              Win rate: {card.use_count > 0 ? `${card.win_rate_pct.toFixed(1)}%` : "—"}
             </span>
             <span className={styles.modalMetric}>
-              Net point swing: {(card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1)}
+              Net point swing: {card.use_count > 0 ? (card.avg_point_swing_player - card.avg_point_swing_opponent).toFixed(1) : "—"}
             </span>
             <span className={styles.modalMetric}>
-              Point swing (player): {card.avg_point_swing_player.toFixed(1)}
+              Point swing (player): {card.use_count > 0 ? card.avg_point_swing_player.toFixed(1) : "—"}
             </span>
             <span className={styles.modalMetric}>
-              Point swing (opponent): {card.avg_point_swing_opponent.toFixed(1)}
+              Point swing (opponent): {card.use_count > 0 ? card.avg_point_swing_opponent.toFixed(1) : "—"}
             </span>
             <span className={styles.modalMetric}>Uses: {card.use_count}</span>
           </div>
@@ -501,14 +501,14 @@ function ComboCard({
       <div className={styles.arcanaCardStats}>
         <span className={styles.arcanaStat}>
           <span className={styles.arcanaStatLabel}>Win rate</span>{" "}
-          {combo.total_matches > 0 ? combo.win_rate_pct.toFixed(1) : "—"}%
+          {combo.total_matches > 0 ? `${combo.win_rate_pct.toFixed(1)}%` : "—"}
         </span>
         <span
           className={styles.arcanaStat}
           title="Net change (player − opponent) for the turn when this combo was used"
         >
           <span className={styles.arcanaStatLabel}>Point swing</span>{" "}
-          {netSwing.toFixed(1)}
+          {combo.total_matches > 0 ? netSwing.toFixed(1) : "—"}
         </span>
         <span className={styles.arcanaStat}>
           <span className={styles.arcanaStatLabel}>Uses</span> {combo.total_matches}
@@ -561,16 +561,16 @@ function ComboDetailModal({
           </p>
           <div className={styles.modalMetricsGrid}>
             <span className={styles.modalMetric}>
-              Win rate: {combo.total_matches > 0 ? combo.win_rate_pct.toFixed(1) : "—"}%
+              Win rate: {combo.total_matches > 0 ? `${combo.win_rate_pct.toFixed(1)}%` : "—"}
             </span>
             <span className={styles.modalMetric}>
-              Net point swing: {netSwing.toFixed(1)}
+              Net point swing: {combo.total_matches > 0 ? netSwing.toFixed(1) : "—"}
             </span>
             <span className={styles.modalMetric}>
-              Point swing (player): {combo.avg_point_swing_player.toFixed(1)}
+              Point swing (player): {combo.total_matches > 0 ? combo.avg_point_swing_player.toFixed(1) : "—"}
             </span>
             <span className={styles.modalMetric}>
-              Point swing (opponent): {combo.avg_point_swing_opponent.toFixed(1)}
+              Point swing (opponent): {combo.total_matches > 0 ? combo.avg_point_swing_opponent.toFixed(1) : "—"}
             </span>
             <span className={styles.modalMetric}>Uses: {combo.total_matches}</span>
           </div>
