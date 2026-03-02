@@ -79,7 +79,7 @@
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .radarCenter:not(:disabled):hover .cardBack {
     box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
   }
@@ -88,6 +88,22 @@
 /* Radar targeting: affected cards (3x3 region) */
 .radarAffected .cardBack {
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+}
+
+@media (max-width: 600px) {
+  .radarCenter .cardBack {
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.6);
+  }
+
+  .radarAffected .cardBack {
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+  }
+}
+
+@media (max-width: 600px) and (hover: hover) and (pointer: fine) {
+  .radarCenter:not(:disabled):hover .cardBack {
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.7);
+  }
 }
 
 /* Match highlight: animated shine outline when card is matched (before removal) */
@@ -115,6 +131,13 @@
   pointer-events: none;
 }
 
+@media (max-width: 600px) {
+  .cardInner.cardMatchHighlight::before {
+    inset: -1px;
+    border-radius: calc(0.55rem + 1px);
+  }
+}
+
 @keyframes matchShine {
   0% {
     background-position: 0% 100%;
@@ -131,7 +154,7 @@
 
 /* Highlight is applied via inline style in Card.tsx so it clears completely when turn ends */
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .cardWrapper:not(:disabled):hover .cardInner {
     transform: rotateY(0deg) translateY(-5px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
