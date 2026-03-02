@@ -86,8 +86,40 @@
 }
 
 @media (max-height: 600px), (max-width: 400px) {
+  .hand {
+    height: 8rem;
+    min-height: 8rem;
+  }
+
+  .item {
+    width: 6.875rem;
+    height: 6.875rem;
+    min-height: 0;
+    aspect-ratio: 1;
+    max-width: 110px;
+    min-width: 85px;
+  }
+
+  .item .cardArt {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: unset;
+    object-fit: cover;
+  }
+
+  .item .title {
+    display: none;
+  }
+
   .item .description {
     display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .item .description {
+    font-size: 0.75rem;
+    line-height: 1.3;
   }
 }
 

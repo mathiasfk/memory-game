@@ -200,7 +200,18 @@
   }
 
   .main {
-    padding: 0.6rem 0.5rem;
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .leftColumn {
+    min-width: 0;
+  }
+
+  .boardWrapper {
+    width: 100%;
+    max-width: min(100cqw, 100cqh);
+    aspect-ratio: 1;
   }
 
   .playerBlock {
