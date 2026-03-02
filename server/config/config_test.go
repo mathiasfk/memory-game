@@ -48,8 +48,8 @@ func TestDefaults(t *testing.T) {
 	if cfg.AIProfiles[0].Name != "Mnemosyne" {
 		t.Errorf("expected first AI name Mnemosyne, got %q", cfg.AIProfiles[0].Name)
 	}
-	if cfg.AIProfiles[0].DelayMinMS != 1000 || cfg.AIProfiles[0].DelayMaxMS != 2000 || cfg.AIProfiles[0].UseBestMoveChance != 90 || cfg.AIProfiles[0].ForgetChance != 1 || cfg.AIProfiles[0].ArcanaRandomness != 10 {
-		t.Errorf("expected Mnemosyne 1000/2000/90 ForgetChance=1 ArcanaRandomness=10, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[0].DelayMinMS, cfg.AIProfiles[0].DelayMaxMS, cfg.AIProfiles[0].UseBestMoveChance, cfg.AIProfiles[0].ForgetChance, cfg.AIProfiles[0].ArcanaRandomness)
+	if cfg.AIProfiles[0].DelayMinMS != 1000 || cfg.AIProfiles[0].DelayMaxMS != 2000 || cfg.AIProfiles[0].UseBestMoveChance != 90 || cfg.AIProfiles[0].ForgetChance != 0 || cfg.AIProfiles[0].ArcanaRandomness != 10 {
+		t.Errorf("expected Mnemosyne 1000/2000/90 ForgetChance=0 ArcanaRandomness=10, got %d/%d/%d ForgetChance=%d ArcanaRandomness=%d", cfg.AIProfiles[0].DelayMinMS, cfg.AIProfiles[0].DelayMaxMS, cfg.AIProfiles[0].UseBestMoveChance, cfg.AIProfiles[0].ForgetChance, cfg.AIProfiles[0].ArcanaRandomness)
 	}
 	if cfg.AIProfiles[1].Name != "Calliope" {
 		t.Errorf("expected second AI name Calliope, got %q", cfg.AIProfiles[1].Name)
@@ -98,18 +98,12 @@ func TestLoadWithEnvOverrides(t *testing.T) {
 	}
 }
 
-func TestLoadWithAIEnvOverrides(t *testing.T) {
+func TestLoadWithAIProfilesFilter(t *testing.T) {
 	os.Setenv("AI_PAIR_TIMEOUT_SEC", "30")
-	os.Setenv("AI_NAME", "TestBot")
-	os.Setenv("AI_DELAY_MIN_MS", "500")
-	os.Setenv("AI_DELAY_MAX_MS", "3000")
-	os.Setenv("AI_USE_BEST_MOVE_CHANCE", "90")
+	os.Setenv("AI_PROFILES", "Calliope,Thalia")
 	defer func() {
 		os.Unsetenv("AI_PAIR_TIMEOUT_SEC")
-		os.Unsetenv("AI_NAME")
-		os.Unsetenv("AI_DELAY_MIN_MS")
-		os.Unsetenv("AI_DELAY_MAX_MS")
-		os.Unsetenv("AI_USE_BEST_MOVE_CHANCE")
+		os.Unsetenv("AI_PROFILES")
 	}()
 
 	cfg := Load()
@@ -117,20 +111,14 @@ func TestLoadWithAIEnvOverrides(t *testing.T) {
 	if cfg.AIPairTimeoutSec != 30 {
 		t.Errorf("expected AIPairTimeoutSec=30, got %d", cfg.AIPairTimeoutSec)
 	}
-	if len(cfg.AIProfiles) == 0 {
-		t.Fatal("expected at least one AI profile")
+	if len(cfg.AIProfiles) != 2 {
+		t.Fatalf("expected 2 AI profiles (Calliope, Thalia), got %d", len(cfg.AIProfiles))
 	}
-	if cfg.AIProfiles[0].Name != "TestBot" {
-		t.Errorf("expected first AI name TestBot, got %q", cfg.AIProfiles[0].Name)
+	if cfg.AIProfiles[0].Name != "Calliope" {
+		t.Errorf("expected first AI name Calliope, got %q", cfg.AIProfiles[0].Name)
 	}
-	if cfg.AIProfiles[0].DelayMinMS != 500 {
-		t.Errorf("expected first AI DelayMinMS=500, got %d", cfg.AIProfiles[0].DelayMinMS)
-	}
-	if cfg.AIProfiles[0].DelayMaxMS != 3000 {
-		t.Errorf("expected first AI DelayMaxMS=3000, got %d", cfg.AIProfiles[0].DelayMaxMS)
-	}
-	if cfg.AIProfiles[0].UseBestMoveChance != 90 {
-		t.Errorf("expected first AI UseBestMoveChance=90, got %d", cfg.AIProfiles[0].UseBestMoveChance)
+	if cfg.AIProfiles[1].Name != "Thalia" {
+		t.Errorf("expected second AI name Thalia, got %q", cfg.AIProfiles[1].Name)
 	}
 }
 

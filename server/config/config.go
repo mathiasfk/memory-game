@@ -94,8 +94,8 @@ func Defaults() *Config {
 		},
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 0, ArcanaRandomness: 10},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 87, ForgetChance: 10, ArcanaRandomness: 20},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 85, ForgetChance: 25, ArcanaRandomness: 25},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 87, ForgetChance: 10, ArcanaRandomness: 15},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 85, ForgetChance: 25, ArcanaRandomness: 20},
 		},
 		TelemetryHistogram: TelemetryHistogramConfig{
 			TurnMax:      100,
@@ -157,13 +157,8 @@ func Load() *Config {
 	overrideInt(&cfg.ReconnectTimeoutSec, "RECONNECT_TIMEOUT_SEC")
 	overrideString(&cfg.NeonAuthBaseURL, "NEON_AUTH_BASE_URL")
 	overrideString(&cfg.DatabaseURL, "DATABASE_URL")
-	if len(cfg.AIProfiles) > 0 {
-		overrideString(&cfg.AIProfiles[0].Name, "AI_NAME")
-		overrideInt(&cfg.AIProfiles[0].DelayMinMS, "AI_DELAY_MIN_MS")
-		overrideInt(&cfg.AIProfiles[0].DelayMaxMS, "AI_DELAY_MAX_MS")
-		overrideInt(&cfg.AIProfiles[0].UseBestMoveChance, "AI_USE_BEST_MOVE_CHANCE")
-		overrideInt(&cfg.AIProfiles[0].ForgetChance, "AI_FORGET_CHANCE")
-		overrideInt(&cfg.AIProfiles[0].ArcanaRandomness, "AI_ARCANA_RANDOMNESS")
+	if names := os.Getenv("AI_PROFILES"); names != "" {
+		cfg.AIProfiles = filterAIProfilesByName(cfg.AIProfiles, names)
 	}
 	overrideInt(&cfg.TelemetryHistogram.TurnMax, "TELEMETRY_TURN_MAX")
 	overrideInt(&cfg.TelemetryHistogram.TurnNumBins, "TELEMETRY_TURN_NUM_BINS")
@@ -172,6 +167,32 @@ func Load() *Config {
 	overrideString(&cfg.LogLevel, "LOG_LEVEL")
 
 	return cfg
+}
+
+// filterAIProfilesByName returns only profiles whose Name (case-insensitive) is in the
+// comma-separated list. If the result would be empty, returns the original slice and logs a warning.
+func filterAIProfilesByName(profiles []AIParams, namesList string) []AIParams {
+	want := make(map[string]bool)
+	for _, s := range strings.Split(namesList, ",") {
+		name := strings.TrimSpace(s)
+		if name != "" {
+			want[strings.ToLower(name)] = true
+		}
+	}
+	if len(want) == 0 {
+		return profiles
+	}
+	var out []AIParams
+	for _, p := range profiles {
+		if want[strings.ToLower(p.Name)] {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		slog.Warn("AI_PROFILES matched no configured profiles; ignoring and keeping all", "tag", "config", "value", namesList)
+		return profiles
+	}
+	return out
 }
 
 func overrideInt(field *int, envKey string) {
