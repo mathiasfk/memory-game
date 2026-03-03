@@ -10,10 +10,10 @@
 .error {
   margin: 0 0 1rem;
   padding: 0.75rem 1rem;
-  background: rgba(220, 38, 38, 0.2);
-  border: 1px solid rgba(220, 38, 38, 0.7);
+  background: var(--color-error-muted);
+  border: 1px solid var(--color-error);
   border-radius: 0.5rem;
-  color: #fecaca;
+  color: var(--color-error);
 }
 
 /* Abandon confirmation modal */
@@ -28,7 +28,7 @@
 }
 
 .modalPanel {
-  background: var(--card-bg, #1e293b);
+  background: var(--card-bg);
   border-radius: 0.75rem;
   padding: 1.5rem;
   max-width: 22rem;
@@ -44,7 +44,7 @@
 
 .modalDescription {
   margin: 0 0 1.25rem;
-  color: var(--muted, #94a3b8);
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.5;
 }
@@ -64,8 +64,8 @@
 
 .modalCancel {
   background: transparent;
-  border: 1px solid var(--border, #334155);
-  color: var(--text, #e2e8f0);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 .modalCancel:hover {
@@ -73,11 +73,11 @@
 }
 
 .modalConfirm {
-  background: rgba(220, 38, 38, 0.9);
+  background: var(--color-error);
   border: none;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .modalConfirm:hover {
-  background: rgba(220, 38, 38, 1);
+  filter: brightness(1.1);
 }

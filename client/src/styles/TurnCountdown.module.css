@@ -12,7 +12,7 @@
 .countdown {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--color-countdown, #f0d000);
+  color: var(--color-countdown);
   animation: tick 1s ease;
 }
 

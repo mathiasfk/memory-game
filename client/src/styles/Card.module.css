@@ -39,9 +39,9 @@
 }
 
 .cardBack {
-  background: #1f2937;
+  background: var(--color-surface-elevated);
   border: none;
-  color: #f8fafc;
+  color: var(--color-text);
   transform: rotateY(0deg);
   overflow: hidden;
 }
@@ -54,9 +54,9 @@
 }
 
 .cardFront {
-  background: #0b1220;
+  background: var(--color-bg);
   border: none;
-  color: #f8fafc;
+  color: var(--color-text);
   transform: rotateY(180deg);
   overflow: hidden;
 }
@@ -76,33 +76,33 @@
 
 /* Radar targeting: center card (the one that will be clicked) */
 .radarCenter .cardBack {
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 0 2px var(--color-radar-center);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .radarCenter:not(:disabled):hover .cardBack {
-    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 0 2px var(--color-warning);
   }
 }
 
 /* Radar targeting: affected cards (3x3 region) */
 .radarAffected .cardBack {
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 0 1px var(--color-radar-affected);
 }
 
 @media (max-width: 600px) {
   .radarCenter .cardBack {
-    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 0 1px var(--color-radar-center);
   }
 
   .radarAffected .cardBack {
-    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+    box-shadow: 0 0 0 1px var(--color-radar-affected);
   }
 }
 
 @media (max-width: 600px) and (hover: hover) and (pointer: fine) {
   .radarCenter:not(:disabled):hover .cardBack {
-    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 0 1px var(--color-warning);
   }
 }
 

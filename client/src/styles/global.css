@@ -11,8 +11,62 @@
   --text-2xl: 1.5rem;
   --text-3xl: 2rem;
 
+  /* Palette (base) */
+  --almond-cream: #f1dac4;
+  --lilac-ash: #a69cac;
+  --dusty-grape: #474973;
+  --prussian-blue: #161b33;
+  --ink-black: #0d0c1d;
+
+  /* Semantic: backgrounds */
+  --color-bg: var(--ink-black);
+  --color-bg-gradient-mid: var(--prussian-blue);
+  --color-surface: var(--prussian-blue);
+  --color-surface-elevated: var(--dusty-grape);
+  --color-surface-overlay: rgba(13, 12, 29, 0.65);
+  --color-surface-overlay-solid: rgba(22, 27, 51, 0.8);
+
+  /* Semantic: text & border */
+  --color-text: var(--almond-cream);
+  --color-text-muted: var(--lilac-ash);
+  --color-border: var(--lilac-ash);
+
+  /* Aliases for existing var() usage */
+  --card-bg: var(--color-surface);
+  --color-fg: var(--color-text);
+  --muted: var(--color-text-muted);
+  --text: var(--color-text);
+  --border: var(--color-border);
+
+  /* Semantic: primary (CTA) */
+  --color-primary: var(--dusty-grape);
+  --color-primary-hover: var(--lilac-ash);
+  --color-primary-fg: var(--almond-cream);
+  /* Primary accent: Almond Cream for main CTA (e.g. Find game) */
+  --color-primary-accent: var(--almond-cream);
+  --color-primary-accent-fg: var(--ink-black);
+  --color-primary-accent-hover: #e8d0b8;
+
+  /* Semantic: secondary */
+  --color-secondary: var(--dusty-grape);
+  --color-secondary-hover: var(--lilac-ash);
+  --color-secondary-fg: var(--almond-cream);
+
+  /* Semantic: feedback (harmonized with palette) */
+  --color-success: #6b9b7a;
+  --color-success-muted: rgba(107, 155, 122, 0.25);
+  --color-error: #c17b7b;
+  --color-error-muted: rgba(193, 123, 123, 0.25);
+  --color-warning: #c9b896;
+  --color-warning-fg: #2d2a22;
+  --color-warning-bg: rgba(201, 184, 150, 0.95);
+  /* Radar/targeting accents */
+  --color-radar-center: rgba(201, 184, 150, 0.6);
+  --color-radar-affected: rgba(166, 156, 172, 0.45);
+  --color-countdown: var(--color-warning);
+
   font-family: var(--font-body);
-  background-color: #0f172a;
+  background-color: var(--color-bg);
   line-height: 1.4;
 }
 
@@ -22,15 +76,15 @@
  */
 .appTheme {
   min-height: 100vh;
-  color: #e7eaf2;
-  --neon-foreground: #e7eaf2;
-  --neon-muted-foreground: #cbd5e1;
-  --neon-card-foreground: #e7eaf2;
-  --neon-popover-foreground: #e7eaf2;
-  --neon-primary-foreground: #e7eaf2;
-  --neon-secondary-foreground: #e2e8f0;
-  --neon-accent-foreground: #e7eaf2;
-  --neon-destructive-foreground: #fecaca;
+  color: var(--color-text);
+  --neon-foreground: var(--color-text);
+  --neon-muted-foreground: var(--color-text-muted);
+  --neon-card-foreground: var(--color-text);
+  --neon-popover-foreground: var(--color-text);
+  --neon-primary-foreground: var(--color-primary-fg);
+  --neon-secondary-foreground: var(--color-text);
+  --neon-accent-foreground: var(--color-text);
+  --neon-destructive-foreground: var(--color-error);
 }
 
 * {
@@ -40,7 +94,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top, #1e293b, #0f172a 65%);
+  background: radial-gradient(circle at top, var(--color-bg-gradient-mid), var(--color-bg) 65%);
 }
 
 #root {

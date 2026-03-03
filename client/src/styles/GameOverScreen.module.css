@@ -4,8 +4,8 @@
   padding: 2rem;
   border-radius: 0.75rem;
   text-align: center;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: var(--color-surface-overlay);
+  border: 1px solid rgba(166, 156, 172, 0.25);
 }
 
 .title {
@@ -14,13 +14,13 @@
   font-size: var(--text-2xl);
   font-weight: 400;
   letter-spacing: -0.02em;
-  color: #f8fafc;
+  color: var(--color-text);
 }
 
 .scores {
   margin: 1rem 0 1.5rem;
   font-size: var(--text-base);
-  color: #cbd5e1;
+  color: var(--color-text-muted);
 }
 
 .scores p {
@@ -39,19 +39,19 @@
   border: 0;
   font-size: var(--text-base);
   font-weight: 600;
-  background: #22c55e;
-  color: #052e16;
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
 @media (hover: hover) {
   .primaryButton:hover:not(:disabled) {
-    background: #16a34a;
+    background: var(--color-primary-hover);
   }
 
   .secondaryButton:hover {
-    background: #64748b;
+    background: var(--color-secondary-hover);
   }
 }
 
@@ -66,8 +66,8 @@
   border: 0;
   font-size: var(--text-base);
   font-weight: 600;
-  background: #475569;
-  color: #e2e8f0;
+  background: var(--color-secondary);
+  color: var(--color-secondary-fg);
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -75,5 +75,5 @@
 .connection {
   margin-top: 1rem;
   font-size: var(--text-sm);
-  color: #fbbf24;
+  color: var(--color-warning);
 }

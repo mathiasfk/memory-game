@@ -3,8 +3,8 @@
   margin: 4rem auto 0;
   padding: 2rem;
   border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: var(--color-surface-overlay);
+  border: 1px solid rgba(166, 156, 172, 0.25);
 }
 
 .title {
@@ -13,7 +13,7 @@
   font-size: var(--text-2xl);
   font-weight: 400;
   letter-spacing: -0.02em;
-  color: #f8fafc;
+  color: var(--color-text);
 }
 
 .backLink {
@@ -21,13 +21,13 @@
   margin-top: 0.5rem;
   margin-bottom: 1.5rem;
   font-size: var(--text-sm);
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-decoration: none;
 }
 
 @media (hover: hover) {
   .backLink:hover {
-    color: #cbd5e1;
+    color: var(--color-text);
   }
 }
 
@@ -36,11 +36,11 @@
 .error {
   margin: 1rem 0 0;
   font-size: var(--text-sm);
-  color: #cbd5e1;
+  color: var(--color-text-muted);
 }
 
 .error {
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .list {
@@ -55,8 +55,8 @@
 .item {
   padding: 1rem;
   border-radius: 0.5rem;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--color-surface-overlay-solid);
+  border: 1px solid rgba(166, 156, 172, 0.2);
 }
 
 .playersRow {
@@ -83,33 +83,33 @@
 
 .playerElo {
   font-size: var(--text-xs);
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .playerName {
   font-size: var(--text-sm);
-  color: #e2e8f0;
+  color: var(--color-text);
 }
 
 .playerScore {
   font-size: var(--text-2xl);
   font-weight: 700;
   line-height: 1;
-  color: #e2e8f0;
+  color: var(--color-text);
 }
 
 .vs {
   flex-shrink: 0;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-transform: lowercase;
 }
 
 .date {
   margin: 0 0 0.25rem;
   font-size: var(--text-sm);
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-align: center;
 }
 
@@ -117,30 +117,30 @@
   margin: 0.25rem 0 0;
   font-size: var(--text-sm);
   font-weight: 400;
-  color: #cbd5e1;
+  color: var(--color-text-muted);
   text-align: center;
 }
 
 .resultRatingUp {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .resultRatingDown {
-  color: #f87171;
+  color: var(--color-error);
 }
 
 .winner {
-  color: #22c55e;
+  color: var(--color-success);
   font-weight: 600;
 }
 
 .loser {
-  color: #f87171;
+  color: var(--color-error);
   font-weight: 500;
 }
 
 .abandoned {
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 
@@ -152,9 +152,9 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #94a3b8;
-  background: rgba(148, 163, 184, 0.18);
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  color: var(--color-text-muted);
+  background: rgba(166, 156, 172, 0.18);
+  border: 1px solid rgba(166, 156, 172, 0.28);
   border-radius: 0.2rem;
   vertical-align: middle;
 }
@@ -169,6 +169,6 @@
 .loadingMore {
   margin: 1rem 0 0;
   font-size: var(--text-sm);
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-align: center;
 }
