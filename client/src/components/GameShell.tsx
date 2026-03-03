@@ -425,7 +425,7 @@ export function GameShell() {
   }, [navigate]);
 
   return (
-    <main className={styles.app}>
+    <main className={styles.app} data-screen={screen}>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {showAbandonConfirm && (

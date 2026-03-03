@@ -7,6 +7,24 @@
   overflow-x: hidden;
 }
 
+/* Vertically center waiting and game-over screens */
+.app[data-screen="waiting"],
+.app[data-screen="gameover"] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+/* Lobby: menu at a fixed max distance from top; at least 1rem from sides on mobile */
+.app[data-screen="lobby"] {
+  padding: clamp(6rem, 14vw, 14rem) 1rem 0 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 100dvh;
+}
+
 .error {
   margin: 0 0 1rem;
   padding: 0.75rem 1rem;

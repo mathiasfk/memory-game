@@ -1,10 +1,13 @@
 .screen {
+  width: 100%;
   max-width: 460px;
-  margin: 4rem auto 0;
+  min-width: 280px;
+  margin: 0 auto;
   padding: 2rem;
   border-radius: 0.75rem;
   background: var(--color-surface-overlay);
   border: 1px solid rgba(166, 156, 172, 0.25);
+  box-sizing: border-box;
 }
 
 .title {

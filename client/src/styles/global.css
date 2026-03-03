@@ -97,7 +97,7 @@
  */
 .appTheme {
   min-height: 100vh;
-  padding-top: 4rem;
+  padding: 0;
   color: var(--color-text);
   background: radial-gradient(circle at top, var(--color-bg-gradient-mid), var(--color-bg) 65%);
   --neon-foreground: var(--color-text);
@@ -108,6 +108,11 @@
   --neon-secondary-foreground: var(--color-text);
   --neon-accent-foreground: var(--color-text);
   --neon-destructive-foreground: var(--color-error);
+}
+
+/* Game screen: no padding to maximize board area */
+.appTheme:has([data-screen="game"]) {
+  padding: 0;
 }
 
 * {
