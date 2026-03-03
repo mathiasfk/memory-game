@@ -1,5 +1,17 @@
 :root {
-  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Typography: Cinzel for headings/menus, Inter for body/HUD/descriptions */
+  --font-heading: "Cinzel", serif;
+  --font-body: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Font size scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+
+  font-family: var(--font-body);
   background-color: #0f172a;
   line-height: 1.4;
 }

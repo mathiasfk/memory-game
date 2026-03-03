@@ -37,14 +37,15 @@
 
 .modalTitle {
   margin: 0 0 0.75rem;
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 400;
 }
 
 .modalDescription {
   margin: 0 0 1.25rem;
   color: var(--muted, #94a3b8);
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
 

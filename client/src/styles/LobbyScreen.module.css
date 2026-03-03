@@ -9,22 +9,23 @@
 
 .title {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 400;
   letter-spacing: -0.02em;
   color: #f8fafc;
 }
 
 .welcome {
   margin: 0.5rem 0 0;
-  font-size: 1rem;
+  font-size: var(--text-base);
   color: #94a3b8;
   font-weight: 500;
 }
 
 .subtitle {
   margin: 1rem 0 1.5rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
   line-height: 1.5;
 }
@@ -39,7 +40,7 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 600;
   background: #22c55e;
   color: #052e16;
@@ -56,7 +57,7 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 600;
   background: #334155;
   color: #e2e8f0;
@@ -82,7 +83,7 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 600;
   background: #475569;
   color: #e2e8f0;
@@ -92,6 +93,6 @@
 
 .connection {
   margin-top: 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: #fbbf24;
 }

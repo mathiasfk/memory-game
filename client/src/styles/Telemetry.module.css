@@ -9,8 +9,9 @@
 
 .title {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 400;
   letter-spacing: -0.02em;
   color: #f8fafc;
 }
@@ -19,7 +20,7 @@
   display: inline-block;
   margin-top: 0.5rem;
   margin-bottom: 1.5rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
   text-decoration: none;
 }
@@ -32,13 +33,13 @@
 }
 
 .filterLabel {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
 }
 
 .matchTypeSelect {
   padding: 0.5rem 2rem 0.5rem 0.75rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #f8fafc;
   background: rgba(30, 41, 59, 0.8);
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -61,7 +62,7 @@
 .status,
 .error {
   margin: 1rem 0 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
 }
 
@@ -75,8 +76,9 @@
 
 .sectionTitle {
   margin: 0 0 1rem;
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 400;
   color: #e2e8f0;
 }
 
@@ -97,14 +99,14 @@
 }
 
 .globalLabel {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
 .globalValue {
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   color: #f8fafc;
 }
@@ -152,7 +154,7 @@
 }
 
 .arcanaCardName {
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   color: #94a3b8;
   line-height: 1.2;
@@ -163,7 +165,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 0.75rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #e2e8f0;
   font-weight: 600;
 }
@@ -171,11 +173,11 @@
 .arcanaStatLabel {
   font-weight: 500;
   color: #94a3b8;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
 }
 
 .comboHelp {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
   margin: 0 0 0.75rem 0;
 }
@@ -190,7 +192,7 @@
 }
 
 .comboEmpty {
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
 }
 
@@ -199,7 +201,7 @@
   border-radius: 0.5rem;
   background: rgba(30, 41, 59, 0.6);
   border: 1px solid rgba(148, 163, 184, 0.2);
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
 }
 
@@ -233,7 +235,7 @@
 }
 
 .comboStats {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: #e2e8f0;
 }
@@ -271,8 +273,9 @@
 
 .modalTitle {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 400;
   color: #f8fafc;
 }
 
@@ -310,7 +313,7 @@
 
 .modalDescription {
   margin: 0 0 1.25rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
   line-height: 1.5;
 }
@@ -322,14 +325,14 @@
 
 .modalSubtitle {
   margin: 0 0 0.5rem;
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 600;
   color: #e2e8f0;
 }
 
 .modalHelper {
   margin: 0 0 0.75rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
   line-height: 1.4;
 }
@@ -338,7 +341,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
 }
 
@@ -351,13 +354,13 @@
 .modalText,
 .modalEmpty {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
 }
 
 .modalMetricLabel {
   margin: 0.75rem 0 0.25rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: #e2e8f0;
 }
@@ -384,7 +387,7 @@
   padding: 0.375rem 0.75rem;
   border-radius: 0.375rem;
   background: rgba(30, 41, 59, 0.8);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
 }
 

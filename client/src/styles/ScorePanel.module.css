@@ -12,10 +12,12 @@
 
 .playerCard h3 {
   margin: 0 0 0.25rem;
+  font-size: var(--text-sm);
 }
 
 .playerCard p {
   margin: 0.15rem 0;
+  font-size: var(--text-sm);
 }
 
 .name {

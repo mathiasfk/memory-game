@@ -9,8 +9,9 @@
 
 .title {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 400;
   letter-spacing: -0.02em;
   color: #f8fafc;
 }
@@ -19,7 +20,7 @@
   display: inline-block;
   margin-top: 0.5rem;
   margin-bottom: 1.5rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
   text-decoration: none;
 }
@@ -34,7 +35,7 @@
 .empty,
 .error {
   margin: 1rem 0 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #cbd5e1;
 }
 
@@ -81,17 +82,17 @@
 }
 
 .playerElo {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: #94a3b8;
 }
 
 .playerName {
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   color: #e2e8f0;
 }
 
 .playerScore {
-  font-size: 2rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   line-height: 1;
   color: #e2e8f0;
@@ -99,7 +100,7 @@
 
 .vs {
   flex-shrink: 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: #94a3b8;
   text-transform: lowercase;
@@ -107,14 +108,14 @@
 
 .date {
   margin: 0 0 0.25rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
   text-align: center;
 }
 
 .result {
   margin: 0.25rem 0 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 400;
   color: #cbd5e1;
   text-align: center;

@@ -2,7 +2,7 @@
   padding: 0.4rem 0.7rem;
   border-radius: 999px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   border: 1px solid transparent;
 }
 

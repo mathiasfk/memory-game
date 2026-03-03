@@ -22,7 +22,7 @@
 .cancelBtn {
   margin-top: 2rem;
   padding: 0.4rem 0.75rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: #e2e8f0;
   background: transparent;
   border: 1px solid rgba(226, 232, 240, 0.5);
