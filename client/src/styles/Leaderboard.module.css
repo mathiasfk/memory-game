@@ -131,8 +131,27 @@
   color: var(--color-text-muted);
 }
 
+/* Current user card: primary accent (almond cream) with dark text for contrast */
 .yourPositionCard {
-  background: var(--color-success-muted);
-  border-color: var(--color-success);
+  background: var(--color-primary-accent);
+  border-color: var(--color-primary-accent-hover);
   border-width: 1.5px;
+}
+
+.yourPositionCard .rank,
+.yourPositionCard .playerName,
+.yourPositionCard .youHighlight {
+  color: var(--color-primary-accent-fg);
+}
+
+.yourPositionCard .cardStats,
+.yourPositionCard .stat,
+.yourPositionCard .statLabel {
+  color: var(--dusty-grape);
+}
+
+.yourPositionCard .botTag {
+  color: var(--color-primary-accent-fg);
+  background: rgba(13, 12, 29, 0.12);
+  border-color: rgba(13, 12, 29, 0.2);
 }
