@@ -75,6 +75,7 @@
   --color-success-muted: rgba(107, 155, 122, 0.25);
   --color-error: #c17b7b;
   --color-error-muted: rgba(193, 123, 123, 0.25);
+  --color-defeat: #ff5e6c;
   --color-warning: #c9b896;
   --color-warning-fg: #2d2a22;
   --color-warning-bg: rgba(201, 184, 150, 0.95);

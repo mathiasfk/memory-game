@@ -122,20 +122,20 @@
 }
 
 .resultRatingUp {
-  color: var(--color-success);
+  color: var(--color-primary-accent);
 }
 
 .resultRatingDown {
-  color: var(--color-error);
+  color: var(--color-defeat);
 }
 
 .winner {
-  color: var(--color-success);
+  color: var(--color-primary-accent);
   font-weight: 600;
 }
 
 .loser {
-  color: var(--color-error);
+  color: var(--color-defeat);
   font-weight: 500;
 }
 
