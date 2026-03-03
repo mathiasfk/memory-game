@@ -12,6 +12,6 @@
 }
 
 .theirs {
-  background: var(--color-error-muted);
-  border-color: var(--color-error);
+  background: var(--color-primary-accent-muted);
+  border-color: var(--color-primary-accent);
 }

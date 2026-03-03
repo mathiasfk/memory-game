@@ -49,13 +49,13 @@
 }
 
 .playerBlockActive {
-  border-color: var(--color-success);
-  background: var(--color-success-muted);
+  border-color: var(--color-primary-accent);
+  background: var(--color-primary-accent-muted);
 }
 
 .playerBlockOpponentActive {
-  border-color: var(--color-error);
-  background: var(--color-error-muted);
+  border-color: var(--color-primary-accent);
+  background: var(--color-primary-accent-muted);
 }
 
 .vs {

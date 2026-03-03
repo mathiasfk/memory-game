@@ -62,6 +62,7 @@
   --color-primary-accent: var(--almond-cream);
   --color-primary-accent-fg: var(--ink-black);
   --color-primary-accent-hover: #e8d0b8;
+  --color-primary-accent-muted: rgba(241, 218, 196, 0.25);
 
   /* Semantic: secondary */
   --color-secondary: var(--dusty-grape);
@@ -71,11 +72,12 @@
   --color-secondary-fg-on-dark: #f8f5f2;
 
   /* Semantic: feedback (harmonized with palette) */
-  --color-success: #6b9b7a;
-  --color-success-muted: rgba(107, 155, 122, 0.25);
+  --color-success: var(--color-primary-accent);
+  --color-success-muted: var(--color-primary-accent-muted);
   --color-error: #c17b7b;
   --color-error-muted: rgba(193, 123, 123, 0.25);
   --color-defeat: #ff5e6c;
+  --color-defeat-muted: rgba(255, 94, 108, 0.25);
   --color-warning: #c9b896;
   --color-warning-fg: #2d2a22;
   --color-warning-bg: rgba(201, 184, 150, 0.95);

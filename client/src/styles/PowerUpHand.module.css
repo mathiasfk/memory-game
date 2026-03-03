@@ -228,13 +228,14 @@
   font-weight: 700;
   cursor: pointer;
   border: none;
-  background: var(--color-success-muted);
-  color: var(--color-success);
-  border: 1px solid var(--color-success);
+  background: var(--color-primary-accent);
+  color: var(--color-primary-accent-fg);
+  border: 1px solid var(--color-primary-accent);
 }
 
 .modalUseButton:hover:not(:disabled) {
-  background: rgba(107, 155, 122, 0.35);
+  background: var(--color-primary-accent-hover);
+  color: var(--color-primary-accent-fg);
 }
 
 .modalUseButton:disabled {
