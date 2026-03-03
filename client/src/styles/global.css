@@ -115,6 +115,13 @@
   padding: 0;
 }
 
+/* History, Leaderboard, Telemetry: top spacing outside content, gradient visible above */
+@media (min-width: 1024px) {
+  .appTheme--listPage {
+    padding-top: 8rem;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
