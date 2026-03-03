@@ -83,7 +83,7 @@ type PowerUpContext struct {
 }
 
 // PowerUpDef holds the definition of a power-up as seen by the game package.
-// Rarity is used for weighted selection when picking arcana for a match (higher = more likely).
+// Rarity is used for weighted selection when picking arcana for a match (higher = less likely; common appears more often).
 type PowerUpDef struct {
 	ID          string
 	Name        string

@@ -7,7 +7,7 @@ import (
 	"memory-game-server/game"
 )
 
-// Rarity constants for weighted arcana selection (higher = more likely to appear in a match).
+// Rarity constants for weighted arcana selection (higher rarity = less likely to appear in a match).
 const (
 	RarityCommon   = 1
 	RarityUncommon = 2
@@ -82,7 +82,7 @@ func (r *Registry) AllPowerUps() []game.PowerUpDef {
 	return defs
 }
 
-// PickArcanaForMatch selects n distinct power-ups with probability proportional to Rarity (higher = more likely).
+// PickArcanaForMatch selects n distinct power-ups with probability inverse to Rarity (common = more likely, rare = less likely).
 // It satisfies the game.PowerUpProvider interface.
 func (r *Registry) PickArcanaForMatch(n int) []game.PowerUpDef {
 	all := r.AllPowerUps()
@@ -92,12 +92,12 @@ func (r *Registry) PickArcanaForMatch(n int) []game.PowerUpDef {
 	if n >= len(all) {
 		return all
 	}
-	// Weighted selection without replacement: weight = max(Rarity, 1)
+	// Weighted selection without replacement: weight = max(1, RarityRare - Rarity + 1) so common appears more often.
 	indices := make([]int, len(all))
 	weights := make([]int, len(all))
 	for i := range all {
 		indices[i] = i
-		w := all[i].Rarity
+		w := RarityRare - all[i].Rarity + 1
 		if w < 1 {
 			w = 1
 		}
