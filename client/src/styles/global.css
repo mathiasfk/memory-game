@@ -51,6 +51,8 @@
   --color-secondary: var(--dusty-grape);
   --color-secondary-hover: var(--lilac-ash);
   --color-secondary-fg: var(--almond-cream);
+  /* Lighter text for secondary buttons (better contrast on dark bg) */
+  --color-secondary-fg-on-dark: #f8f5f2;
 
   /* Semantic: feedback (harmonized with palette) */
   --color-success: #6b9b7a;

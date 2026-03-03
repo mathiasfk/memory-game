@@ -60,7 +60,7 @@
   font-size: var(--text-sm);
   font-weight: 600;
   background: var(--color-secondary);
-  color: var(--color-secondary-fg);
+  color: var(--color-secondary-fg-on-dark);
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -86,7 +86,7 @@
   font-size: var(--text-sm);
   font-weight: 600;
   background: var(--color-secondary);
-  color: var(--color-secondary-fg);
+  color: var(--color-secondary-fg-on-dark);
   cursor: pointer;
   transition: background-color 0.15s;
 }
