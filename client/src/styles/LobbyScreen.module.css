@@ -17,8 +17,8 @@
 }
 
 .welcome {
-  margin: 0.5rem 0 0;
-  font-size: var(--text-base);
+  margin: 0.5rem 0 1.75rem;
+  font-size: var(--text-sm);
   color: #94a3b8;
   font-weight: 500;
 }
@@ -40,7 +40,7 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
   background: #22c55e;
   color: #052e16;
@@ -57,7 +57,7 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
   background: #334155;
   color: #e2e8f0;
@@ -83,7 +83,7 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
   background: #475569;
   color: #e2e8f0;

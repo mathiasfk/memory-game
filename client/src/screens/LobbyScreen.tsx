@@ -25,7 +25,6 @@ export default function LobbyScreen({
     <section className={styles.screen}>
       <h1 className={styles.title}>Memory Game</h1>
       <p className={styles.welcome}>Welcome, {firstName}</p>
-      <p className={styles.subtitle}>Click to enter the match queue.</p>
       <div className={styles.actions}>
         <button
           type="button"
