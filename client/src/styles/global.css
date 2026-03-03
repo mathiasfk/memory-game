@@ -30,6 +30,22 @@
   --color-text: var(--almond-cream);
   --color-text-muted: var(--lilac-ash);
   --color-border: var(--lilac-ash);
+  /* Borders on dark surfaces (lilac-ash at varying opacity) */
+  --color-border-subtle: rgba(166, 156, 172, 0.2);
+  --color-border-muted: rgba(166, 156, 172, 0.25);
+  --color-border-strong: rgba(166, 156, 172, 0.35);
+  /* Text on dark background – light cream variants for hierarchy */
+  --color-text-on-dark: var(--color-secondary-fg-on-dark);
+  --color-text-on-dark-soft: rgba(248, 245, 242, 0.9);
+  --color-text-on-dark-muted: rgba(248, 245, 242, 0.85);
+  --color-text-on-dark-subtle: rgba(248, 245, 242, 0.8);
+  --color-text-on-dark-faint: rgba(248, 245, 242, 0.75);
+  /* Tag/chip on dark (e.g. Bot badge) */
+  --color-tag-bg: rgba(166, 156, 172, 0.25);
+  --color-tag-border: rgba(166, 156, 172, 0.35);
+  /* On primary-accent (almond cream) background – muted dark */
+  --color-on-accent-muted-bg: rgba(13, 12, 29, 0.12);
+  --color-on-accent-muted-border: rgba(13, 12, 29, 0.2);
 
   /* Aliases for existing var() usage */
   --card-bg: var(--color-surface);

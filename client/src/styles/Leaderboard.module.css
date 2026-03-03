@@ -4,7 +4,7 @@
   padding: 2rem;
   border-radius: 0.75rem;
   background: var(--color-surface-overlay);
-  border: 1px solid rgba(166, 156, 172, 0.25);
+  border: 1px solid var(--color-border-muted);
 }
 
 .title {
@@ -27,16 +27,20 @@
 
 @media (hover: hover) {
   .backLink:hover {
-    color: var(--color-text);
+    color: var(--color-text-on-dark);
   }
 }
 
 .status,
-.empty,
+.empty {
+  margin: 1rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-on-dark-muted);
+}
+
 .error {
   margin: 1rem 0 0;
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
 }
 
 .error {
@@ -57,7 +61,7 @@
   padding: 1rem;
   border-radius: 0.5rem;
   background: var(--color-surface-overlay-solid);
-  border: 1px solid rgba(166, 156, 172, 0.2);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .cardHeader {
@@ -72,19 +76,19 @@
   flex-shrink: 0;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: var(--color-text-on-dark-soft);
 }
 
 .playerName {
   font-size: var(--text-sm);
-  color: var(--color-text);
+  color: var(--color-text-on-dark);
   min-width: 0;
   word-break: break-word;
 }
 
 .youHighlight {
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--color-text-on-dark);
 }
 
 .botTag {
@@ -95,9 +99,9 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--color-text-muted);
-  background: rgba(166, 156, 172, 0.18);
-  border: 1px solid rgba(166, 156, 172, 0.28);
+  color: var(--color-text-on-dark-subtle);
+  background: var(--color-tag-bg);
+  border: 1px solid var(--color-tag-border);
   border-radius: 0.2rem;
   vertical-align: middle;
 }
@@ -108,7 +112,7 @@
   gap: 1rem;
   margin-top: 0.5rem;
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-on-dark-subtle);
 }
 
 .stat {
@@ -119,16 +123,16 @@
 
 .statLabel {
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-on-dark-faint);
 }
 
 .yourPositionSep {
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(166, 156, 172, 0.25);
+  border-top: 1px solid var(--color-border-muted);
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: var(--color-text-on-dark-soft);
 }
 
 /* Current user card: primary accent (almond cream) with dark text for contrast */
@@ -147,11 +151,11 @@
 .yourPositionCard .cardStats,
 .yourPositionCard .stat,
 .yourPositionCard .statLabel {
-  color: var(--dusty-grape);
+  color: var(--prussian-blue);
 }
 
 .yourPositionCard .botTag {
   color: var(--color-primary-accent-fg);
-  background: rgba(13, 12, 29, 0.12);
-  border-color: rgba(13, 12, 29, 0.2);
+  background: var(--color-on-accent-muted-bg);
+  border-color: var(--color-on-accent-muted-border);
 }
