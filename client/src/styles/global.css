@@ -78,7 +78,9 @@
  */
 .appTheme {
   min-height: 100vh;
+  padding-top: 4rem;
   color: var(--color-text);
+  background: radial-gradient(circle at top, var(--color-bg-gradient-mid), var(--color-bg) 65%);
   --neon-foreground: var(--color-text);
   --neon-muted-foreground: var(--color-text-muted);
   --neon-card-foreground: var(--color-text);

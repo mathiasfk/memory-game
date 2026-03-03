@@ -1,6 +1,6 @@
 .wrapper {
   max-width: 560px;
-  margin: 4rem auto 0;
+  margin: 0 auto;
   padding: 2rem;
   border-radius: 0.75rem;
   background: var(--color-surface-overlay);
