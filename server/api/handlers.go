@@ -209,6 +209,10 @@ func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
 	if matchType != "all" && matchType != "pvp" && matchType != "vs_ai" {
 		matchType = "all"
 	}
+	timeRange := r.URL.Query().Get("time_range")
+	if timeRange != "24h" && timeRange != "7d" && timeRange != "30d" {
+		timeRange = "7d"
+	}
 	th := h.Config.TelemetryHistogram
 	binConfig := &storage.TelemetryBinConfig{
 		TurnMax:      th.TurnMax,
@@ -216,6 +220,7 @@ func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
 		PairsMax:     th.PairsMax,
 		PairsNumBins: th.PairsNumBins,
 		MatchType:    matchType,
+		TimeRange:    timeRange,
 	}
 	metrics, err := h.HistoryStore.GetTelemetryMetrics(r.Context(), binConfig)
 	if err != nil {

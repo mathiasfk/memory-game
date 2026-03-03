@@ -517,9 +517,9 @@ type TelemetryMetrics struct {
 
 // TelemetryPlayers holds player-count and activity metrics.
 type TelemetryPlayers struct {
-	RegisteredCount   int `json:"registered_count"`
-	ActiveLastWeek    int `json:"active_last_week"`
-	TotalMatches      int `json:"total_matches"`
+	RegisteredCount int `json:"registered_count"`
+	ActiveInPeriod  int `json:"active_in_period"`
+	TotalMatches    int `json:"total_matches"`
 }
 
 type TelemetryGlobal struct {
@@ -534,12 +534,14 @@ type TelemetryGlobal struct {
 
 // TelemetryBinConfig defines histogram bin bounds for turn and pairs (used by GetTelemetryMetrics).
 // MatchType filters by game type: "all", "pvp" (human vs human), "vs_ai" (human vs AI).
+// TimeRange limits metrics to matches in the period: "24h", "7d", "30d".
 type TelemetryBinConfig struct {
 	TurnMax      int
 	TurnNumBins  int
 	PairsMax     int
 	PairsNumBins int
 	MatchType    string // "all", "pvp", "vs_ai"
+	TimeRange    string // "24h", "7d", "30d"
 }
 
 // TelemetryHistogramBucket is one bin in a histogram (label + count).
@@ -577,7 +579,22 @@ type TelemetryByCombo struct {
 }
 
 // defaultTelemetryBinConfig is used when GetTelemetryMetrics is called with nil binConfig.
-var defaultTelemetryBinConfig = TelemetryBinConfig{TurnMax: 100, TurnNumBins: 6, PairsMax: 36, PairsNumBins: 6}
+var defaultTelemetryBinConfig = TelemetryBinConfig{TurnMax: 100, TurnNumBins: 6, PairsMax: 36, PairsNumBins: 6, TimeRange: "7d"}
+
+// telemetryTimeIntervalSQL returns the PostgreSQL interval literal for the given time range.
+// Only allows "24h", "7d", "30d"; defaults to "7 days" for empty or invalid values (no raw user input).
+func telemetryTimeIntervalSQL(timeRange string) string {
+	switch timeRange {
+	case "24h":
+		return "24 hours"
+	case "7d":
+		return "7 days"
+	case "30d":
+		return "30 days"
+	default:
+		return "7 days"
+	}
+}
 
 // buildTurnHistogramLabels returns labels for turn bins: [0-step), [step-2*step), ..., "TurnMax+".
 func buildTurnHistogramLabels(cfg TelemetryBinConfig) []string {
@@ -627,19 +644,21 @@ func gameHistoryMatchTypeCondition(matchType string) string {
 	}
 }
 
-// filteredMatchIDsSubquery returns a subquery "SELECT id FROM game_history WHERE <match_type condition>"
-// for use in WHERE match_id IN (...). When matchType is "all" returns "SELECT id FROM game_history" so no filtering.
-func filteredMatchIDsSubquery(matchType string) string {
+// filteredMatchIDsSubquery returns a subquery "SELECT id FROM game_history WHERE <match_type and time range>"
+// for use in WHERE match_id IN (...). timeRange is applied via played_at >= now() - interval.
+func filteredMatchIDsSubquery(matchType, timeRange string) string {
 	cond := gameHistoryMatchTypeCondition(matchType)
-	// Condition uses "gh" alias; for the subquery we need unaliased column names
 	condNoAlias := strings.ReplaceAll(cond, "gh.", "")
-	return "SELECT id FROM game_history WHERE " + condNoAlias
+	interval := telemetryTimeIntervalSQL(timeRange)
+	return "SELECT id FROM game_history WHERE " + condNoAlias + " AND played_at >= now() - interval '" + interval + "'"
 }
 
 // getGameHistoryCondForDirectQuery returns the condition for a query that already has game_history (aliased as gh).
-// For "all" returns "true".
-func getGameHistoryCondForDirectQuery(matchType string) string {
-	return gameHistoryMatchTypeCondition(matchType)
+// Includes match type and time range (played_at >= now() - interval).
+func getGameHistoryCondForDirectQuery(matchType, timeRange string) string {
+	cond := gameHistoryMatchTypeCondition(matchType)
+	interval := telemetryTimeIntervalSQL(timeRange)
+	return cond + " AND gh.played_at >= now() - interval '" + interval + "'"
 }
 
 // GetTelemetryMetrics returns aggregated metrics from game_history, match_arcana, turn, arcana_use.
@@ -664,8 +683,12 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 		cfg.PairsMax = 36
 	}
 	matchType := cfg.MatchType
-	ghCond := getGameHistoryCondForDirectQuery(matchType)
-	matchIDsSubq := filteredMatchIDsSubquery(matchType)
+	timeRange := cfg.TimeRange
+	if timeRange != "24h" && timeRange != "7d" && timeRange != "30d" {
+		timeRange = "7d"
+	}
+	ghCond := getGameHistoryCondForDirectQuery(matchType, timeRange)
+	matchIDsSubq := filteredMatchIDsSubquery(matchType, timeRange)
 
 	out := &TelemetryMetrics{}
 
@@ -673,14 +696,14 @@ func (s *Store) GetTelemetryMetrics(ctx context.Context, binConfig *TelemetryBin
 	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM player_ratings`).Scan(&out.Players.RegisteredCount); err != nil {
 		return nil, err
 	}
-	// Players: active in last 7 days (distinct users who played a match of the selected type)
+	// Players: active in selected period (distinct users who played a match of the selected type)
 	if err := s.pool.QueryRow(ctx, fmt.Sprintf(`
 		SELECT COUNT(DISTINCT user_id) FROM (
-			SELECT player0_user_id AS user_id FROM game_history gh WHERE gh.played_at >= now() - interval '7 days' AND %s
+			SELECT player0_user_id AS user_id FROM game_history gh WHERE %s
 			UNION
-			SELECT player1_user_id FROM game_history gh WHERE gh.played_at >= now() - interval '7 days' AND %s
+			SELECT player1_user_id FROM game_history gh WHERE %s
 		) t
-	`, ghCond, ghCond)).Scan(&out.Players.ActiveLastWeek); err != nil {
+	`, ghCond, ghCond)).Scan(&out.Players.ActiveInPeriod); err != nil {
 		return nil, err
 	}
 	// Global: total matches (also used for Players.TotalMatches)

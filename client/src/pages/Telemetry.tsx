@@ -61,7 +61,7 @@ export interface TelemetryByCombo {
 
 export interface TelemetryPlayers {
   registered_count: number;
-  active_last_week: number;
+  active_in_period: number;
   total_matches: number;
 }
 
@@ -90,11 +90,20 @@ const MATCH_TYPE_OPTIONS: { value: MatchTypeFilter; label: string }[] = [
   { value: "vs_ai", label: "Human vs AI" },
 ];
 
+export type TimeRangeFilter = "24h" | "7d" | "30d";
+
+const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string }[] = [
+  { value: "24h", label: "Last 24 hours" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+];
+
 export function TelemetryPage() {
   const [metrics, setMetrics] = useState<TelemetryMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [matchType, setMatchType] = useState<MatchTypeFilter>("all");
+  const [timeRange, setTimeRange] = useState<TimeRangeFilter>("7d");
   const [selectedCard, setSelectedCard] = useState<TelemetryByCard | null>(null);
   const [selectedCombo, setSelectedCombo] = useState<TelemetryByCombo | null>(null);
 
@@ -122,7 +131,7 @@ export function TelemetryPage() {
           return;
         }
         const base = apiBase();
-        return fetch(`${base}/api/telemetry/metrics?match_type=${encodeURIComponent(matchType)}`, {
+        return fetch(`${base}/api/telemetry/metrics?match_type=${encodeURIComponent(matchType)}&time_range=${encodeURIComponent(timeRange)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       })
@@ -160,7 +169,7 @@ export function TelemetryPage() {
     return () => {
       cancelled = true;
     };
-  }, [matchType]);
+  }, [matchType, timeRange]);
 
   return (
     <>
@@ -171,22 +180,42 @@ export function TelemetryPage() {
             Back to lobby
           </Link>
           <div className={styles.filterRow}>
-            <label htmlFor="match-type-filter" className={styles.filterLabel}>
-              Match type
-            </label>
-            <select
-              id="match-type-filter"
-              className={styles.matchTypeSelect}
-              value={matchType}
-              onChange={(e) => setMatchType(e.target.value as MatchTypeFilter)}
-              aria-label="Filter metrics by match type"
-            >
-              {MATCH_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <div className={styles.filterGroup}>
+              <label htmlFor="match-type-filter" className={styles.filterLabel}>
+                Match type
+              </label>
+              <select
+                id="match-type-filter"
+                className={styles.matchTypeSelect}
+                value={matchType}
+                onChange={(e) => setMatchType(e.target.value as MatchTypeFilter)}
+                aria-label="Filter metrics by match type"
+              >
+                {MATCH_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.filterGroup}>
+              <label htmlFor="time-range-filter" className={styles.filterLabel}>
+                Time range
+              </label>
+              <select
+                id="time-range-filter"
+                className={styles.matchTypeSelect}
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value as TimeRangeFilter)}
+                aria-label="Filter metrics by time range"
+              >
+                {TIME_RANGE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           {loading && <p className={styles.status}>Loading...</p>}
           {error && <p className={styles.error}>{error}</p>}
@@ -200,8 +229,8 @@ export function TelemetryPage() {
                     <span className={styles.globalValue}>{metrics.players?.registered_count ?? "—"}</span>
                   </div>
                   <div className={styles.globalCard}>
-                    <span className={styles.globalLabel}>Active in the last week</span>
-                    <span className={styles.globalValue}>{metrics.players?.active_last_week ?? "—"}</span>
+                    <span className={styles.globalLabel}>Active in selected period</span>
+                    <span className={styles.globalValue}>{metrics.players?.active_in_period ?? "—"}</span>
                   </div>
                   <div className={styles.globalCard}>
                     <span className={styles.globalLabel}>Total matches</span>
