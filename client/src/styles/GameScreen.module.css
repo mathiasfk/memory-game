@@ -230,14 +230,14 @@
 .botTag {
   display: inline-block;
   margin-left: 0.25rem;
-  padding: 0.0625rem 0.375rem;
-  font-size: 0.5625rem;
+  padding: 0.03125rem 0.25rem;
+  font-size: 0.5rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--color-text-muted);
   background: rgba(166, 156, 172, 0.18);
   border: 1px solid rgba(166, 156, 172, 0.28);
-  border-radius: 0.2rem;
+  border-radius: 0.15rem;
   vertical-align: middle;
 }
