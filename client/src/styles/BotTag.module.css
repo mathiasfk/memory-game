@@ -1,0 +1,20 @@
+.botTag {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0.03125rem 0.25rem;
+  font-size: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-on-dark-subtle);
+  background: var(--color-tag-bg);
+  border: 1px solid var(--color-tag-border);
+  border-radius: 0.15rem;
+  vertical-align: middle;
+}
+
+.botTagOnAccent {
+  color: var(--color-primary-accent-fg);
+  background: var(--color-on-accent-muted-bg);
+  border-color: var(--color-on-accent-muted-border);
+}

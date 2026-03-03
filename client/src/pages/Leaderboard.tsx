@@ -4,6 +4,7 @@ import {
   RedirectToSignIn,
   SignedIn,
 } from "@neondatabase/neon-js/auth/react/ui";
+import { BotTag } from "../components/BotTag";
 import { authClient } from "../lib/auth";
 import styles from "../styles/Leaderboard.module.css";
 
@@ -38,10 +39,12 @@ function LeaderboardCard({
   entry,
   rank,
   isYou,
+  onAccentBackground,
 }: {
   entry: LeaderboardEntry;
   rank: number;
   isYou?: boolean;
+  onAccentBackground?: boolean;
 }) {
   const name = entry.display_name?.trim() || "—";
   return (
@@ -52,7 +55,7 @@ function LeaderboardCard({
           <span className={isYou ? styles.youHighlight : undefined}>
             {isYou ? "You" : name}
           </span>
-          {entry.is_bot && <span className={styles.botTag}>Bot</span>}
+          {entry.is_bot && <BotTag variant={onAccentBackground ? "onAccent" : "default"} />}
         </span>
       </div>
       <div className={styles.cardStats}>
@@ -170,6 +173,7 @@ export function LeaderboardPage() {
                           entry={data.current_user_entry}
                           rank={-1}
                           isYou
+                          onAccentBackground
                         />
                       </ul>
                     </>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Board from "../components/Board";
+import { BotTag } from "../components/BotTag";
 import PowerUpHand from "../components/PowerUpHand";
 import type { GameStateMsg, MatchFoundMsg } from "../types/messages";
 import styles from "../styles/GameScreen.module.css";
@@ -143,7 +144,7 @@ export default function GameScreen({
           >
             <span className={styles.playerScore}>{gameState.opponent.score}</span>
             <span className={styles.playerName}>{gameState.opponent.name}</span>
-            {opponentIsBot && <span className={styles.botTag}>Bot</span>}
+            {opponentIsBot && <BotTag />}
           </div>
         </div>
         <div className={styles.menuWrap}>

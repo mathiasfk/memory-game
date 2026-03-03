@@ -4,6 +4,7 @@ import {
   RedirectToSignIn,
   SignedIn,
 } from "@neondatabase/neon-js/auth/react/ui";
+import { BotTag } from "../components/BotTag";
 import { authClient } from "../lib/auth";
 import styles from "../styles/History.module.css";
 
@@ -232,7 +233,7 @@ function GameHistoryItem({ record }: { record: GameRecord }) {
               {oppName}
             </span>
             {oppEloBefore != null && <span className={styles.playerElo}>({oppEloBefore})</span>}
-            {oppIsBot && <span className={styles.botTag}>Bot</span>}
+            {oppIsBot && <BotTag />}
           </div>
           <span className={[styles.playerScore, (isAbandoned && !youAbandoned && !opponentAbandoned) && styles.abandoned, youLost && styles.winner, youWon && styles.loser, youAbandoned && styles.winner, opponentAbandoned && styles.loser].filter(Boolean).join(" ")}>{oppScore}</span>
         </div>
