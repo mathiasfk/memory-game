@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   RedirectToSignIn,
@@ -9,6 +9,7 @@ import styles from "../styles/History.module.css";
 
 const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? "";
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
+const HISTORY_PAGE_SIZE = 10;
 
 function apiBase(): string {
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -36,24 +37,32 @@ export interface GameRecord {
   player1_elo_after?: number | null;
 }
 
+interface HistoryResponse {
+  games: GameRecord[];
+  has_more: boolean;
+}
+
+async function fetchToken(): Promise<string | null> {
+  if (!NEON_AUTH_URL) return null;
+  const getSessionUrl = `${NEON_AUTH_URL.replace(/\/$/, "")}/get-session`;
+  const res = await fetch(getSessionUrl, { credentials: "include" });
+  const jwt =
+    res.headers.get("set-auth-jwt") ?? res.headers.get("Set-Auth-Jwt");
+  if (jwt) return jwt;
+  const result = await authClient.token();
+  return result.data?.token ?? null;
+}
+
 export function HistoryPage() {
   const [list, setList] = useState<GameRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function fetchToken(): Promise<string | null> {
-      if (!NEON_AUTH_URL) return null;
-      const getSessionUrl = `${NEON_AUTH_URL.replace(/\/$/, "")}/get-session`;
-      const res = await fetch(getSessionUrl, { credentials: "include" });
-      const jwt =
-        res.headers.get("set-auth-jwt") ?? res.headers.get("Set-Auth-Jwt");
-      if (jwt) return jwt;
-      const result = await authClient.token();
-      return result.data?.token ?? null;
-    }
 
     fetchToken()
       .then((token) => {
@@ -64,9 +73,10 @@ export function HistoryPage() {
           return;
         }
         const base = apiBase();
-        return fetch(`${base}/api/history`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        return fetch(
+          `${base}/api/history?limit=${HISTORY_PAGE_SIZE}&offset=0`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
       })
       .then((res) => {
         if (cancelled || !res) return;
@@ -79,15 +89,18 @@ export function HistoryPage() {
         }
         return res.json();
       })
-      .then((data: GameRecord[] | undefined) => {
+      .then((data: HistoryResponse | undefined) => {
         if (cancelled) return;
-        setList(Array.isArray(data) ? data : []);
+        const games = data?.games ?? [];
+        setList(Array.isArray(games) ? games : []);
+        setHasMore(Boolean(data?.has_more));
         setError(null);
       })
       .catch((err) => {
         if (!cancelled) {
           setError(err?.message ?? "Failed to load history");
           setList([]);
+          setHasMore(false);
         }
       })
       .finally(() => {
@@ -98,6 +111,44 @@ export function HistoryPage() {
       cancelled = true;
     };
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadingMore) return;
+    const token = await fetchToken();
+    if (!token) return;
+    setLoadingMore(true);
+    const base = apiBase();
+    try {
+      const res = await fetch(
+        `${base}/api/history?limit=${HISTORY_PAGE_SIZE}&offset=${list.length}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error(res.statusText || "Failed to load history");
+      const data: HistoryResponse = await res.json();
+      const games = data?.games ?? [];
+      setList((prev) => [...prev, ...(Array.isArray(games) ? games : [])]);
+      setHasMore(Boolean(data?.has_more));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load more");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, list.length]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || loadingMore || list.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        loadMore();
+      },
+      { rootMargin: "200px", threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, list.length, loadMore]);
 
   return (
     <>
@@ -113,11 +164,17 @@ export function HistoryPage() {
             <p className={styles.empty}>No games yet. Play a match to see history here.</p>
           )}
           {!loading && !error && list.length > 0 && (
-            <ul className={styles.list}>
-              {list.map((game) => (
-                <GameHistoryItem key={game.id} record={game} />
-              ))}
-            </ul>
+            <>
+              <ul className={styles.list}>
+                {list.map((game) => (
+                  <GameHistoryItem key={game.id} record={game} />
+                ))}
+              </ul>
+              <div ref={sentinelRef} className={styles.sentinel} aria-hidden />
+              {loadingMore && (
+                <p className={styles.loadingMore}>Loading more…</p>
+              )}
+            </>
           )}
         </div>
       </SignedIn>

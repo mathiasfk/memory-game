@@ -57,7 +57,13 @@ func (h *Handler) extractUserID(r *http.Request) string {
 	return auth.UserIDFromClaims(claims)
 }
 
-// History returns the game history for the authenticated user.
+// HistoryResponse is the JSON structure for /api/history (paginated).
+type HistoryResponse struct {
+	Games   []storage.GameRecord `json:"games"`
+	HasMore bool                 `json:"has_more"`
+}
+
+// History returns the game history for the authenticated user (paginated).
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	if CORS(w, r) {
 		return
@@ -73,19 +79,35 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list := []storage.GameRecord{}
+	limit := 10
+	if s := r.URL.Query().Get("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 {
+			limit = n
+			if limit > 100 {
+				limit = 100
+			}
+		}
+	}
+	offset := 0
+	if s := r.URL.Query().Get("offset"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	resp := HistoryResponse{Games: []storage.GameRecord{}}
 	if h.HistoryStore != nil {
 		var err error
-		list, err = h.HistoryStore.ListByUserID(r.Context(), userID)
+		resp.Games, resp.HasMore, err = h.HistoryStore.ListByUserIDPaginated(r.Context(), userID, limit, offset)
 		if err != nil {
-			slog.Error("ListByUserID", "tag", "api", "err", err)
+			slog.Error("ListByUserIDPaginated", "tag", "api", "err", err)
 			http.Error(w, "failed to load history", http.StatusInternalServerError)
 			return
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(list); err != nil {
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		slog.Error("Encode history response", "tag", "api", "err", err)
 	}
 }

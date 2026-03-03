@@ -7,6 +7,7 @@ import "context"
 type HistoryStore interface {
 	// Read
 	ListByUserID(ctx context.Context, userID string) ([]GameRecord, error)
+	ListByUserIDPaginated(ctx context.Context, userID string, limit, offset int) ([]GameRecord, bool, error)
 	ListLeaderboard(ctx context.Context, limit, offset int) ([]LeaderboardEntry, error)
 	GetLeaderboardEntryByUserID(ctx context.Context, userID string) (*LeaderboardEntry, error)
 	GetUserRole(ctx context.Context, userID string) (string, error)

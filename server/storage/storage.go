@@ -358,6 +358,68 @@ func (s *Store) ListByUserID(ctx context.Context, userID string) ([]GameRecord, 
 	return out, rows.Err()
 }
 
+const maxHistoryLimit = 100
+
+// ListByUserIDPaginated returns a page of games where the user participated, ordered by played_at DESC.
+// hasMore is true if there are more results after this page.
+func (s *Store) ListByUserIDPaginated(ctx context.Context, userID string, limit, offset int) ([]GameRecord, bool, error) {
+	if s == nil || s.pool == nil {
+		return []GameRecord{}, false, nil
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > maxHistoryLimit {
+		limit = maxHistoryLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, played_at, player0_user_id, player1_user_id, player0_name, player1_name, player0_score, player1_score, winner_index, COALESCE(end_reason,''),
+			player0_elo_before, player0_elo_after, player1_elo_before, player1_elo_after
+		FROM game_history
+		WHERE player0_user_id = $1 OR player1_user_id = $1
+		ORDER BY played_at DESC
+		LIMIT $2 OFFSET $3`,
+		userID, limit+1, offset)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	var out []GameRecord
+	for rows.Next() {
+		var r GameRecord
+		var winnerIndex *int
+		var playedAt time.Time
+		var elo0Before, elo0After, elo1Before, elo1After *int
+		if err := rows.Scan(&r.ID, &playedAt, &r.Player0UserID, &r.Player1UserID, &r.Player0Name, &r.Player1Name, &r.Player0Score, &r.Player1Score, &winnerIndex, &r.EndReason, &elo0Before, &elo0After, &elo1Before, &elo1After); err != nil {
+			return nil, false, err
+		}
+		r.GameID = r.ID
+		r.PlayedAt = playedAt.UTC().Format(time.RFC3339)
+		r.WinnerIndex = winnerIndex
+		r.Player0EloBefore = elo0Before
+		r.Player0EloAfter = elo0After
+		r.Player1EloBefore = elo1Before
+		r.Player1EloAfter = elo1After
+		yi := 0
+		if r.Player1UserID == userID {
+			yi = 1
+		}
+		r.YourIndex = &yi
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+	hasMore := len(out) > limit
+	if hasMore {
+		out = out[:limit]
+	}
+	return out, hasMore, nil
+}
+
 // LeaderboardEntry is a single row for the leaderboard API.
 type LeaderboardEntry struct {
 	UserID        string `json:"user_id"`

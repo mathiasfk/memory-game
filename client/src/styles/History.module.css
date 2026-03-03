@@ -158,3 +158,17 @@
   border-radius: 0.2rem;
   vertical-align: middle;
 }
+
+.sentinel {
+  height: 1px;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loadingMore {
+  margin: 1rem 0 0;
+  font-size: var(--text-sm);
+  color: #94a3b8;
+  text-align: center;
+}
