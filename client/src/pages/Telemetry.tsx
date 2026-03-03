@@ -78,8 +78,8 @@ export interface TelemetryGlobal {
 export interface TelemetryMetrics {
   players?: TelemetryPlayers;
   global: TelemetryGlobal;
-  by_card: TelemetryByCard[];
-  by_combo: TelemetryByCombo[];
+  by_card: TelemetryByCard[] | null;
+  by_combo: TelemetryByCombo[] | null;
 }
 
 export type MatchTypeFilter = "all" | "pvp" | "vs_ai";
@@ -297,7 +297,7 @@ export function TelemetryPage() {
               <section className={styles.section}>
                 <h2 className={styles.sectionTitle}>Metrics by card</h2>
                 <div className={styles.cardGrid}>
-                  {metrics.by_card.map((card) => (
+                  {(metrics.by_card ?? []).map((card) => (
                     <ArcanaCard
                       key={card.power_up_id}
                       card={card}
@@ -313,12 +313,12 @@ export function TelemetryPage() {
                   Combos of 2+ cards played together in the same turn (synergy).
                 </p>
                 <div className={styles.cardGrid}>
-                  {metrics.by_combo.length === 0 && (
+                  {(metrics.by_combo ?? []).length === 0 && (
                     <p className={styles.comboEmpty}>
                       No multi-card combo recorded (need at least 2 cards used in the same turn).
                     </p>
                   )}
-                  {metrics.by_combo.map((combo) => (
+                  {(metrics.by_combo ?? []).map((combo) => (
                     <ComboCard
                       key={combo.combo_key}
                       combo={combo}
