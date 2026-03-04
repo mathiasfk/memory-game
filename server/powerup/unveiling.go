@@ -14,7 +14,9 @@ type UnveilingPowerUp struct {
 
 func (d *UnveilingPowerUp) ID() string          { return "unveiling" }
 func (d *UnveilingPowerUp) Name() string        { return "Unveiling" }
-func (d *UnveilingPowerUp) Description() string { return "Highlights all tiles that have never been revealed (this turn only)." }
+func (d *UnveilingPowerUp) Description() string {
+	return "Highlights (for both players) all tiles that have never been revealed. Lasts until the end of the turn."
+}
 func (d *UnveilingPowerUp) Cost() int           { return d.CostValue }
 func (d *UnveilingPowerUp) Rarity() int         { return RarityCommon }
 

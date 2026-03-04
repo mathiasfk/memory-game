@@ -13,7 +13,7 @@ type ChaosPowerUp struct {
 func (c *ChaosPowerUp) ID() string   { return "chaos" }
 func (c *ChaosPowerUp) Name() string { return "Chaos" }
 func (c *ChaosPowerUp) Description() string {
-	return "Reshuffles the positions of all cards that are not yet matched."
+	return "Reshuffles the positions of all tiles that are not yet matched."
 }
 func (c *ChaosPowerUp) Cost() int   { return c.CostValue }
 func (c *ChaosPowerUp) Rarity() int { return RarityUncommon }

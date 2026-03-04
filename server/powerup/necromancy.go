@@ -13,7 +13,9 @@ type NecromancyPowerUp struct {
 
 func (n *NecromancyPowerUp) ID() string          { return "necromancy" }
 func (n *NecromancyPowerUp) Name() string        { return "Necromancy" }
-func (n *NecromancyPowerUp) Description() string { return "Returns all collected tiles back to the board in new random positions." }
+func (n *NecromancyPowerUp) Description() string {
+	return "Returns all other collected tiles back to the board in new random positions. Tiles that were still on the board stay in place."
+}
 func (n *NecromancyPowerUp) Cost() int           { return n.CostValue }
 func (n *NecromancyPowerUp) Rarity() int         { return RarityUncommon }
 

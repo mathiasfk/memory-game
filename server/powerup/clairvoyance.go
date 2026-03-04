@@ -1,7 +1,6 @@
 package powerup
 
 import (
-	"fmt"
 	"memory-game-server/game"
 )
 
@@ -15,11 +14,7 @@ type ClairvoyancePowerUp struct {
 func (c *ClairvoyancePowerUp) ID() string   { return "clairvoyance" }
 func (c *ClairvoyancePowerUp) Name() string { return "Clairvoyance" }
 func (c *ClairvoyancePowerUp) Description() string {
-	sec := c.RevealDuration
-	if sec <= 0 {
-		sec = 1
-	}
-	return fmt.Sprintf("Reveals a 3x3 area around the card you choose for %d second(s), then hides it again.", sec)
+	return "Reveals a 3x3 area around the tile you choose for a few seconds, then hides it again."
 }
 func (c *ClairvoyancePowerUp) Cost() int   { return c.CostValue }
 func (c *ClairvoyancePowerUp) Rarity() int { return RarityCommon }
