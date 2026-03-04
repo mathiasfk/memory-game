@@ -1,6 +1,17 @@
 .screen {
-  margin: 8rem auto 0;
+  width: 100%;
+  max-width: 460px;
+  min-width: 280px;
+  margin: 0 auto;
+  padding: 2rem;
   text-align: center;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .screen {
+    padding: 1.25rem 1rem;
+  }
 }
 
 .spinner {

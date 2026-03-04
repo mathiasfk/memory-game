@@ -7,11 +7,12 @@
   overflow-x: hidden;
 }
 
-/* Vertically center waiting screen */
+/* Waiting: same responsive top spacing as lobby and game over */
 .app[data-screen="waiting"] {
+  padding: clamp(6rem, 14vw, 14rem) 1rem 0 1rem;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100dvh;
 }
 
