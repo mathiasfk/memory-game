@@ -55,7 +55,8 @@ export default function GameOverScreen({
     showRating ? eloBefore : eloAfter ?? eloBefore ?? 0
   );
 
-  const isDefeat = result?.result === "lose";
+  const youWon = result?.result === "win";
+  const opponentWon = result?.result === "lose";
 
   useEffect(() => {
     if (!showRating || eloBefore == null || eloAfter == null) return;
@@ -97,10 +98,10 @@ export default function GameOverScreen({
       </h2>
 
       <div className={styles.scores}>
-        <p>
+        <p className={youWon ? styles.winner : undefined}>
           {yourName}: <strong>{yourScore}</strong>
         </p>
-        <p>
+        <p className={opponentWon ? styles.winner : undefined}>
           {opponentName}: <strong>{opponentScore}</strong>
         </p>
       </div>
@@ -112,7 +113,7 @@ export default function GameOverScreen({
             <span className={`${styles.ratingValue} ${styles.ratingValueBase}`}>
               {displayRating}
             </span>
-            {isDefeat && (
+            {opponentWon && (
               <span
                 className={`${styles.ratingValue} ${styles.ratingValueOverlay} ${styles.ratingValueOverlayAnimating}`}
                 aria-hidden
