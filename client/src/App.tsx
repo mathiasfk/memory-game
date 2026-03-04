@@ -1,12 +1,13 @@
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Account } from "./pages/Account";
+import { AdminPage } from "./pages/AdminPage";
 import { Auth } from "./pages/Auth";
 import { HistoryPage } from "./pages/History";
 import { LeaderboardPage } from "./pages/Leaderboard";
 import { TelemetryPage } from "./pages/Telemetry";
 import { Home } from "./pages/Home";
 
-const LIST_PAGE_PATHS = ["/history", "/leaderboard", "/telemetry"];
+const LIST_PAGE_PATHS = ["/history", "/leaderboard", "/admin", "/admin/telemetry"];
 
 export default function App() {
   const { pathname } = useLocation();
@@ -39,8 +40,17 @@ export default function App() {
           </div>
         }
       />
+      <Route path="/telemetry" element={<Navigate to="/admin/telemetry" replace />} />
       <Route
-        path="/telemetry"
+        path="/admin"
+        element={
+          <div className={appThemeClass}>
+            <AdminPage />
+          </div>
+        }
+      />
+      <Route
+        path="/admin/telemetry"
         element={
           <div className={appThemeClass}>
             <TelemetryPage />

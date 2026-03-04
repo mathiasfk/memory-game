@@ -176,8 +176,8 @@ export function TelemetryPage() {
       <SignedIn>
         <div className={styles.wrapper}>
           <h1 className={styles.title}>Telemetry analysis</h1>
-          <Link to="/" className={styles.backLink}>
-            Back to lobby
+          <Link to="/admin" className={styles.backLink}>
+            Back
           </Link>
           <div className={styles.filterRow}>
             <div className={styles.filterGroup}>

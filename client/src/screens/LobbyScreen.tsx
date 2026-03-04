@@ -51,10 +51,10 @@ export default function LobbyScreen({
         {isAdmin && (
           <button
             type="button"
-            onClick={() => navigate("/telemetry")}
+            onClick={() => navigate("/admin")}
             className={styles.historyButton}
           >
-            Telemetry
+            Admin Tools
           </button>
         )}
         <button type="button" onClick={onSignOut} className={styles.signOut}>
