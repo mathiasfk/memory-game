@@ -13,6 +13,8 @@ function easeOutCubic(t: number): number {
 interface GameOverScreenProps {
   connected: boolean;
   result: GameOverMsg | null;
+  /** ELO sent later via rating_update when server persists in background. */
+  ratingOverride?: { you_elo_before: number; you_elo_after: number } | null;
   opponentDisconnected: boolean;
   latestGameState: GameStateMsg | null;
   onPlayAgain: () => void;
@@ -33,6 +35,7 @@ function resultLabel(result: GameOverMsg["result"]): string {
 export default function GameOverScreen({
   connected,
   result,
+  ratingOverride,
   opponentDisconnected,
   latestGameState,
   onPlayAgain,
@@ -43,8 +46,8 @@ export default function GameOverScreen({
   const yourName = result?.you.name ?? latestGameState?.you.name ?? "You";
   const opponentName = result?.opponent.name ?? latestGameState?.opponent.name ?? "Opponent";
 
-  const eloBefore = result?.you_elo_before;
-  const eloAfter = result?.you_elo_after;
+  const eloBefore = ratingOverride?.you_elo_before ?? result?.you_elo_before;
+  const eloAfter = ratingOverride?.you_elo_after ?? result?.you_elo_after;
   const showRating =
     result != null &&
     eloBefore != null &&

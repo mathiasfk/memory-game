@@ -18,6 +18,7 @@ const MESSAGE_TYPES: ReadonlySet<ServerMessage["type"]> = new Set([
   "match_found",
   "game_state",
   "game_over",
+  "rating_update",
   "opponent_disconnected",
   "opponent_reconnecting",
   "opponent_reconnected",

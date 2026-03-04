@@ -361,24 +361,45 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 		store := m.historyStore
 		g.TelemetrySink = m.queuedSink
 		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string, done func(elo0Before, elo0After, elo1Before, elo1After *int)) {
-			var e0Before, e0After, e1Before, e1After *int
-			if endReason == "completed" || endReason == "opponent_disconnected" {
-				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
-				if err == nil {
-					e0Before, e0After = &eb0, &ea0
-					e1Before, e1After = &eb1, &ea1
+			// Send game_over immediately so the client can show the result without waiting for DB/telemetry.
+			done(nil, nil, nil, nil)
+			go func() {
+				var e0Before, e0After, e1Before, e1After *int
+				if endReason == "completed" || endReason == "opponent_disconnected" {
+					eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
+					if err == nil {
+						e0Before, e0After = &eb0, &ea0
+						e1Before, e1After = &eb1, &ea1
+					}
 				}
-			}
-			_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
-			m.queuedSink.FlushMatch(matchID)
-			var powerUpIDs []string
-			for i := 0; i < 6; i++ {
-				if id, ok := g.PairIDToPowerUp[i]; ok {
-					powerUpIDs = append(powerUpIDs, id)
+				_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
+				m.queuedSink.FlushMatch(matchID)
+				var powerUpIDs []string
+				for i := 0; i < 6; i++ {
+					if id, ok := g.PairIDToPowerUp[i]; ok {
+						powerUpIDs = append(powerUpIDs, id)
+					}
 				}
-			}
-			_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
-			done(e0Before, e0After, e1Before, e1After)
+				_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
+				// Notify both players of their rating update so the UI can show ELO when ready.
+				for i := 0; i < 2; i++ {
+					var before, after *int
+					if i == 0 {
+						before, after = e0Before, e0After
+					} else {
+						before, after = e1Before, e1After
+					}
+					if before != nil && after != nil && g.Players[i] != nil && g.Players[i].Send != nil {
+						payload := map[string]interface{}{
+							"type":             "rating_update",
+							"you_elo_before":   *before,
+							"you_elo_after":   *after,
+						}
+						data, _ := json.Marshal(payload)
+						wsutil.SafeSend(g.Players[i].Send, data)
+					}
+				}
+			}()
 		}
 	}
 
@@ -430,24 +451,37 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 		store := m.historyStore
 		g.TelemetrySink = m.queuedSink
 		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string, done func(elo0Before, elo0After, elo1Before, elo1After *int)) {
-			var e0Before, e0After, e1Before, e1After *int
-			if endReason == "completed" || endReason == "opponent_disconnected" {
-				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
-				if err == nil {
-					e0Before, e0After = &eb0, &ea0
-					e1Before, e1After = &eb1, &ea1
+			// Send game_over immediately so the client can show the result without waiting for DB/telemetry.
+			done(nil, nil, nil, nil)
+			go func() {
+				var e0Before, e0After, e1Before, e1After *int
+				if endReason == "completed" || endReason == "opponent_disconnected" {
+					eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
+					if err == nil {
+						e0Before, e0After = &eb0, &ea0
+						e1Before, e1After = &eb1, &ea1
+					}
 				}
-			}
-			_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
-			m.queuedSink.FlushMatch(matchID)
-			var powerUpIDs []string
-			for i := 0; i < 6; i++ {
-				if id, ok := g.PairIDToPowerUp[i]; ok {
-					powerUpIDs = append(powerUpIDs, id)
+				_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
+				m.queuedSink.FlushMatch(matchID)
+				var powerUpIDs []string
+				for i := 0; i < 6; i++ {
+					if id, ok := g.PairIDToPowerUp[i]; ok {
+						powerUpIDs = append(powerUpIDs, id)
+					}
 				}
-			}
-			_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
-			done(e0Before, e0After, e1Before, e1After)
+				_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
+				// Notify human player (index 0) of rating update; AI (index 1) has no real client Send.
+				if e0Before != nil && e0After != nil && g.Players[0] != nil && g.Players[0].Send != nil {
+					payload := map[string]interface{}{
+						"type":             "rating_update",
+						"you_elo_before":   *e0Before,
+						"you_elo_after":  *e0After,
+					}
+					data, _ := json.Marshal(payload)
+					wsutil.SafeSend(g.Players[0].Send, data)
+				}
+			}()
 		}
 	}
 

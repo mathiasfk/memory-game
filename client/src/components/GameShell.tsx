@@ -40,6 +40,8 @@ export function GameShell() {
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [pendingGameOver, setPendingGameOver] = useState<GameOverMsg | null>(null);
+  /** ELO sent asynchronously after game_over (when server persists in background). */
+  const [ratingUpdate, setRatingUpdate] = useState<{ you_elo_before: number; you_elo_after: number } | null>(null);
   const [powerUpMessage, setPowerUpMessage] = useState<string | null>(null);
   const [authSent, setAuthSent] = useState(false);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
@@ -88,12 +90,14 @@ export function GameShell() {
         case "waiting_for_match":
           setScreen("waiting");
           setGameResult(null);
+          setRatingUpdate(null);
           setOpponentDisconnected(false);
           break;
         case "match_found":
           setMatchInfo(msg);
           setScreen("game");
           setGameResult(null);
+          setRatingUpdate(null);
           setOpponentDisconnected(false);
           if (msg.gameId && msg.rejoinToken) {
             saveGameSession({
@@ -135,6 +139,7 @@ export function GameShell() {
       case "game_over":
         clearGameSession();
         setGameResult(msg);
+        setRatingUpdate(null);
         setOpponentDisconnected(false);
         setPendingGameOver(msg);
         if (gameOverTimeoutRef.current) clearTimeout(gameOverTimeoutRef.current);
@@ -143,6 +148,9 @@ export function GameShell() {
           setScreen("gameover");
           setPendingGameOver(null);
         }, GAME_OVER_DELAY_MS);
+        break;
+      case "rating_update":
+        setRatingUpdate({ you_elo_before: msg.you_elo_before, you_elo_after: msg.you_elo_after });
         break;
       case "opponent_disconnected":
         if (reconnectingToastIdRef.current) {
@@ -495,6 +503,7 @@ export function GameShell() {
         <GameOverScreen
           connected={connected}
           result={gameResult}
+          ratingOverride={ratingUpdate}
           opponentDisconnected={opponentDisconnected}
           latestGameState={gameState}
           onPlayAgain={handlePlayAgain}

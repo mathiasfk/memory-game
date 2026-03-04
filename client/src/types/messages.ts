@@ -90,6 +90,13 @@ export interface GameOverMsg {
   you_elo_after?: number;
 }
 
+/** Sent after game_over when ELO was computed asynchronously (e.g. after DB persist). */
+export interface RatingUpdateMsg {
+  type: "rating_update";
+  you_elo_before: number;
+  you_elo_after: number;
+}
+
 export interface OpponentDisconnectedMsg {
   type: "opponent_disconnected";
 }
@@ -127,6 +134,7 @@ export type ServerMessage =
   | MatchFoundMsg
   | GameStateMsg
   | GameOverMsg
+  | RatingUpdateMsg
   | OpponentDisconnectedMsg
   | OpponentReconnectingMsg
   | OpponentReconnectedMsg
