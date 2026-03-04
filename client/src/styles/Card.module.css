@@ -39,7 +39,7 @@
 }
 
 .cardBack {
-  background: var(--color-surface-elevated);
+  background: transparent;
   border: none;
   color: var(--color-text);
   transform: rotateY(0deg);

@@ -14,7 +14,7 @@ import styles from "../styles/App.module.css";
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? "";
-const GAME_OVER_DELAY_MS = 600;
+const GAME_OVER_DELAY_MS = 300;
 
 type ScreenName = "lobby" | "waiting" | "game" | "gameover";
 
