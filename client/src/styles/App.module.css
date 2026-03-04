@@ -7,12 +7,20 @@
   overflow-x: hidden;
 }
 
-/* Vertically center waiting and game-over screens */
-.app[data-screen="waiting"],
-.app[data-screen="gameover"] {
+/* Vertically center waiting screen */
+.app[data-screen="waiting"] {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-height: 100dvh;
+}
+
+/* Game over: dynamic top spacing like lobby */
+.app[data-screen="gameover"] {
+  padding: clamp(6rem, 14vw, 14rem) 1rem 0 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   min-height: 100dvh;
 }
 

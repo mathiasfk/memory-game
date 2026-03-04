@@ -1,11 +1,20 @@
 .screen {
+  width: 100%;
   max-width: 460px;
-  margin: 4rem auto 0;
+  min-width: 280px;
+  margin: 0 auto;
   padding: 2rem;
   border-radius: 0.75rem;
   text-align: center;
   background: var(--color-surface-overlay);
   border: 1px solid rgba(166, 156, 172, 0.25);
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .screen {
+    padding: 1.25rem 1rem;
+  }
 }
 
 .title {
@@ -37,22 +46,12 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
-  background: var(--color-primary);
-  color: var(--color-primary-fg);
+  background: var(--color-primary-accent);
+  color: var(--color-primary-accent-fg);
   cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-@media (hover: hover) {
-  .primaryButton:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-  }
-
-  .secondaryButton:hover {
-    background: var(--color-secondary-hover);
-  }
+  transition: background-color 0.15s, color 0.15s;
 }
 
 .primaryButton:disabled {
@@ -64,12 +63,22 @@
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
   background: var(--color-secondary);
-  color: var(--color-secondary-fg);
+  color: var(--color-secondary-fg-on-dark);
   cursor: pointer;
   transition: background-color 0.15s;
+}
+
+@media (hover: hover) {
+  .primaryButton:hover:not(:disabled) {
+    background: var(--color-primary-accent-hover);
+  }
+
+  .secondaryButton:hover {
+    background: var(--color-secondary-hover);
+  }
 }
 
 .connection {
