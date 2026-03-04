@@ -93,9 +93,9 @@ func Defaults() *Config {
 			Clairvoyance: ClairvoyancePowerUpConfig{RevealDurationMS: 3000},
 		},
 		AIProfiles: []AIParams{
-			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 0, ArcanaRandomness: 10},
-			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 87, ForgetChance: 10, ArcanaRandomness: 15},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 85, ForgetChance: 25, ArcanaRandomness: 20},
+			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 2, ArcanaRandomness: 10},
+			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 90, ForgetChance: 8, ArcanaRandomness: 15},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 15, ArcanaRandomness: 20},
 		},
 		TelemetryHistogram: TelemetryHistogramConfig{
 			TurnMax:      100,
