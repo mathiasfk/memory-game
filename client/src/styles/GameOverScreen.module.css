@@ -59,6 +59,15 @@
 .ratingValueWrap {
   position: relative;
   display: inline-block;
+  min-height: 1.2em;
+}
+
+.ratingPlaceholder {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-muted);
 }
 
 .ratingValue {

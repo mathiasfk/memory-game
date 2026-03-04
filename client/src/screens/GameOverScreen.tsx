@@ -48,11 +48,9 @@ export default function GameOverScreen({
 
   const eloBefore = ratingOverride?.you_elo_before ?? result?.you_elo_before;
   const eloAfter = ratingOverride?.you_elo_after ?? result?.you_elo_after;
-  const showRating =
-    result != null &&
-    eloBefore != null &&
-    eloAfter != null &&
-    !opponentDisconnected;
+  const hasRating = eloBefore != null && eloAfter != null;
+  const showRatingBlock = result != null && !opponentDisconnected;
+  const showRating = showRatingBlock && hasRating;
 
   const [displayRating, setDisplayRating] = useState(
     showRating ? eloBefore : eloAfter ?? eloBefore ?? 0
@@ -109,19 +107,27 @@ export default function GameOverScreen({
         </p>
       </div>
 
-      {showRating && (
+      {showRatingBlock && (
         <div className={styles.ratingBlock}>
           <span className={styles.ratingLabel}>Rating</span>
           <div className={styles.ratingValueWrap}>
-            <span className={`${styles.ratingValue} ${styles.ratingValueBase}`}>
-              {displayRating}
-            </span>
-            {opponentWon && (
-              <span
-                className={`${styles.ratingValue} ${styles.ratingValueOverlay} ${styles.ratingValueOverlayAnimating}`}
-                aria-hidden
-              >
-                {displayRating}
+            {hasRating ? (
+              <>
+                <span className={`${styles.ratingValue} ${styles.ratingValueBase}`}>
+                  {displayRating}
+                </span>
+                {opponentWon && (
+                  <span
+                    className={`${styles.ratingValue} ${styles.ratingValueOverlay} ${styles.ratingValueOverlayAnimating}`}
+                    aria-hidden
+                  >
+                    {displayRating}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className={styles.ratingPlaceholder} aria-live="polite">
+                {" "}
               </span>
             )}
           </div>

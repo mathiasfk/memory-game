@@ -372,16 +372,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 						e1Before, e1After = &eb1, &ea1
 					}
 				}
-				_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
-				m.queuedSink.FlushMatch(matchID)
-				var powerUpIDs []string
-				for i := 0; i < 6; i++ {
-					if id, ok := g.PairIDToPowerUp[i]; ok {
-						powerUpIDs = append(powerUpIDs, id)
-					}
-				}
-				_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
-				// Notify both players of their rating update so the UI can show ELO when ready.
+				// Send rating to clients as soon as we have it; persistence below is independent.
 				for i := 0; i < 2; i++ {
 					var before, after *int
 					if i == 0 {
@@ -391,14 +382,24 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 					}
 					if before != nil && after != nil && g.Players[i] != nil && g.Players[i].Send != nil {
 						payload := map[string]interface{}{
-							"type":             "rating_update",
-							"you_elo_before":   *before,
-							"you_elo_after":   *after,
+							"type":           "rating_update",
+							"you_elo_before": *before,
+							"you_elo_after":  *after,
 						}
 						data, _ := json.Marshal(payload)
 						wsutil.SafeSend(g.Players[i].Send, data)
 					}
 				}
+				// Persist game history and telemetry after having responded with rating.
+				_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
+				m.queuedSink.FlushMatch(matchID)
+				var powerUpIDs []string
+				for i := 0; i < 6; i++ {
+					if id, ok := g.PairIDToPowerUp[i]; ok {
+						powerUpIDs = append(powerUpIDs, id)
+					}
+				}
+				_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
 			}()
 		}
 	}
@@ -462,6 +463,17 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 						e1Before, e1After = &eb1, &ea1
 					}
 				}
+				// Send rating to client as soon as we have it; persistence below is independent.
+				if e0Before != nil && e0After != nil && g.Players[0] != nil && g.Players[0].Send != nil {
+					payload := map[string]interface{}{
+						"type":           "rating_update",
+						"you_elo_before": *e0Before,
+						"you_elo_after":  *e0After,
+					}
+					data, _ := json.Marshal(payload)
+					wsutil.SafeSend(g.Players[0].Send, data)
+				}
+				// Persist game history and telemetry after having responded with rating.
 				_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
 				m.queuedSink.FlushMatch(matchID)
 				var powerUpIDs []string
@@ -471,16 +483,6 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 					}
 				}
 				_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
-				// Notify human player (index 0) of rating update; AI (index 1) has no real client Send.
-				if e0Before != nil && e0After != nil && g.Players[0] != nil && g.Players[0].Send != nil {
-					payload := map[string]interface{}{
-						"type":             "rating_update",
-						"you_elo_before":   *e0Before,
-						"you_elo_after":  *e0After,
-					}
-					data, _ := json.Marshal(payload)
-					wsutil.SafeSend(g.Players[0].Send, data)
-				}
 			}()
 		}
 	}
