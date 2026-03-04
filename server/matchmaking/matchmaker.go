@@ -360,7 +360,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 	if m.historyStore != nil {
 		store := m.historyStore
 		g.TelemetrySink = m.queuedSink
-		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
+		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string, done func(elo0Before, elo0After, elo1Before, elo1After *int)) {
 			var e0Before, e0After, e1Before, e1After *int
 			if endReason == "completed" || endReason == "opponent_disconnected" {
 				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
@@ -378,6 +378,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 				}
 			}
 			_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
+			done(e0Before, e0After, e1Before, e1After)
 		}
 	}
 
@@ -428,7 +429,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 	if m.historyStore != nil {
 		store := m.historyStore
 		g.TelemetrySink = m.queuedSink
-		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string) {
+		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string, done func(elo0Before, elo0After, elo1Before, elo1After *int)) {
 			var e0Before, e0After, e1Before, e1After *int
 			if endReason == "completed" || endReason == "opponent_disconnected" {
 				eb0, ea0, eb1, ea1, err := store.UpdateRatingsAfterGame(context.Background(), p0UID, p1UID, p0Name, p1Name, winnerIdx)
@@ -446,6 +447,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 				}
 			}
 			_ = store.InsertMatchArcana(context.Background(), matchID, powerUpIDs)
+			done(e0Before, e0After, e1Before, e1After)
 		}
 	}
 

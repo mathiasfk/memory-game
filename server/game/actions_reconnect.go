@@ -11,7 +11,7 @@ func (g *Game) handleDisconnect(playerIdx int) {
 	g.Finished = true
 	opponentIdx := 1 - playerIdx
 	if g.OnGameEnd != nil {
-		g.OnGameEnd(g.ID, g.PlayerUserIDs[0], g.PlayerUserIDs[1], g.Players[0].Name, g.Players[1].Name, g.Players[0].Score, g.Players[1].Score, opponentIdx, "opponent_disconnected")
+		g.OnGameEnd(g.ID, g.PlayerUserIDs[0], g.PlayerUserIDs[1], g.Players[0].Name, g.Players[1].Name, g.Players[0].Score, g.Players[1].Score, opponentIdx, "opponent_disconnected", func(_, _, _, _ *int) {})
 	}
 	// Notify the opponent
 	opponent := g.Players[opponentIdx]

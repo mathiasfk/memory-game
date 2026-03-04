@@ -139,7 +139,8 @@ type Game struct {
 	Done    chan struct{}
 
 	// OnGameEnd is called when the game ends (normal finish or opponent disconnect). winnerIndex is 0, 1, or -1 for draw.
-	OnGameEnd func(gameID, player0UserID, player1UserID, player0Name, player1Name string, player0Score, player1Score int, winnerIndex int, endReason string)
+	// done is invoked by the caller with elo0Before, elo0After, elo1Before, elo1After (nil when rating is not updated).
+	OnGameEnd func(gameID, player0UserID, player1UserID, player0Name, player1Name string, player0Score, player1Score int, winnerIndex int, endReason string, done func(elo0Before, elo0After, elo1Before, elo1After *int))
 }
 
 // NewGame creates a new Game between two players.
@@ -382,35 +383,45 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 }
 
 func (g *Game) broadcastGameOver() {
-	for i := 0; i < 2; i++ {
-		opponentIdx := 1 - i
-		var result string
-		if g.Players[i].Score > g.Players[opponentIdx].Score {
-			result = "win"
-		} else if g.Players[i].Score < g.Players[opponentIdx].Score {
-			result = "lose"
-		} else {
-			result = "draw"
-		}
+	sendGameOverToBoth := func(elo0Before, elo0After, elo1Before, elo1After *int) {
+		for i := 0; i < 2; i++ {
+			opponentIdx := 1 - i
+			var result string
+			if g.Players[i].Score > g.Players[opponentIdx].Score {
+				result = "win"
+			} else if g.Players[i].Score < g.Players[opponentIdx].Score {
+				result = "lose"
+			} else {
+				result = "draw"
+			}
 
-		msg := map[string]interface{}{
-			"type":   "game_over",
-			"result": result,
-			"you": map[string]interface{}{
-				"name":  g.Players[i].Name,
-				"score": g.Players[i].Score,
-			},
-			"opponent": map[string]interface{}{
-				"name":  g.Players[opponentIdx].Name,
-				"score": g.Players[opponentIdx].Score,
-			},
-		}
-		data, _ := json.Marshal(msg)
-		if g.Players[i] != nil && g.Players[i].Send != nil {
-			wsutil.SafeSend(g.Players[i].Send, data)
+			msg := map[string]interface{}{
+				"type":   "game_over",
+				"result": result,
+				"you": map[string]interface{}{
+					"name":  g.Players[i].Name,
+					"score": g.Players[i].Score,
+				},
+				"opponent": map[string]interface{}{
+					"name":  g.Players[opponentIdx].Name,
+					"score": g.Players[opponentIdx].Score,
+				},
+			}
+			if i == 0 && elo0Before != nil && elo0After != nil {
+				msg["you_elo_before"] = *elo0Before
+				msg["you_elo_after"] = *elo0After
+			}
+			if i == 1 && elo1Before != nil && elo1After != nil {
+				msg["you_elo_before"] = *elo1Before
+				msg["you_elo_after"] = *elo1After
+			}
+			data, _ := json.Marshal(msg)
+			if g.Players[i] != nil && g.Players[i].Send != nil {
+				wsutil.SafeSend(g.Players[i].Send, data)
+			}
 		}
 	}
-	// Persist once for history (winnerIndex: 0, 1, or -1 for draw)
+
 	if g.OnGameEnd != nil {
 		winnerIdx := -1
 		if g.Players[0].Score > g.Players[1].Score {
@@ -418,6 +429,8 @@ func (g *Game) broadcastGameOver() {
 		} else if g.Players[1].Score > g.Players[0].Score {
 			winnerIdx = 1
 		}
-		g.OnGameEnd(g.ID, g.PlayerUserIDs[0], g.PlayerUserIDs[1], g.Players[0].Name, g.Players[1].Name, g.Players[0].Score, g.Players[1].Score, winnerIdx, "completed")
+		g.OnGameEnd(g.ID, g.PlayerUserIDs[0], g.PlayerUserIDs[1], g.Players[0].Name, g.Players[1].Name, g.Players[0].Score, g.Players[1].Score, winnerIdx, "completed", sendGameOverToBoth)
+	} else {
+		sendGameOverToBoth(nil, nil, nil, nil)
 	}
 }

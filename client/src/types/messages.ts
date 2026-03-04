@@ -84,6 +84,10 @@ export interface GameOverMsg {
   result: "win" | "lose" | "draw";
   you: PlayerView;
   opponent: PlayerView;
+  /** Your rating before this game (included when ratings were updated). */
+  you_elo_before?: number;
+  /** Your rating after this game (included when ratings were updated). */
+  you_elo_after?: number;
 }
 
 export interface OpponentDisconnectedMsg {
