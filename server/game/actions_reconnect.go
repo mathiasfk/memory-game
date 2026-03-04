@@ -34,6 +34,10 @@ func (g *Game) handlePlayerDisconnected(playerIdx int) {
 	if g.DisconnectedPlayerIdx >= 0 {
 		return
 	}
+	// Clear Send so no further messages are sent to this player; Hub will close the channel after a delay.
+	if g.Players[playerIdx] != nil {
+		g.Players[playerIdx].Send = nil
+	}
 	g.cancelTurnTimer()
 	g.DisconnectedPlayerIdx = playerIdx
 	timeoutSec := g.Config.ReconnectTimeoutSec

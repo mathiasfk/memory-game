@@ -173,7 +173,7 @@ func (c *Client) handleAuth(raw json.RawMessage) {
 	c.UserID = auth.UserIDFromClaims(claims)
 	c.Name = auth.FirstNameFromClaims(claims)
 	c.Authenticated = true
-	slog.Info("authenticated user", "tag", "auth", "user_id", c.UserID, "name", c.Name)
+	slog.Info("authenticated user", "tag", "auth", "user_id", c.UserID, "name", c.Name, "total_users", c.Hub.uniqueAuthenticatedUsers())
 }
 
 func (c *Client) handleSetName(raw json.RawMessage) {

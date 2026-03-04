@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"memory-game-server/config"
@@ -45,6 +46,18 @@ func NewHub(cfg *config.Config, mm MatchmakerInterface) *Hub {
 	}
 }
 
+// uniqueAuthenticatedUsers returns the number of distinct authenticated users (by UserID).
+// Multiple connections from the same user (e.g. React Strict Mode) count as one.
+func (h *Hub) uniqueAuthenticatedUsers() int {
+	seen := make(map[string]bool)
+	for c := range h.Clients {
+		if c.Authenticated && c.UserID != "" {
+			seen[c.UserID] = true
+		}
+	}
+	return len(seen)
+}
+
 // Run starts the hub's main loop. Should be run as a goroutine.
 // When ctx is cancelled (e.g. on server shutdown), Run returns and no longer accepts new registrations.
 func (h *Hub) Run(ctx context.Context) {
@@ -55,15 +68,15 @@ func (h *Hub) Run(ctx context.Context) {
 			return
 		case client := <-h.Register:
 			h.Clients[client] = true
-			slog.Info("Client connected", "tag", "hub", "total_clients", len(h.Clients))
+			slog.Info("Client connected", "tag", "hub", "total_connections", len(h.Clients), "total_users", h.uniqueAuthenticatedUsers())
 
 		case client := <-h.Unregister:
 			if _, ok := h.Clients[client]; ok {
 				delete(h.Clients, client)
-				close(client.Send)
-				slog.Info("Client disconnected", "tag", "hub", "total_clients", len(h.Clients))
+				slog.Info("Client disconnected", "tag", "hub", "total_connections", len(h.Clients), "total_users", h.uniqueAuthenticatedUsers())
 
-				// If the client was in a game, start reconnection window (do not end game immediately)
+				// Notify game first so it can clear player.Send before we close the channel,
+				// reducing "send on closed channel" panics in SafeSend.
 				if client.Game != nil && !client.Game.Finished {
 					select {
 					case client.Game.Actions <- game.Action{
@@ -73,6 +86,12 @@ func (h *Hub) Run(ctx context.Context) {
 					default:
 					}
 				}
+
+				// Close Send after a short delay so the game loop can process the action and clear its reference.
+				go func(c *Client) {
+					time.Sleep(200 * time.Millisecond)
+					close(c.Send)
+				}(client)
 			}
 		}
 	}
