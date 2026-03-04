@@ -8,7 +8,7 @@ interface WaitingScreenProps {
 export default function WaitingScreen({ connected, onCancel }: WaitingScreenProps) {
   return (
     <section className={styles.screen}>
-      <div className={styles.spinner} aria-hidden="true" />
+      <span className={styles.loader} aria-hidden="true" />
       <h2>Looking for an opponent...</h2>
       <p>{connected ? "Waiting in matchmaking queue." : "Reconnecting to server..."}</p>
       {onCancel && (
