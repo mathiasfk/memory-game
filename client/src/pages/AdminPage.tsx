@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import styles from "../styles/LobbyScreen.module.css";
 
 export function AdminPage() {
@@ -7,6 +7,9 @@ export function AdminPage() {
   return (
     <section className={styles.screen}>
       <h1 className={styles.title}>Admin Tools</h1>
+      <Link to="/" className={styles.backLink}>
+        Back to lobby
+      </Link>
       <p className={styles.subtitle}>Manage and inspect game data.</p>
       <div className={styles.actions}>
         <button
@@ -18,10 +21,10 @@ export function AdminPage() {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/admin/preview-cards")}
           className={styles.historyButton}
         >
-          Back to lobby
+          Preview Cards
         </button>
       </div>
     </section>

@@ -1,0 +1,43 @@
+.wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface-overlay);
+  border: 1px solid rgba(166, 156, 172, 0.25);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.backLink {
+  display: inline-block;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .backLink:hover {
+    color: var(--color-text);
+  }
+}
+
+.subtitle {
+  margin: 0 0 1rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.handWrap {
+  width: 100%;
+}

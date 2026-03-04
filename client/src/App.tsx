@@ -5,9 +5,10 @@ import { Auth } from "./pages/Auth";
 import { HistoryPage } from "./pages/History";
 import { LeaderboardPage } from "./pages/Leaderboard";
 import { TelemetryPage } from "./pages/Telemetry";
+import { PreviewCardsPage } from "./pages/PreviewCardsPage";
 import { Home } from "./pages/Home";
 
-const LIST_PAGE_PATHS = ["/history", "/leaderboard", "/admin", "/admin/telemetry"];
+const LIST_PAGE_PATHS = ["/history", "/leaderboard", "/admin", "/admin/telemetry", "/admin/preview-cards"];
 
 export default function App() {
   const { pathname } = useLocation();
@@ -54,6 +55,14 @@ export default function App() {
         element={
           <div className={appThemeClass}>
             <TelemetryPage />
+          </div>
+        }
+      />
+      <Route
+        path="/admin/preview-cards"
+        element={
+          <div className={appThemeClass}>
+            <PreviewCardsPage />
           </div>
         }
       />
