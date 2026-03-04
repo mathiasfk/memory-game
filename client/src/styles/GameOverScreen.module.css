@@ -74,6 +74,17 @@
   top: 0;
   color: var(--color-defeat);
   pointer-events: none;
+  opacity: 0;
+}
+
+.ratingValueOverlayAnimating {
+  animation: ratingDefeatFadeIn 1.2s ease-out 1s forwards;
+}
+
+@keyframes ratingDefeatFadeIn {
+  to {
+    opacity: 1;
+  }
 }
 
 .actions {

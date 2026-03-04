@@ -54,14 +54,12 @@ export default function GameOverScreen({
   const [displayRating, setDisplayRating] = useState(
     showRating ? eloBefore : eloAfter ?? eloBefore ?? 0
   );
-  const [defeatOverlayOpacity, setDefeatOverlayOpacity] = useState(0);
 
   const isDefeat = result?.result === "lose";
 
   useEffect(() => {
     if (!showRating || eloBefore == null || eloAfter == null) return;
     setDisplayRating(eloBefore);
-    setDefeatOverlayOpacity(0);
     let cancelled = false;
     const start = performance.now();
     const totalDuration = RATING_HOLD_MS + RATING_ANIMATION_DURATION_MS;
@@ -71,19 +69,16 @@ export default function GameOverScreen({
       const elapsed = now - start;
       if (elapsed >= totalDuration) {
         setDisplayRating(eloAfter);
-        setDefeatOverlayOpacity(isDefeat ? 1 : 0);
         return;
       }
-
       if (elapsed < RATING_HOLD_MS) {
         setDisplayRating(eloBefore);
-        setDefeatOverlayOpacity(0);
       } else {
         const animProgress = (elapsed - RATING_HOLD_MS) / RATING_ANIMATION_DURATION_MS;
         const eased = easeOutCubic(animProgress);
-        const value = Math.round(eloBefore + (eloAfter - eloBefore) * eased);
-        setDisplayRating(value);
-        setDefeatOverlayOpacity(isDefeat ? eased : 0);
+        setDisplayRating(
+          Math.round(eloBefore + (eloAfter - eloBefore) * eased)
+        );
       }
       requestAnimationFrame(tick);
     };
@@ -91,7 +86,7 @@ export default function GameOverScreen({
     return () => {
       cancelled = true;
     };
-  }, [showRating, eloBefore, eloAfter, isDefeat]);
+  }, [showRating, eloBefore, eloAfter]);
 
   return (
     <section className={styles.screen}>
@@ -119,8 +114,7 @@ export default function GameOverScreen({
             </span>
             {isDefeat && (
               <span
-                className={`${styles.ratingValue} ${styles.ratingValueOverlay}`}
-                style={{ opacity: defeatOverlayOpacity }}
+                className={`${styles.ratingValue} ${styles.ratingValueOverlay} ${styles.ratingValueOverlayAnimating}`}
                 aria-hidden
               >
                 {displayRating}
