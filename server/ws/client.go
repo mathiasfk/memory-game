@@ -59,7 +59,8 @@ func (c *Client) ReadPump() {
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+			// 1005 (No Status) is common when client closes without sending a close frame (tab close, navigation, etc.)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure, websocket.CloseNoStatusReceived) {
 				slog.Error("WebSocket read error", "tag", "auth", "err", err)
 			}
 			break
