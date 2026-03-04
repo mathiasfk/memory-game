@@ -90,19 +90,19 @@
 }
 
 .modalCancel {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: var(--color-primary-accent);
+  border: 0;
+  color: var(--color-primary-accent-fg);
 }
 
 .modalCancel:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-primary-accent-hover);
 }
 
 .modalConfirm {
-  background: var(--color-error);
+  background: var(--color-defeat);
   border: none;
-  color: var(--color-text);
+  color: var(--color-secondary-fg-on-dark);
 }
 
 .modalConfirm:hover {
