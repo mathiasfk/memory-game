@@ -226,6 +226,13 @@ export default function GameScreen({
         <PowerUpHand
           hand={gameState.hand}
           enabled={handUseEnabled}
+          useDisabledReason={
+            handUseEnabled
+              ? null
+              : !gameState.yourTurn
+                ? "wait_turn"
+                : "before_flip"
+          }
           onUsePowerUp={handleUsePowerUpClick}
         />
       </div>

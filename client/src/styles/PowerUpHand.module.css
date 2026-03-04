@@ -207,10 +207,20 @@
 }
 
 .modalDescription {
-  margin: 0 0 1rem;
+  margin: 0 0 0.5rem;
+  min-height: 2.8em;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   line-height: 1.4;
+}
+
+.modalUseHint {
+  margin: 0 0 1rem;
+  min-height: 1.35em;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.35;
+  font-style: italic;
 }
 
 .modalActions {

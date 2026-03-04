@@ -10,17 +10,30 @@ function handDescription(
   return display.shortDescription ?? display.description;
 }
 
+/** Why the Use button is disabled; null when use is allowed. */
+export type UseDisabledReason = "wait_turn" | "before_flip" | null;
+
 interface PowerUpHandProps {
   hand: PowerUpInHand[];
   enabled: boolean;
+  /** When disabled: show "wait_turn" = opponent's turn, "before_flip" = use before flipping first tile. */
+  useDisabledReason?: UseDisabledReason;
   onUsePowerUp: (powerUpId: string) => void;
+}
+
+function useDisabledMessage(reason: UseDisabledReason): string {
+  if (reason === "wait_turn") return "You can use it on your turn.";
+  if (reason === "before_flip") return "Use it at the start of a move, before flipping a tile.";
+  return "";
 }
 
 export default function PowerUpHand({
   hand,
   enabled,
+  useDisabledReason = null,
   onUsePowerUp,
 }: PowerUpHandProps) {
+  const hintMessage = useDisabledMessage(useDisabledReason ?? null);
   const items = hand.filter((item) => item.count > 0);
   const [selectedPowerUpId, setSelectedPowerUpId] = useState<string | null>(null);
   const modalPanelRef = useRef<HTMLDivElement>(null);
@@ -135,8 +148,9 @@ export default function PowerUpHand({
               </h2>
               <p id="powerup-modal-desc" className={styles.modalDescription}>
                 {display?.description ?? ""}
-                {onCooldown ? " Available next turn." : ""}
-                {!enabled ? " You can use it on your turn." : ""}
+              </p>
+              <p className={styles.modalUseHint} aria-live="polite">
+                {onCooldown ? "Available next turn." : hintMessage}
               </p>
               <div className={styles.modalActions}>
                 <button
