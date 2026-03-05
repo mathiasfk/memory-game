@@ -3,6 +3,8 @@ import { BotTag } from "../components/BotTag";
 import { playSound } from "../lib/sounds";
 import styles from "../styles/MatchIntroScreen.module.css";
 
+const BOT_NAMES_WITH_AVATAR = ["Calliope", "Mnemosyne", "Thalia"] as const;
+
 interface MatchIntroScreenProps {
   yourName: string;
   opponentName: string;
@@ -68,7 +70,16 @@ export default function MatchIntroScreen({
           VS
         </span>
         <div className={styles.playerCard}>
-          <AvatarPlaceholder />
+          {opponentIsBot &&
+          (BOT_NAMES_WITH_AVATAR as readonly string[]).includes(opponentName) ? (
+            <img
+              src={`/avatars/${opponentName}.webp`}
+              alt=""
+              className={styles.avatarImg}
+            />
+          ) : (
+            <AvatarPlaceholder />
+          )}
           <div className={styles.nameRow}>
             <span className={styles.playerName}>{opponentName}</span>
             {opponentIsBot && <BotTag />}

@@ -102,6 +102,16 @@
   opacity: 0.7;
 }
 
+.avatarImg {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface-elevated);
+  border: 2px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
 .playerName {
   font-family: var(--font-heading);
   font-size: var(--text-lg);
@@ -168,6 +178,11 @@
     width: 3.25rem;
     height: 3.25rem;
     font-size: 1.25rem;
+  }
+
+  .avatarImg {
+    width: 3.25rem;
+    height: 3.25rem;
   }
 
   .title {
