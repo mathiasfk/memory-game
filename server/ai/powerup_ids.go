@@ -11,4 +11,5 @@ const (
 	PowerUpWaterElemental = "water_elemental"
 	PowerUpAirElemental   = "air_elemental"
 	PowerUpEarthElemental = "earth_elemental"
+	PowerUpNecromancy     = "necromancy"
 )

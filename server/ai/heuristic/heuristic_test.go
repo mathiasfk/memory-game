@@ -102,6 +102,150 @@ func TestEV_Leech_WithoutKnownPair(t *testing.T) {
 	}
 }
 
+func TestEV_BloodPact_WithThreeKnownPairs(t *testing.T) {
+	state := &game.GameStateMsg{Cards: make([]game.CardView, 12), ArcanaPairs: 6}
+	for i := range state.Cards {
+		state.Cards[i] = game.CardView{Index: i, State: "hidden"}
+	}
+	hidden := hiddenIndicesForTest(state.Cards)
+	// Three known pairs: (0,1)=pair0, (2,3)=pair1, (4,5)=pair2
+	memory := map[int]int{0: 0, 1: 0, 2: 1, 3: 1, 4: 2, 5: 2}
+	P := 6
+	ev := EV("blood_pact", state, memory, hidden, P)
+	if ev <= 0 {
+		t.Errorf("EV(blood_pact) with 3 known pairs should be positive (5), got %v", ev)
+	}
+	if ev != 5 {
+		t.Errorf("EV(blood_pact) with 3 known pairs want 5, got %v", ev)
+	}
+}
+
+func TestEV_BloodPact_WithTwoKnownPairs(t *testing.T) {
+	state := &game.GameStateMsg{Cards: make([]game.CardView, 12), ArcanaPairs: 6}
+	for i := range state.Cards {
+		state.Cards[i] = game.CardView{Index: i, State: "hidden"}
+	}
+	hidden := hiddenIndicesForTest(state.Cards)
+	memory := map[int]int{0: 0, 1: 0, 2: 1, 3: 1}
+	P := 6
+	ev := EV("blood_pact", state, memory, hidden, P)
+	if ev != 0 {
+		t.Errorf("EV(blood_pact) with 2 known pairs should be 0 (do not risk), got %v", ev)
+	}
+}
+
+func TestEV_BloodPact_WithoutKnownPair(t *testing.T) {
+	state := &game.GameStateMsg{Cards: make([]game.CardView, 12), ArcanaPairs: 6}
+	for i := range state.Cards {
+		state.Cards[i] = game.CardView{Index: i, State: "hidden"}
+	}
+	hidden := hiddenIndicesForTest(state.Cards)
+	memory := map[int]int{}
+	P := 6
+	ev := EV("blood_pact", state, memory, hidden, P)
+	if ev != 0 {
+		t.Errorf("EV(blood_pact) without known pair should be 0, got %v", ev)
+	}
+	// Partial knowledge (only one card per pair) is not enough
+	memoryPartial := map[int]int{0: 0, 2: 1, 4: 2}
+	evPartial := EV("blood_pact", state, memoryPartial, hidden, P)
+	if evPartial != 0 {
+		t.Errorf("EV(blood_pact) with only partial pairs should be 0, got %v", evPartial)
+	}
+}
+
+func TestEV_Necromancy_WhenBehindAndHasRevivedPairs(t *testing.T) {
+	// 12 cards: 4 matched (pairs 1 and 2), 8 hidden. Necromancy is pair 0, not matched. AI behind.
+	state := &game.GameStateMsg{
+		Cards:          make([]game.CardView, 12),
+		ArcanaPairs:    6,
+		PairIDToPowerUp: map[int]string{0: "necromancy", 1: "chaos", 2: "clairvoyance"},
+		You:            game.PlayerView{Score: 0},
+		Opponent:       game.PlayerView{Score: 2},
+	}
+	for i := 0; i < 4; i++ {
+		state.Cards[i] = game.CardView{Index: i, State: "matched", PairID: intPtr(1 + i/2)}
+	}
+	for i := 4; i < 12; i++ {
+		state.Cards[i] = game.CardView{Index: i, State: "hidden"}
+	}
+	hidden := hiddenIndicesForTest(state.Cards)
+	memory := map[int]int{}
+	P := 4 // 8 hidden = 4 pairs remaining
+	ev := EV("necromancy", state, memory, hidden, P)
+	if ev <= 0 {
+		t.Errorf("EV(necromancy) when behind with revived pairs should be positive, got %v", ev)
+	}
+}
+
+func TestEV_Necromancy_WhenTiedOrAhead_ReturnsNegative(t *testing.T) {
+	state := &game.GameStateMsg{
+		Cards:           make([]game.CardView, 12),
+		ArcanaPairs:     6,
+		PairIDToPowerUp: map[int]string{0: "necromancy"},
+		You:             game.PlayerView{Score: 2},
+		Opponent:       game.PlayerView{Score: 2},
+	}
+	for i := 0; i < 4; i++ {
+		state.Cards[i] = game.CardView{Index: i, State: "matched", PairID: intPtr(1)}
+	}
+	for i := 4; i < 12; i++ {
+		state.Cards[i] = game.CardView{Index: i, State: "hidden"}
+	}
+	hidden := hiddenIndicesForTest(state.Cards)
+	ev := EV("necromancy", state, nil, hidden, 4)
+	if ev != -1 {
+		t.Errorf("EV(necromancy) when tied should be -1, got %v", ev)
+	}
+	state.You.Score = 3
+	evAhead := EV("necromancy", state, nil, hidden, 4)
+	if evAhead != -1 {
+		t.Errorf("EV(necromancy) when ahead should be -1, got %v", evAhead)
+	}
+}
+
+func TestEV_Necromancy_WhenNoMatchedToRevive_ReturnsNegative(t *testing.T) {
+	state := &game.GameStateMsg{
+		Cards:           make([]game.CardView, 12),
+		ArcanaPairs:     6,
+		PairIDToPowerUp: map[int]string{0: "necromancy"},
+		You:             game.PlayerView{Score: 0},
+		Opponent:       game.PlayerView{Score: 2},
+	}
+	for i := range state.Cards {
+		state.Cards[i] = game.CardView{Index: i, State: "hidden"}
+	}
+	hidden := hiddenIndicesForTest(state.Cards)
+	ev := EV("necromancy", state, nil, hidden, 6)
+	if ev != -1 {
+		t.Errorf("EV(necromancy) when no matched to revive should be -1, got %v", ev)
+	}
+}
+
+func TestEV_Necromancy_WhenNecromancyPairIsMatched_ExcludesItFromRevived(t *testing.T) {
+	// 6 cards: all matched (3 pairs). Pair 0 = Necromancy. So revivedPairs = 2 (only pairs 1 and 2).
+	state := &game.GameStateMsg{
+		Cards:           make([]game.CardView, 6),
+		ArcanaPairs:     6,
+		PairIDToPowerUp: map[int]string{0: "necromancy", 1: "chaos", 2: "clairvoyance"},
+		You:             game.PlayerView{Score: 0},
+		Opponent:       game.PlayerView{Score: 2},
+	}
+	state.Cards[0] = game.CardView{Index: 0, State: "matched", PairID: intPtr(0)}
+	state.Cards[1] = game.CardView{Index: 1, State: "matched", PairID: intPtr(0)}
+	state.Cards[2] = game.CardView{Index: 2, State: "matched", PairID: intPtr(1)}
+	state.Cards[3] = game.CardView{Index: 3, State: "matched", PairID: intPtr(1)}
+	state.Cards[4] = game.CardView{Index: 4, State: "matched", PairID: intPtr(2)}
+	state.Cards[5] = game.CardView{Index: 5, State: "matched", PairID: intPtr(2)}
+	hidden := hiddenIndicesForTest(state.Cards) // empty
+	ev := EV("necromancy", state, nil, hidden, 0)
+	if ev <= 0 {
+		t.Errorf("EV(necromancy) when behind with 2 revived pairs (Necromancy pair excluded) should be positive, got %v", ev)
+	}
+}
+
+func intPtr(i int) *int { return &i }
+
 func hiddenIndicesForTest(cards []game.CardView) []int {
 	var out []int
 	for _, c := range cards {

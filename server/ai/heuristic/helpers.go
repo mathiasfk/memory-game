@@ -28,6 +28,20 @@ func pairToHiddenIndices(memory map[int]int, hidden []int) map[int][]int {
 	return out
 }
 
+// evNoCardApprox returns expected value (points) for this turn without using any arcana.
+// Mirrors ai.evNoCard: known pair => 1 + RandomMatchProb(P-1); else RandomMatchProb(P).
+// Used by the Necromancy heuristic to compare "continue" vs "revert".
+func evNoCardApprox(memory map[int]int, hidden []int, P int) float64 {
+	if HasKnownPair(memory, hidden) {
+		PAfter := P - 1
+		if PAfter <= 0 {
+			return 1
+		}
+		return 1 + RandomMatchProb(PAfter)
+	}
+	return RandomMatchProb(P)
+}
+
 // HasKnownPair returns true if memory contains a complete pair still in hidden (both indices hidden).
 // Exported for use by ai.evNoCard.
 func HasKnownPair(memory map[int]int, hidden []int) bool {
