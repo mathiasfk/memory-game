@@ -31,7 +31,7 @@ export const NORMAL_CARD_SYMBOLS: NormalCardSymbol[] = [
   // 🌬 AIR (3)
   { symbol: "\u{1F701}", color: SYMBOL_COLORS.air },    // 🜁 air
   { symbol: "\u263F", color: SYMBOL_COLORS.air },       // ☿ mercury
-  { symbol: "\u16DF", color: SYMBOL_COLORS.air },       // ᛟ Othala
+  { symbol: "\u16C9", color: SYMBOL_COLORS.air },       // ᛉ Algiz
 
   // 🌍 EARTH (3)
   { symbol: "\u{1F703}", color: SYMBOL_COLORS.earth },  // 🜃 earth
