@@ -4,3 +4,5 @@ Sound effects and media credits
 Quiet Page Turn - 5 by SpaceJoe (tile-flip, tile-flip-back) -- https://freesound.org/s/484965/ -- License: Creative Commons 0
 
 Flip.ogg by egomassive -- https://freesound.org/s/536782/ -- License: Attribution 3.0
+
+Drums_4ontheFloor KickDrum(108BPM).wav by Hewn.Marrow -- https://freesound.org/s/666000/ -- License: Attribution 4.0

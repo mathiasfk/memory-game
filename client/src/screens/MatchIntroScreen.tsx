@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { BotTag } from "../components/BotTag";
+import { playSound } from "../lib/sounds";
 import styles from "../styles/MatchIntroScreen.module.css";
 
 interface MatchIntroScreenProps {
@@ -42,6 +44,10 @@ export default function MatchIntroScreen({
 }: MatchIntroScreenProps) {
   const opponentIsBot =
     opponentUserId === "ai" || (opponentUserId?.startsWith("ai:") ?? false);
+
+  useEffect(() => {
+    playSound("matchFound");
+  }, []);
 
   return (
     <section

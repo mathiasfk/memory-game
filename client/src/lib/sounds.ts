@@ -3,7 +3,7 @@
  * Add new events in SOUND_REGISTRY and call playSound() from handlers/screens.
  */
 
-export type SoundEvent = "tileFlip" | "tileFlipBack" | "pairMatch";
+export type SoundEvent = "tileFlip" | "tileFlipBack" | "pairMatch" | "matchFound";
 
 interface SoundEntry {
   path: string;
@@ -19,6 +19,9 @@ const SOUND_REGISTRY: Record<SoundEvent, SoundEntry> = {
   },
   pairMatch: {
     path: "/sounds/tile-match__536782.mp3",
+  },
+  matchFound: {
+    path: "/sounds/match-found__666000.mp3",
   },
 };
 
