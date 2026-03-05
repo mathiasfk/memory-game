@@ -7,6 +7,8 @@ import GameScreen from "../screens/GameScreen";
 import LobbyScreen from "../screens/LobbyScreen";
 import WaitingScreen from "../screens/WaitingScreen";
 import type { GameOverMsg, GameStateMsg, MatchFoundMsg } from "../types/messages";
+import { fetchLastGame } from "../lib/api";
+import { recordToGameOverMsg } from "../lib/gameOverFromHistory";
 import { getGameSession, clearGameSession, saveGameSession } from "../lib/gameSession";
 import { playSound } from "../lib/sounds";
 import { ToastContainer, type ToastItem } from "./Toast";
@@ -58,6 +60,8 @@ export function GameShell() {
   /** Match intro: show for MATCH_INTRO_DURATION_MS then go to board; skipped on rejoin. */
   const [introDismissed, setIntroDismissed] = useState(false);
   const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** When set, GameOverScreen shows this title when result is null (e.g. "A partida acabou" after missed game_over). */
+  const [gameOverTitleOverride, setGameOverTitleOverride] = useState<string | null>(null);
 
   const addToast = useCallback(
     (
@@ -103,6 +107,7 @@ export function GameShell() {
           setGameResult(null);
           setRatingUpdate(null);
           setOpponentDisconnected(false);
+          setGameOverTitleOverride(null);
           const session = getGameSession();
           const isRejoin = session?.gameId === msg.gameId;
           if (isRejoin) {
@@ -161,6 +166,7 @@ export function GameShell() {
         setGameResult(msg);
         setRatingUpdate(null);
         setOpponentDisconnected(false);
+        setGameOverTitleOverride(null);
         setPendingGameOver(msg);
         if (gameOverTimeoutRef.current) clearTimeout(gameOverTimeoutRef.current);
         gameOverTimeoutRef.current = setTimeout(() => {
@@ -180,6 +186,7 @@ export function GameShell() {
         clearGameSession();
         setOpponentDisconnected(true);
         setGameResult(null);
+        setGameOverTitleOverride(null);
         setScreen("gameover");
         break;
       case "opponent_reconnecting":
@@ -221,7 +228,43 @@ export function GameShell() {
         }, 3000);
         break;
       }
-      case "error":
+      case "error": {
+        if (msg.message.includes("You are not in a game.") && (screen === "game" || matchInfo != null)) {
+          clearGameSession();
+          setMatchInfo(null);
+          setGameState(null);
+          setGameOverTitleOverride(null);
+          fetchLastGame()
+            .then((record) => {
+              if (record) {
+                setGameResult(recordToGameOverMsg(record));
+                setOpponentDisconnected(record.end_reason === "opponent_disconnected");
+                const yi = record.your_index ?? 0;
+                const eloBefore = yi === 0 ? record.player0_elo_before : record.player1_elo_before;
+                const eloAfter = yi === 0 ? record.player0_elo_after : record.player1_elo_after;
+                if (eloBefore != null && eloAfter != null) {
+                  setRatingUpdate({ you_elo_before: eloBefore, you_elo_after: eloAfter });
+                } else {
+                  setRatingUpdate(null);
+                }
+                setScreen("gameover");
+              } else {
+                setGameResult(null);
+                setOpponentDisconnected(false);
+                setRatingUpdate(null);
+                setGameOverTitleOverride("A partida acabou");
+                setScreen("gameover");
+              }
+            })
+            .catch(() => {
+              setGameResult(null);
+              setOpponentDisconnected(false);
+              setRatingUpdate(null);
+              setGameOverTitleOverride("A partida acabou");
+              setScreen("gameover");
+            });
+          break;
+        }
         if (msg.message.includes("Game not found") || msg.message.includes("Invalid rejoin")) {
           clearGameSession();
         }
@@ -230,12 +273,13 @@ export function GameShell() {
           addToast(msg.message);
         }
         break;
+      }
       default: {
         const _exhaustiveCheck: never = msg;
         void _exhaustiveCheck;
       }
     }
-  }, [addToast, dismissToast, gameState]);
+  }, [addToast, dismissToast, gameState, screen, matchInfo]);
 
   // Remount Board when we receive the first game_state (new game or rejoin) so it can show already matched/removed tiles as empty.
   useEffect(() => {
@@ -414,6 +458,7 @@ export function GameShell() {
   const handlePlayAgain = useCallback(() => {
     setGameResult(null);
     setOpponentDisconnected(false);
+    setGameOverTitleOverride(null);
     setIntroDismissed(false);
     if (introTimerRef.current) {
       clearTimeout(introTimerRef.current);
@@ -429,6 +474,7 @@ export function GameShell() {
     setMatchInfo(null);
     setGameState(null);
     setOpponentDisconnected(false);
+    setGameOverTitleOverride(null);
     setIntroDismissed(false);
     if (introTimerRef.current) {
       clearTimeout(introTimerRef.current);
@@ -547,6 +593,7 @@ export function GameShell() {
           ratingOverride={ratingUpdate}
           opponentDisconnected={opponentDisconnected}
           latestGameState={gameState}
+          titleWhenNoResult={gameOverTitleOverride ?? undefined}
           onPlayAgain={handlePlayAgain}
           onBackToHome={handleBackToHome}
         />

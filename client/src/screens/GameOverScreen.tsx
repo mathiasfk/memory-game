@@ -17,6 +17,8 @@ interface GameOverScreenProps {
   ratingOverride?: { you_elo_before: number; you_elo_after: number } | null;
   opponentDisconnected: boolean;
   latestGameState: GameStateMsg | null;
+  /** When result is null and not opponentDisconnected (e.g. missed game_over), show this title instead of "Opponent disconnected". */
+  titleWhenNoResult?: string;
   onPlayAgain: () => void;
   onBackToHome: () => void;
 }
@@ -38,6 +40,7 @@ export default function GameOverScreen({
   ratingOverride,
   opponentDisconnected,
   latestGameState,
+  titleWhenNoResult,
   onPlayAgain,
   onBackToHome,
 }: GameOverScreenProps) {
@@ -93,9 +96,11 @@ export default function GameOverScreen({
   return (
     <section className={styles.screen}>
       <h2 className={styles.title}>
-        {opponentDisconnected || result === null
-          ? "Opponent disconnected"
-          : resultLabel(result.result)}
+        {result !== null
+          ? resultLabel(result.result)
+          : opponentDisconnected
+            ? "Opponent disconnected"
+            : titleWhenNoResult ?? "Opponent disconnected"}
       </h2>
 
       <div className={styles.scores}>

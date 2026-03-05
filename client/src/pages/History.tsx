@@ -5,54 +5,11 @@ import {
   SignedIn,
 } from "@neondatabase/neon-js/auth/react/ui";
 import { BotTag } from "../components/BotTag";
-import { authClient } from "../lib/auth";
+import { getApiBase, getAuthToken } from "../lib/api";
+import type { GameRecord, HistoryResponse } from "../types/history";
 import styles from "../styles/History.module.css";
 
-const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? "";
-const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 const HISTORY_PAGE_SIZE = 10;
-
-function apiBase(): string {
-  const apiUrl = import.meta.env.VITE_API_URL;
-  if (apiUrl) return apiUrl.replace(/\/$/, "");
-  const base = WS_URL.replace(/^ws/, "http").replace(/\/ws\/?$/, "") || "http://localhost:8080";
-  return base;
-}
-
-export interface GameRecord {
-  id: string;
-  played_at: string;
-  game_id: string;
-  player0_user_id: string;
-  player1_user_id: string;
-  player0_name: string;
-  player1_name: string;
-  player0_score: number;
-  player1_score: number;
-  winner_index: number | null;
-  end_reason: string;
-  your_index: number | null;
-  player0_elo_before?: number | null;
-  player1_elo_before?: number | null;
-  player0_elo_after?: number | null;
-  player1_elo_after?: number | null;
-}
-
-interface HistoryResponse {
-  games: GameRecord[];
-  has_more: boolean;
-}
-
-async function fetchToken(): Promise<string | null> {
-  if (!NEON_AUTH_URL) return null;
-  const getSessionUrl = `${NEON_AUTH_URL.replace(/\/$/, "")}/get-session`;
-  const res = await fetch(getSessionUrl, { credentials: "include" });
-  const jwt =
-    res.headers.get("set-auth-jwt") ?? res.headers.get("Set-Auth-Jwt");
-  if (jwt) return jwt;
-  const result = await authClient.token();
-  return result.data?.token ?? null;
-}
 
 export function HistoryPage() {
   const [list, setList] = useState<GameRecord[]>([]);
@@ -65,7 +22,7 @@ export function HistoryPage() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchToken()
+    getAuthToken()
       .then((token) => {
         if (cancelled) return;
         if (!token) {
@@ -73,7 +30,7 @@ export function HistoryPage() {
           setLoading(false);
           return;
         }
-        const base = apiBase();
+        const base = getApiBase();
         return fetch(
           `${base}/api/history?limit=${HISTORY_PAGE_SIZE}&offset=0`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -115,10 +72,10 @@ export function HistoryPage() {
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore) return;
-    const token = await fetchToken();
+    const token = await getAuthToken();
     if (!token) return;
     setLoadingMore(true);
-    const base = apiBase();
+    const base = getApiBase();
     try {
       const res = await fetch(
         `${base}/api/history?limit=${HISTORY_PAGE_SIZE}&offset=${list.length}`,
