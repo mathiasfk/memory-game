@@ -75,16 +75,17 @@ func (h *Hub) Run(ctx context.Context) {
 				delete(h.Clients, client)
 				slog.Info("Client disconnected", "tag", "hub", "total_connections", len(h.Clients), "total_users", h.uniqueAuthenticatedUsers())
 
-				// Notify game first so it can clear player.Send before we close the channel,
-				// reducing "send on closed channel" panics in SafeSend.
+				// Notify game so it can clear player.Send before we close the channel.
+				// Use a goroutine with blocking send so we never drop this action; if we dropped it,
+				// the game would never clear the Send reference and every broadcast would panic on closed channel.
 				if client.Game != nil && !client.Game.Finished {
-					select {
-					case client.Game.Actions <- game.Action{
+					act := game.Action{
 						Type:      game.ActionPlayerDisconnected,
 						PlayerIdx: client.PlayerID,
-					}:
-					default:
 					}
+					go func() {
+						client.Game.Actions <- act
+					}()
 				}
 
 				// Close Send after a short delay so the game loop can process the action and clear its reference.
