@@ -11,7 +11,17 @@
   box-sizing: border-box;
 }
 
+/* Mobile: viewport narrow → compact gap. */
 @media (max-width: 600px) {
+  .board {
+    gap: 0.15rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* Small board (e.g. desktop 1024×768): when tile size is small, compact gap regardless of viewport. */
+@container (max-width: 500px) {
   .board {
     gap: 0.15rem;
     padding-left: 0.5rem;
