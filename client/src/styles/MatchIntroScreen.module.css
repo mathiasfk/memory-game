@@ -83,8 +83,8 @@
 }
 
 .avatarPlaceholder {
-  width: 4rem;
-  height: 4rem;
+  width: 6rem;
+  height: 6rem;
   border-radius: 50%;
   background: var(--color-surface-elevated);
   border: 2px solid var(--color-border-subtle);
@@ -97,14 +97,14 @@
 }
 
 .avatarPlaceholder svg {
-  width: 2rem;
-  height: 2rem;
+  width: 3rem;
+  height: 3rem;
   opacity: 0.7;
 }
 
 .avatarImg {
-  width: 4rem;
-  height: 4rem;
+  width: 6rem;
+  height: 6rem;
   border-radius: 50%;
   object-fit: cover;
   background: var(--color-surface-elevated);
@@ -175,14 +175,19 @@
   }
 
   .avatarPlaceholder {
-    width: 3.25rem;
-    height: 3.25rem;
+    width: 4.5rem;
+    height: 4.5rem;
     font-size: 1.25rem;
   }
 
+  .avatarPlaceholder svg {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
   .avatarImg {
-    width: 3.25rem;
-    height: 3.25rem;
+    width: 4.5rem;
+    height: 4.5rem;
   }
 
   .title {
