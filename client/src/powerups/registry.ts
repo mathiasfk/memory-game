@@ -58,6 +58,13 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
     shortDescription: "Remove a tile and its pair.",
     imagePath: "/cards/Oblivion.webp",
   },
+  silence: {
+    icon: "SIL",
+    label: "Silence",
+    description: "Pass your turn immediately without revealing a pair.",
+    shortDescription: "Pass the turn without revealing a pair.",
+    imagePath: "/cards/Silence.webp",
+  },
   earth_elemental: {
     icon: "ERT",
     label: "Earth Elemental",

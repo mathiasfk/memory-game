@@ -215,6 +215,46 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 	powerUpLabel := pup.Name
 	g.broadcastPowerUpUsed(player.Name, powerUpLabel, noEffect)
 
+	// Silence: pass turn immediately without revealing a pair
+	if powerUpID == "silence" {
+		// End of turn: clear highlight for both players and Leech
+		for i := 0; i < 2; i++ {
+			if g.Players[i] != nil {
+				g.Players[i].HighlightIndices = nil
+			}
+		}
+		player.LeechActive = false
+		// Blood Pact: passing turn counts as failure; lose 3 points and clear pact
+		if player.BloodPactActive {
+			player.Score -= 3
+			if player.Score < 0 {
+				player.Score = 0
+			}
+			g.broadcastPowerUpEffectResolved(player.Name, "Blood Pact", player.Name+" broke the Pact and lost 3 points")
+			player.BloodPactActive = false
+			player.BloodPactMatchesCount = 0
+		}
+		// Record turn telemetry, advance turn, start timer for next player
+		if g.TelemetrySink != nil {
+			pidx := g.CurrentTurn
+			scoreAfter := g.Players[pidx].Score
+			oppScoreAfter := g.Players[1-pidx].Score
+			deltaPlayer := scoreAfter - g.TurnStartScores[pidx]
+			deltaOpponent := oppScoreAfter - g.TurnStartScores[1-pidx]
+			g.TelemetrySink.RecordTurn(g.ID, g.Round, pidx, scoreAfter, oppScoreAfter, deltaPlayer, deltaOpponent)
+		}
+		g.Round++
+		g.CurrentTurn = 1 - g.CurrentTurn
+		g.TurnPhase = FirstFlip
+		g.TurnStartScores[0] = g.Players[0].Score
+		g.TurnStartScores[1] = g.Players[1].Score
+		g.clearHandCooldownForPlayer(g.CurrentTurn)
+		g.cancelTurnTimer()
+		g.startTurnTimer()
+		g.broadcastState()
+		return
+	}
+
 	// Broadcast updated state (turn does not end)
 	g.broadcastState()
 

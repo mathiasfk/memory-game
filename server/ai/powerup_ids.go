@@ -6,6 +6,7 @@ const (
 	PowerUpClairvoyance   = "clairvoyance"
 	PowerUpLeech          = "leech"
 	PowerUpOblivion       = "oblivion"
+	PowerUpSilence        = "silence"
 	PowerUpFireElemental  = "fire_elemental"
 	PowerUpWaterElemental = "water_elemental"
 	PowerUpAirElemental   = "air_elemental"

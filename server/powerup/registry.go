@@ -146,6 +146,7 @@ func RegisterAll(r *Registry, cfg *config.PowerUpsConfig) {
 	r.Register(&BloodPactPowerUp{CostValue: 0})
 	r.Register(&LeechPowerUp{CostValue: 0})
 	r.Register(&OblivionPowerUp{CostValue: 0})
+	r.Register(&SilencePowerUp{CostValue: 0})
 	r.Register(&EarthElementalPowerUp{CostValue: 0})
 	r.Register(&FireElementalPowerUp{CostValue: 0})
 	r.Register(&WaterElementalPowerUp{CostValue: 0})
