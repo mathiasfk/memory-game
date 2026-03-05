@@ -523,6 +523,18 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 		BoardCols:      m.config.BoardCols,
 		YourTurn:       yourTurn,
 	}
+	if m.historyStore != nil {
+		ctx := context.Background()
+		if e, err := m.historyStore.GetLeaderboardEntryByUserID(ctx, client.UserID); err == nil && e != nil {
+			msg.YourElo = &e.Elo
+		}
+		opponentUID := g.PlayerUserIDs[1-playerIdx]
+		if opponentUID != "" {
+			if e, err := m.historyStore.GetLeaderboardEntryByUserID(ctx, opponentUID); err == nil && e != nil {
+				msg.OpponentElo = &e.Elo
+			}
+		}
+	}
 	data, _ := json.Marshal(msg)
 	wsutil.SafeSend(client.Send, data)
 }

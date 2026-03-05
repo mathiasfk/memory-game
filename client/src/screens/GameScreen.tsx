@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Board from "../components/Board";
 import { BotTag } from "../components/BotTag";
 import PowerUpHand from "../components/PowerUpHand";
+import MatchIntroScreen from "./MatchIntroScreen";
 import type { GameStateMsg, MatchFoundMsg } from "../types/messages";
 import styles from "../styles/GameScreen.module.css";
 import countdownStyles from "../styles/TurnCountdown.module.css";
@@ -14,6 +15,10 @@ interface GameScreenProps {
   boardKey: number;
   /** Temporary message when a power-up is used (e.g. "Thalia used Leech!"). */
   powerUpMessage?: string | null;
+  /** When false, show match intro screen; when true (or on rejoin), go straight to board when gameState is ready. */
+  introDismissed: boolean;
+  /** Current player display name for match intro. */
+  yourName: string;
   onFlipCard: (index: number) => void;
   onUsePowerUp: (powerUpId: string, cardIndex?: number) => void;
   onAbandon: () => void;
@@ -29,6 +34,8 @@ export default function GameScreen({
   gameState,
   boardKey,
   powerUpMessage = null,
+  introDismissed,
+  yourName,
   onFlipCard,
   onUsePowerUp,
   onAbandon,
@@ -82,6 +89,18 @@ export default function GameScreen({
       <section className={styles.screen}>
         <p>Waiting for match details...</p>
       </section>
+    );
+  }
+
+  if (!introDismissed) {
+    return (
+      <MatchIntroScreen
+        yourName={yourName}
+        opponentName={matchInfo.opponentName}
+        yourElo={matchInfo.your_elo}
+        opponentElo={matchInfo.opponent_elo}
+        opponentUserId={matchInfo.opponentUserId}
+      />
     );
   }
 

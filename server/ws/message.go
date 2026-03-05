@@ -88,4 +88,7 @@ type MatchFoundMsg struct {
 	BoardRows      int    `json:"boardRows"`
 	BoardCols      int    `json:"boardCols"`
 	YourTurn       bool   `json:"yourTurn"`
+	// YourElo and OpponentElo are current ratings when available (from leaderboard).
+	YourElo     *int `json:"your_elo,omitempty"`
+	OpponentElo *int `json:"opponent_elo,omitempty"`
 }

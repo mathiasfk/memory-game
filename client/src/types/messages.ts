@@ -73,6 +73,8 @@ export interface MatchFoundMsg {
   boardRows: number;
   boardCols: number;
   yourTurn: boolean;
+  your_elo?: number;
+  opponent_elo?: number;
 }
 
 export interface GameStateMsg extends GameState {

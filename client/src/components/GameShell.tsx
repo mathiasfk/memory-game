@@ -15,6 +15,7 @@ import styles from "../styles/App.module.css";
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? "";
 const GAME_OVER_DELAY_MS = 300;
+const MATCH_INTRO_DURATION_MS = 4000;
 
 type ScreenName = "lobby" | "waiting" | "game" | "gameover";
 
@@ -54,6 +55,9 @@ export function GameShell() {
   const prevHadGameStateRef = useRef(false);
   /** ID of the "Opponent lost connection..." toast so we can dismiss it when opponent_reconnected. */
   const reconnectingToastIdRef = useRef<string | null>(null);
+  /** Match intro: show for MATCH_INTRO_DURATION_MS then go to board; skipped on rejoin. */
+  const [introDismissed, setIntroDismissed] = useState(false);
+  const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addToast = useCallback(
     (
@@ -93,12 +97,27 @@ export function GameShell() {
           setRatingUpdate(null);
           setOpponentDisconnected(false);
           break;
-        case "match_found":
+        case "match_found": {
           setMatchInfo(msg);
           setScreen("game");
           setGameResult(null);
           setRatingUpdate(null);
           setOpponentDisconnected(false);
+          const session = getGameSession();
+          const isRejoin = session?.gameId === msg.gameId;
+          if (isRejoin) {
+            setIntroDismissed(true);
+          } else {
+            setIntroDismissed(false);
+            if (introTimerRef.current) {
+              clearTimeout(introTimerRef.current);
+              introTimerRef.current = null;
+            }
+            introTimerRef.current = setTimeout(() => {
+              introTimerRef.current = null;
+              setIntroDismissed(true);
+            }, MATCH_INTRO_DURATION_MS);
+          }
           if (msg.gameId && msg.rejoinToken) {
             saveGameSession({
               gameId: msg.gameId,
@@ -107,6 +126,7 @@ export function GameShell() {
             });
           }
           break;
+        }
         case "game_state": {
           const prevCards = gameState?.cards ?? [];
           const prevByIndex = new Map(prevCards.map((c) => [c.index, c.state]));
@@ -315,7 +335,7 @@ export function GameShell() {
     }
   }, [connected]);
 
-  // Clear game-over delay and power-up message timeouts on unmount
+  // Clear game-over delay, power-up message, and match intro timeouts on unmount
   useEffect(() => {
     return () => {
       if (gameOverTimeoutRef.current) {
@@ -325,6 +345,10 @@ export function GameShell() {
       if (powerUpMessageTimeoutRef.current) {
         clearTimeout(powerUpMessageTimeoutRef.current);
         powerUpMessageTimeoutRef.current = null;
+      }
+      if (introTimerRef.current) {
+        clearTimeout(introTimerRef.current);
+        introTimerRef.current = null;
       }
     };
   }, []);
@@ -390,6 +414,11 @@ export function GameShell() {
   const handlePlayAgain = useCallback(() => {
     setGameResult(null);
     setOpponentDisconnected(false);
+    setIntroDismissed(false);
+    if (introTimerRef.current) {
+      clearTimeout(introTimerRef.current);
+      introTimerRef.current = null;
+    }
     clearGameSession();
     send({ type: "play_again" });
     setScreen("waiting");
@@ -400,6 +429,11 @@ export function GameShell() {
     setMatchInfo(null);
     setGameState(null);
     setOpponentDisconnected(false);
+    setIntroDismissed(false);
+    if (introTimerRef.current) {
+      clearTimeout(introTimerRef.current);
+      introTimerRef.current = null;
+    }
     clearGameSession();
     setScreen("lobby");
   }, []);
@@ -415,6 +449,11 @@ export function GameShell() {
 
   const handleConfirmAbandon = useCallback(() => {
     setShowAbandonConfirm(false);
+    setIntroDismissed(false);
+    if (introTimerRef.current) {
+      clearTimeout(introTimerRef.current);
+      introTimerRef.current = null;
+    }
     clearGameSession();
     send({ type: "leave_game" });
     setMatchInfo(null);
@@ -494,6 +533,8 @@ export function GameShell() {
           gameState={gameState}
           boardKey={boardKey}
           powerUpMessage={powerUpMessage}
+          introDismissed={introDismissed}
+          yourName={userName}
           onFlipCard={handleFlipCard}
           onUsePowerUp={handleUsePowerUp}
           onAbandon={handleAbandonClick}
