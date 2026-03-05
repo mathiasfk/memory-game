@@ -95,28 +95,17 @@ export const POWER_UP_DISPLAY: Record<string, PowerUpDisplayInfo> = {
   },
 };
 
-/** Fallback when server does not send pairIdToPowerUp (e.g. old client). */
-const PAIR_ID_TO_POWER_UP_ID: Record<number, string> = {
-  0: "chaos",
-  1: "clairvoyance",
-  2: "necromancy",
-  3: "unveiling",
-  4: "blood_pact",
-  5: "leech",
-};
-
 /**
  * Returns display info for the power-up at the given pair ID.
- * Uses pairIdToPowerUp from game state when provided (per-match arcana); otherwise fallback.
+ * Only uses pairIdToPowerUp from the server; when absent (unexpected state), returns null
+ * so the UI can show a placeholder instead of wrong powerup art.
  */
 export function getPowerUpDisplayByPairId(
   pairId: number,
   pairIdToPowerUp?: Record<string, string> | null
 ): PowerUpDisplayInfo | null {
   const powerUpId =
-    pairIdToPowerUp != null && pairIdToPowerUp[String(pairId)] != null
-      ? pairIdToPowerUp[String(pairId)]
-      : PAIR_ID_TO_POWER_UP_ID[pairId];
+    pairIdToPowerUp != null ? pairIdToPowerUp[String(pairId)] : undefined;
   if (powerUpId == null) return null;
   return POWER_UP_DISPLAY[powerUpId] ?? null;
 }

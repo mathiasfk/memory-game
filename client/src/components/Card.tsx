@@ -72,7 +72,9 @@ export default function Card({
     pairId != null
       ? powerUpDisplay
         ? `Card ${powerUpDisplay.label}`
-        : "Card symbol"
+        : isArcana
+          ? "Card (arcana)"
+          : "Card symbol"
       : `Card ${card.index}`;
 
   const wrapperClasses = [
@@ -101,6 +103,8 @@ export default function Card({
         >
           {normalSymbol.symbol}
         </span>
+      ) : isArcana ? (
+        <span className={styles.inner} aria-hidden>?</span>
       ) : (
         <span className={styles.inner}>{String(pairId)}</span>
       )
