@@ -8,7 +8,9 @@ import (
 )
 
 // Rarity constants for weighted arcana selection (higher rarity = less likely to appear in a match).
+// RarityMust is for debug only (e.g. testing a new card): those cards are always included in the match set; do not use in production.
 const (
+	RarityMust    = 0
 	RarityCommon   = 1
 	RarityUncommon = 2
 	RarityRare     = 3
@@ -83,6 +85,7 @@ func (r *Registry) AllPowerUps() []game.PowerUpDef {
 }
 
 // PickArcanaForMatch selects n distinct power-ups with probability inverse to Rarity (common = more likely, rare = less likely).
+// Cards with RarityMust are always included (for debug/testing); the rest of the slots are filled by weighted selection.
 // It satisfies the game.PowerUpProvider interface.
 func (r *Registry) PickArcanaForMatch(n int) []game.PowerUpDef {
 	all := r.AllPowerUps()
@@ -92,18 +95,47 @@ func (r *Registry) PickArcanaForMatch(n int) []game.PowerUpDef {
 	if n >= len(all) {
 		return all
 	}
-	// Weighted selection without replacement: weight = max(1, RarityRare - Rarity + 1) so common appears more often.
-	indices := make([]int, len(all))
-	weights := make([]int, len(all))
-	for i := range all {
+
+	// Always include RarityMust cards first (debug only).
+	var picked []game.PowerUpDef
+	var pool []game.PowerUpDef
+	for _, p := range all {
+		if p.Rarity == RarityMust {
+			picked = append(picked, p)
+		} else {
+			pool = append(pool, p)
+		}
+	}
+	// If we have more Must than slots, only take the first n (caller should avoid this).
+	if len(picked) >= n {
+		return picked[:n]
+	}
+	if len(pool) == 0 {
+		return picked
+	}
+
+	// Fill remaining slots with weighted selection from non-Must pool.
+	need := n - len(picked)
+	if need >= len(pool) {
+		picked = append(picked, pool...)
+		return picked
+	}
+
+	// Weight = 2^(RarityRare-Rarity) so Common=4, Uncommon=2, Rare=1.
+	indices := make([]int, len(pool))
+	weights := make([]int, len(pool))
+	for i := range pool {
 		indices[i] = i
-		w := RarityRare - all[i].Rarity + 1
+		shift := RarityRare - pool[i].Rarity
+		if shift < 0 {
+			shift = 0
+		}
+		w := 1 << shift
 		if w < 1 {
 			w = 1
 		}
 		weights[i] = w
 	}
-	picked := make([]game.PowerUpDef, 0, n)
 	for len(picked) < n && len(indices) > 0 {
 		var total int
 		for _, w := range weights {
@@ -121,8 +153,7 @@ func (r *Registry) PickArcanaForMatch(n int) []game.PowerUpDef {
 				break
 			}
 		}
-		picked = append(picked, all[indices[idx]])
-		// Remove chosen from indices and weights
+		picked = append(picked, pool[indices[idx]])
 		indices = append(indices[:idx], indices[idx+1:]...)
 		weights = append(weights[:idx], weights[idx+1:]...)
 	}
