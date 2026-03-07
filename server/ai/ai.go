@@ -21,11 +21,48 @@ func clampPercent(v int) int {
 	return v
 }
 
+// applyForgetByRecency removes entries from memoryData with recency-based chance:
+//   - age 0 (revealed this round): 0% — never forgotten
+//   - age 1 (revealed by opponent last turn): forgetChance/2 (e.g. 8% → 4%)
+//   - age >= 2: full forgetChance
+// roll is called once per candidate entry (age > 0) and should return 0-99; if roll() < effectiveChance the entry is removed.
+func applyForgetByRecency(memoryData map[int]tileMemory, currentRound int, forgetChance int, roll func() int) {
+	if forgetChance <= 0 || len(memoryData) == 0 {
+		return
+	}
+	var toForget []int
+	for idx, entry := range memoryData {
+		age := currentRound - entry.LastSeenRound
+		if age < 0 {
+			age = 0
+		}
+		if age == 0 {
+			continue // never forget something seen this round
+		}
+		effectiveChance := forgetChance
+		if age == 1 {
+			effectiveChance = forgetChance / 2 // intermediate chance for "opponent revealed last turn"
+		}
+		if roll() < effectiveChance {
+			toForget = append(toForget, idx)
+		}
+	}
+	for _, idx := range toForget {
+		delete(memoryData, idx)
+	}
+}
+
+// tileMemory holds pairID and the round when the tile was last seen (for recency-based forget).
+type tileMemory struct {
+	PairID        int
+	LastSeenRound int
+}
+
 // Run receives game state messages from the given channel and sends actions to the game
 // when it is the AI's turn. It only uses information from the game_state payload (no
 // access to board internals). It runs until the channel is closed or a game_over is received.
 func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIParams) {
-	memory := make(map[int]int)             // index -> pairID (what we've seen at each position)
+	memoryData := make(map[int]tileMemory)   // index -> pairID + lastSeenRound (for recency-based forget)
 	elementMemory := make(map[int]string)    // index -> element (tiles we know the element of, e.g. from elemental highlight)
 	var lastElementalUsed string             // element of the elemental we just used; next state's HighlightIndices will be that element
 	var clearElementMemoryNext bool          // true after we use Chaos (board shuffles, so element-by-index is stale)
@@ -61,38 +98,37 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				}
 			}
 			if allHidden && len(state.KnownIndices) == 0 {
-				memory = make(map[int]int)
+				memoryData = make(map[int]tileMemory)
 			}
-			// Update memory from current view: any revealed or matched card exposes its pairID.
+			// Update memory from current view: any revealed or matched card exposes its pairID and the round we saw it.
 			// Never overwrite an index with a different pairID than we've already seen (avoids stale/wrong
 			// state from overwriting correct memory, e.g. index 0 already known as pairID 4).
 			// Only allow memory[0] to be set from state.Cards[0] (slice position 0); if any other
 			// card reports Index==0 (e.g. zero value / serialization bug), ignore it so we don't
 			// wrongly associate pairID with tile 0.
+			currentRound := state.Round
 			for i, c := range state.Cards {
 				if (c.State == "revealed" || c.State == "matched") && c.PairID != nil {
 					if c.Index == 0 && i != 0 {
 						continue
 					}
 					pairID := *c.PairID
-					if existing, ok := memory[c.Index]; !ok || existing == pairID {
-						memory[c.Index] = pairID
+					if existing, ok := memoryData[c.Index]; !ok || existing.PairID == pairID {
+						memoryData[c.Index] = tileMemory{PairID: pairID, LastSeenRound: currentRound}
 					}
 				}
 			}
 
-			// Forget: with ForgetChance probability, remove each known card from memory
+			// Forget: Option A — tiles seen this round (age 0) are never forgotten; older tiles have ForgetChance to be removed.
 			forgetChance := clampPercent(params.ForgetChance)
-			if forgetChance > 0 && len(memory) > 0 {
-				var toForget []int
-				for idx := range memory {
-					if rand.Intn(100) < forgetChance {
-						toForget = append(toForget, idx)
-					}
-				}
-				for _, idx := range toForget {
-					delete(memory, idx)
-				}
+			if forgetChance > 0 && len(memoryData) > 0 {
+				applyForgetByRecency(memoryData, currentRound, forgetChance, func() int { return rand.Intn(100) })
+			}
+
+			// Build memory map for pick/heuristic (index -> pairID only).
+			memory := make(map[int]int, len(memoryData))
+			for idx, entry := range memoryData {
+				memory[idx] = entry.PairID
 			}
 
 			if !state.YourTurn {
@@ -111,9 +147,11 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 
 			// After Chaos the board is shuffled; index->pairID and element memory are no longer valid.
 			if clearElementMemoryNext {
-				memory = make(map[int]int)
+				memoryData = make(map[int]tileMemory)
 				elementMemory = make(map[int]string)
 				clearElementMemoryNext = false
+				// Rebuild memory from (now empty) memoryData
+				memory = make(map[int]int)
 			}
 			// Prune element memory: only keep indices that are still hidden (matched/removed/revealed no longer useful).
 			// In second_flip, keep the first flipped index in elementMemory so pickSecondCard can look up its element

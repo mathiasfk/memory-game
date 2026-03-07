@@ -405,3 +405,78 @@ func TestEVWithCard_Clairvoyance(t *testing.T) {
 		t.Errorf("evWithCard(oblivion) should return -1")
 	}
 }
+
+func TestApplyForgetByRecency_OptionA_NeverForgetAgeZero(t *testing.T) {
+	// Option A: tiles with age 0 (seen this round) must never be forgotten.
+	// Entries with age > 0 are subject to ForgetChance; use a deterministic roll that always "hits" for age > 0.
+	currentRound := 5
+	forgetChance := 100
+	rollCount := 0
+	roll := func() int {
+		rollCount++
+		return 0 // always < forgetChance, so any age > 0 entry would be forgotten
+	}
+	memoryData := map[int]tileMemory{
+		0: {PairID: 10, LastSeenRound: 5}, // age 0
+		1: {PairID: 11, LastSeenRound: 5}, // age 0
+		2: {PairID: 12, LastSeenRound: 0}, // age 5
+	}
+	applyForgetByRecency(memoryData, currentRound, forgetChance, roll)
+	if _, ok := memoryData[0]; !ok {
+		t.Error("age 0 entry at index 0 should never be forgotten")
+	}
+	if _, ok := memoryData[1]; !ok {
+		t.Error("age 0 entry at index 1 should never be forgotten")
+	}
+	if _, ok := memoryData[2]; ok {
+		t.Error("age 5 entry at index 2 should be forgotten when roll < forgetChance")
+	}
+	// Only one entry had age > 0, so roll should have been called once
+	if rollCount != 1 {
+		t.Errorf("roll should be called once (for the single age>0 entry), got %d", rollCount)
+	}
+}
+
+func TestApplyForgetByRecency_Age1UsesHalfChance(t *testing.T) {
+	// age=1 (opponent revealed last turn) uses forgetChance/2. With forgetChance=10, effective=5: roll 4 forgets, roll 5 keeps.
+	currentRound := 5
+	forgetChance := 10
+	memoryData := map[int]tileMemory{
+		0: {PairID: 10, LastSeenRound: 4}, // age 1
+		1: {PairID: 11, LastSeenRound: 3}, // age 2
+	}
+	rolls := []int{4, 0} // age 1 gets 4 (< 5 → forget), age 2 gets 0 (< 10 → forget)
+	rollIdx := 0
+	roll := func() int {
+		v := rolls[rollIdx]
+		rollIdx++
+		return v
+	}
+	applyForgetByRecency(memoryData, currentRound, forgetChance, roll)
+	if _, ok := memoryData[0]; ok {
+		t.Error("age 1 entry with roll 4 and effectiveChance 5 should be forgotten")
+	}
+	if _, ok := memoryData[1]; ok {
+		t.Error("age 2 entry with roll 0 and forgetChance 10 should be forgotten")
+	}
+
+	// Same setup but roll 5 for age 1: should keep age 1 entry
+	memoryData2 := map[int]tileMemory{
+		0: {PairID: 10, LastSeenRound: 4}, // age 1
+		1: {PairID: 11, LastSeenRound: 3}, // age 2
+	}
+	rolls2 := []int{5, 0} // age 1 gets 5 (>= 5 → keep), age 2 gets 0 (forget)
+	rollIdx2 := 0
+	roll2 := func() int {
+		v := rolls2[rollIdx2]
+		rollIdx2++
+		return v
+	}
+	applyForgetByRecency(memoryData2, currentRound, forgetChance, roll2)
+	if _, ok := memoryData2[0]; !ok {
+		t.Error("age 1 entry with roll 5 and effectiveChance 5 should be kept")
+	}
+	if _, ok := memoryData2[1]; ok {
+		t.Error("age 2 entry with roll 0 should be forgotten")
+	}
+}

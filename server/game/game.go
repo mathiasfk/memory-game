@@ -374,6 +374,7 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		PairIDToPowerUp:  g.PairIDToPowerUp,
 		ArcanaPairs:      g.Board.ArcanaPairs,
 		HighlightIndices: g.Players[playerIdx].HighlightIndices,
+		Round:            g.Round,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
 		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()

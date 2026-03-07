@@ -56,6 +56,8 @@ type GameStateMsg struct {
 	ArcanaPairs int `json:"arcanaPairs,omitempty"`
 	// HighlightIndices are card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Current turn only.
 	HighlightIndices []int `json:"highlightIndices,omitempty"`
+	// Round is the number of completed turns (incremented when a turn ends). Used by AI for recency-based forget.
+	Round int `json:"round,omitempty"`
 }
 
 // BuildCardViews constructs the client-facing card list. Server is source of truth: we send
