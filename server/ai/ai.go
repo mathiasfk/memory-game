@@ -26,9 +26,10 @@ func clampPercent(v int) int {
 //   - age 1 (revealed by opponent last turn): forgetChance/2 (e.g. 8% → 4%)
 //   - age >= 2: full forgetChance
 // roll is called once per candidate entry (age > 0) and should return 0-99; if roll() < effectiveChance the entry is removed.
-func applyForgetByRecency(memoryData map[int]tileMemory, currentRound int, forgetChance int, roll func() int) {
+// Returns the indices that were forgotten (for logging).
+func applyForgetByRecency(memoryData map[int]tileMemory, currentRound int, forgetChance int, roll func() int) []int {
 	if forgetChance <= 0 || len(memoryData) == 0 {
-		return
+		return nil
 	}
 	var toForget []int
 	for idx, entry := range memoryData {
@@ -50,6 +51,7 @@ func applyForgetByRecency(memoryData map[int]tileMemory, currentRound int, forge
 	for _, idx := range toForget {
 		delete(memoryData, idx)
 	}
+	return toForget
 }
 
 // tileMemory holds pairID and the round when the tile was last seen (for recency-based forget).
@@ -122,7 +124,10 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			// Forget: Option A — tiles seen this round (age 0) are never forgotten; older tiles have ForgetChance to be removed.
 			forgetChance := clampPercent(params.ForgetChance)
 			if forgetChance > 0 && len(memoryData) > 0 {
-				applyForgetByRecency(memoryData, currentRound, forgetChance, func() int { return rand.Intn(100) })
+				forgotten := applyForgetByRecency(memoryData, currentRound, forgetChance, func() int { return rand.Intn(100) })
+				for _, tile := range forgotten {
+					slog.Debug("forgot tile", "tag", "ai", "name", params.Name, "tile", tile)
+				}
 			}
 
 			// Build memory map for pick/heuristic (index -> pairID only).

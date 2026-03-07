@@ -95,7 +95,7 @@ func Defaults() *Config {
 		AIProfiles: []AIParams{
 			{Name: "Mnemosyne", DelayMinMS: 1000, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 2, ArcanaRandomness: 10},
 			{Name: "Calliope", DelayMinMS: 500, DelayMaxMS: 1100, UseBestMoveChance: 90, ForgetChance: 8, ArcanaRandomness: 15},
-			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 15, ArcanaRandomness: 20},
+			{Name: "Thalia", DelayMinMS: 500, DelayMaxMS: 2000, UseBestMoveChance: 90, ForgetChance: 12, ArcanaRandomness: 20},
 		},
 		TelemetryHistogram: TelemetryHistogramConfig{
 			TurnMax:      100,

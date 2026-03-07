@@ -438,45 +438,29 @@ func TestApplyForgetByRecency_OptionA_NeverForgetAgeZero(t *testing.T) {
 }
 
 func TestApplyForgetByRecency_Age1UsesHalfChance(t *testing.T) {
-	// age=1 (opponent revealed last turn) uses forgetChance/2. With forgetChance=10, effective=5: roll 4 forgets, roll 5 keeps.
+	// age=1 (opponent revealed last turn) uses forgetChance/2. With forgetChance=12, effective=6: roll 4 forgets, roll 6 keeps.
+	// Use single-entry maps so roll order is deterministic (no map iteration order dependency).
 	currentRound := 5
-	forgetChance := 10
-	memoryData := map[int]tileMemory{
-		0: {PairID: 10, LastSeenRound: 4}, // age 1
-		1: {PairID: 11, LastSeenRound: 3}, // age 2
-	}
-	rolls := []int{4, 0} // age 1 gets 4 (< 5 → forget), age 2 gets 0 (< 10 → forget)
-	rollIdx := 0
-	roll := func() int {
-		v := rolls[rollIdx]
-		rollIdx++
-		return v
-	}
-	applyForgetByRecency(memoryData, currentRound, forgetChance, roll)
+	forgetChance := 12
+
+	// Only age 1 entry, roll 4 → forget (4 < 6)
+	memoryData := map[int]tileMemory{0: {PairID: 10, LastSeenRound: 4}}
+	applyForgetByRecency(memoryData, currentRound, forgetChance, func() int { return 4 })
 	if _, ok := memoryData[0]; ok {
-		t.Error("age 1 entry with roll 4 and effectiveChance 5 should be forgotten")
-	}
-	if _, ok := memoryData[1]; ok {
-		t.Error("age 2 entry with roll 0 and forgetChance 10 should be forgotten")
+		t.Error("age 1 entry with roll 4 and effectiveChance 6 should be forgotten")
 	}
 
-	// Same setup but roll 5 for age 1: should keep age 1 entry
-	memoryData2 := map[int]tileMemory{
-		0: {PairID: 10, LastSeenRound: 4}, // age 1
-		1: {PairID: 11, LastSeenRound: 3}, // age 2
-	}
-	rolls2 := []int{5, 0} // age 1 gets 5 (>= 5 → keep), age 2 gets 0 (forget)
-	rollIdx2 := 0
-	roll2 := func() int {
-		v := rolls2[rollIdx2]
-		rollIdx2++
-		return v
-	}
-	applyForgetByRecency(memoryData2, currentRound, forgetChance, roll2)
+	// Only age 1 entry, roll 6 → keep (6 >= 6)
+	memoryData2 := map[int]tileMemory{0: {PairID: 10, LastSeenRound: 4}}
+	applyForgetByRecency(memoryData2, currentRound, forgetChance, func() int { return 6 })
 	if _, ok := memoryData2[0]; !ok {
-		t.Error("age 1 entry with roll 5 and effectiveChance 5 should be kept")
+		t.Error("age 1 entry with roll 6 and effectiveChance 6 should be kept")
 	}
-	if _, ok := memoryData2[1]; ok {
-		t.Error("age 2 entry with roll 0 should be forgotten")
+
+	// Only age 2 entry, roll 0 → forget (0 < 12)
+	memoryData3 := map[int]tileMemory{0: {PairID: 11, LastSeenRound: 3}}
+	applyForgetByRecency(memoryData3, currentRound, forgetChance, func() int { return 0 })
+	if _, ok := memoryData3[0]; ok {
+		t.Error("age 2 entry with roll 0 and forgetChance 12 should be forgotten")
 	}
 }
