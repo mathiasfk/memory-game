@@ -1,4 +1,4 @@
-import { getApiBase } from "./api";
+import { getApiBase, getAuthToken } from "./api";
 
 export interface FrontendErrorPayload {
   message: string;
@@ -13,20 +13,22 @@ export interface FrontendErrorPayload {
 
 const ENDPOINT = "/api/log/frontend-error";
 
-/**
- * Sends a frontend error report to the backend for structured logging (Grafana).
- * Uses fetch with sendBeacon fallback. Does not throw.
- */
-export function reportFrontendError(payload: FrontendErrorPayload): void {
-  const body: FrontendErrorPayload = {
-    ...payload,
-    url: payload.url ?? (typeof window !== "undefined" ? window.location.href : ""),
-    userAgent: payload.userAgent ?? (typeof navigator !== "undefined" ? navigator.userAgent : ""),
-    timestamp: payload.timestamp ?? new Date().toISOString(),
-  };
+/** Decodes JWT payload (no verification) and returns the "sub" claim, or undefined. */
+function getUserIdFromToken(token: string): string | undefined {
+  try {
+    const parts = token.split(".");
+    const payload = parts[1];
+    if (parts.length !== 3 || !payload) return undefined;
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(base64);
+    const claims = JSON.parse(json) as { sub?: string };
+    return typeof claims.sub === "string" && claims.sub ? claims.sub : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
-  if (!body.message) return;
-
+function sendPayload(body: FrontendErrorPayload): void {
   const url = `${getApiBase()}${ENDPOINT}`;
   const blob = new Blob([JSON.stringify(body)], { type: "application/json" });
 
@@ -51,6 +53,32 @@ export function reportFrontendError(payload: FrontendErrorPayload): void {
   } catch {
     // avoid throwing from report
   }
+}
+
+/**
+ * Sends a frontend error report to the backend for structured logging (Grafana).
+ * Enriches the payload with url, userAgent, timestamp, and userId (from JWT sub) when available.
+ * Uses fetch with sendBeacon fallback. Does not throw.
+ */
+export function reportFrontendError(payload: FrontendErrorPayload): void {
+  const body: FrontendErrorPayload = {
+    ...payload,
+    url: payload.url ?? (typeof window !== "undefined" ? window.location.href : ""),
+    userAgent: payload.userAgent ?? (typeof navigator !== "undefined" ? navigator.userAgent : ""),
+    timestamp: payload.timestamp ?? new Date().toISOString(),
+  };
+
+  if (!body.message) return;
+
+  getAuthToken()
+    .then((token) => {
+      if (token) {
+        const userId = getUserIdFromToken(token);
+        if (userId) body.userId = userId;
+      }
+      sendPayload(body);
+    })
+    .catch(() => sendPayload(body));
 }
 
 const recentlyReported = new Set<string>();
