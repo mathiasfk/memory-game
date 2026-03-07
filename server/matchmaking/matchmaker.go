@@ -361,6 +361,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 		store := m.historyStore
 		g.TelemetrySink = m.queuedSink
 		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string, done func(elo0Before, elo0After, elo1Before, elo1After *int)) {
+			logMatchEnd(matchID, p0Name, p1Name, endReason, winnerIdx)
 			// Send game_over immediately so the client can show the result without waiting for DB/telemetry.
 			done(nil, nil, nil, nil)
 			go func() {
@@ -452,6 +453,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 		store := m.historyStore
 		g.TelemetrySink = m.queuedSink
 		g.OnGameEnd = func(matchID, p0UID, p1UID, p0Name, p1Name string, p0Score, p1Score int, winnerIdx int, endReason string, done func(elo0Before, elo0After, elo1Before, elo1After *int)) {
+			logMatchEnd(matchID, p0Name, p1Name, endReason, winnerIdx)
 			// Send game_over immediately so the client can show the result without waiting for DB/telemetry.
 			done(nil, nil, nil, nil)
 			go func() {
@@ -537,6 +539,17 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 	}
 	data, _ := json.Marshal(msg)
 	wsutil.SafeSend(client.Send, data)
+}
+
+// logMatchEnd logs match end with match_id, end_reason and winner (or "draw").
+func logMatchEnd(matchID, p0Name, p1Name, endReason string, winnerIdx int) {
+	winner := "draw"
+	if winnerIdx == 0 {
+		winner = p0Name
+	} else if winnerIdx == 1 {
+		winner = p1Name
+	}
+	slog.Info("Match ended", "tag", "matchmaking", "match_id", matchID, "end_reason", endReason, "winner", winner)
 }
 
 func (m *Matchmaker) removeGame(gameID string) {
