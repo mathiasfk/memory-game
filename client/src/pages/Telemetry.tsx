@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { authClient } from "../lib/auth";
 import { POWER_UP_DISPLAY } from "../powerups/registry";
+import { reportFrontendError } from "../lib/reportError";
 import styles from "../styles/Telemetry.module.css";
 
 const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? "";
@@ -158,8 +159,14 @@ export function TelemetryPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err?.message ?? "Failed to load metrics");
+          const message = err?.message ?? "Failed to load metrics";
+          setError(message);
           setMetrics(null);
+          reportFrontendError({
+            message: "Telemetry load failed",
+            context: "api/telemetry",
+            errorDetail: message,
+          });
         }
       })
       .finally(() => {

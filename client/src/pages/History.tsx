@@ -6,6 +6,7 @@ import {
 } from "@neondatabase/neon-js/auth/react/ui";
 import { BotTag } from "../components/BotTag";
 import { getApiBase, getAuthToken } from "../lib/api";
+import { reportFrontendError } from "../lib/reportError";
 import type { GameRecord, HistoryResponse } from "../types/history";
 import styles from "../styles/History.module.css";
 
@@ -56,9 +57,15 @@ export function HistoryPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err?.message ?? "Failed to load history");
+          const message = err?.message ?? "Failed to load history";
+          setError(message);
           setList([]);
           setHasMore(false);
+          reportFrontendError({
+            message: "History load failed",
+            context: "api/history",
+            errorDetail: message,
+          });
         }
       })
       .finally(() => {
@@ -87,7 +94,13 @@ export function HistoryPage() {
       setList((prev) => [...prev, ...(Array.isArray(games) ? games : [])]);
       setHasMore(Boolean(data?.has_more));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load more");
+      const message = err instanceof Error ? err.message : "Failed to load more";
+      setError(message);
+      reportFrontendError({
+        message: "History load more failed",
+        context: "api/history pagination",
+        errorDetail: message,
+      });
     } finally {
       setLoadingMore(false);
     }

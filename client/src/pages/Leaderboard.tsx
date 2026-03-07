@@ -6,6 +6,7 @@ import {
 } from "@neondatabase/neon-js/auth/react/ui";
 import { BotTag } from "../components/BotTag";
 import { authClient } from "../lib/auth";
+import { reportFrontendError } from "../lib/reportError";
 import styles from "../styles/Leaderboard.module.css";
 
 const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL ?? "";
@@ -121,8 +122,14 @@ export function LeaderboardPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err?.message ?? "Failed to load leaderboard");
+          const message = err?.message ?? "Failed to load leaderboard";
+          setError(message);
           setData(null);
+          reportFrontendError({
+            message: "Leaderboard load failed",
+            context: "api/leaderboard",
+            errorDetail: message,
+          });
         }
       })
       .finally(() => {

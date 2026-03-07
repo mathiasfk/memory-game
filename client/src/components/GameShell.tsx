@@ -10,6 +10,7 @@ import type { GameOverMsg, GameStateMsg, MatchFoundMsg } from "../types/messages
 import { fetchLastGame } from "../lib/api";
 import { recordToGameOverMsg } from "../lib/gameOverFromHistory";
 import { getGameSession, clearGameSession, saveGameSession } from "../lib/gameSession";
+import { reportFrontendError } from "../lib/reportError";
 import { playSound } from "../lib/sounds";
 import { ToastContainer, type ToastItem } from "./Toast";
 import styles from "../styles/App.module.css";
@@ -260,12 +261,17 @@ export function GameShell() {
                 setScreen("gameover");
               }
             })
-            .catch(() => {
+            .catch((err) => {
               setGameResult(null);
               setOpponentDisconnected(false);
               setRatingUpdate(null);
               setGameOverTitleOverride("A partida acabou");
               setScreen("gameover");
+              reportFrontendError({
+                message: "Fetch last game failed (game over fallback)",
+                context: "api/history?limit=1 after 'You are not in a game'",
+                errorDetail: err instanceof Error ? err.message : String(err),
+              });
             });
           break;
         }
@@ -325,6 +331,10 @@ export function GameShell() {
     const timeoutId = window.setTimeout(() => {
       if (cancelled || authSentRef.current) return;
       addToast("Auth token request timed out. Try signing out and back in.");
+      reportFrontendError({
+        message: "Auth token request timed out",
+        context: "get-session/token() did not resolve within 15s",
+      });
     }, 15000);
 
     function sendAuthAndReady(jwt: string) {
@@ -356,15 +366,30 @@ export function GameShell() {
           return;
         }
         if (tokenResult?.error) {
-          addToast(tokenResult.error.message ?? "Could not get auth token.");
+          const message = tokenResult.error.message ?? "Could not get auth token.";
+          addToast(message);
+          reportFrontendError({
+            message: "Auth token failed (Neon)",
+            authError: message,
+            context: "get-session + token()",
+          });
           return;
         }
         addToast("Could not get auth token. Try signing out and back in.");
+        reportFrontendError({
+          message: "Auth token missing (Neon)",
+          context: "get-session returned no JWT and token() returned no token",
+        });
       })
       .catch((err) => {
         if (cancelled) return;
         const msg = err?.message ?? String(err);
         addToast(`Auth failed: ${msg}. Try signing out and back in.`);
+        reportFrontendError({
+          message: "Auth request failed",
+          authError: msg,
+          context: "get-session or token() fetch",
+        });
       })
       .finally(() => {
         window.clearTimeout(timeoutId);
