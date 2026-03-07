@@ -14,24 +14,27 @@ const (
 )
 
 // pickPair returns (firstIndex, secondIndex, reason). secondIndex may be -1 if we're guessing (we'll pick on next state).
-// hiddenHighlighted: hidden indices currently highlighted (e.g. after an elemental).
-// hiddenByElement: hidden indices we know per element (from element memory); used to prefer flipping within same element.
-// knownIndicesSet: indices ever revealed by any player (from game state); used so "unseen" excludes opponent's reveals.
-func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighlighted []int, hiddenByElement map[string][]int, knownIndicesSet map[int]struct{}) (first, second int, reason string) {
+// clairvoyanceRevealed: indices temporarily revealed by Clairvoyance; included for known-pair lookup so AI can choose one and wait for hide.
+func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighlighted []int, hiddenByElement map[string][]int, knownIndicesSet map[int]struct{}, clairvoyanceRevealed []int) (first, second int, reason string) {
 	if !useBestMove {
 		if len(hidden) == 0 {
 			return -1, -1, flipReasonRandom
 		}
 		return hidden[rand.Intn(len(hidden))], -1, flipReasonRandom
 	}
-	// Build pairID -> list of hidden indices we know
+	// Build pairID -> list of indices we know (hidden + temporarily revealed by Clairvoyance)
 	pairToIndices := make(map[int][]int)
 	for _, idx := range hidden {
 		if p, ok := memory[idx]; ok {
 			pairToIndices[p] = append(pairToIndices[p], idx)
 		}
 	}
-	// Find a complete known pair (both cards still hidden)
+	for _, idx := range clairvoyanceRevealed {
+		if p, ok := memory[idx]; ok {
+			pairToIndices[p] = append(pairToIndices[p], idx)
+		}
+	}
+	// Find a complete known pair (both cards still pickable: hidden or clairvoyance-revealed)
 	for _, indices := range pairToIndices {
 		if len(indices) >= 2 {
 			return indices[0], indices[1], flipReasonKnownPair
@@ -69,16 +72,24 @@ func pickPair(memory map[int]int, hidden []int, useBestMove bool, hiddenHighligh
 }
 
 // pickSecondCard chooses the second card to flip. Returns (index, reason).
-// hiddenHighlighted: hidden indices currently highlighted (e.g. after elemental).
-// elementMemory and hiddenByElement: tiles we know the element of; if first card is one of them, prefer second from same element.
-// knownIndicesSet: indices ever revealed by any player; used so "unseen" excludes opponent's reveals.
-func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int, knownIndicesSet map[int]struct{}) (int, string) {
-	// Always complete a known pair when we can (first card's pairID known and the other tile still hidden).
-	// Only consider indices we've actually seen revealed (present in memory); otherwise when pairID is 0,
-	// memory[idx] is 0 for any unseen idx (Go zero value) and we'd wrongly treat e.g. index 0 as known_pair.
+// clairvoyanceRevealed: indices temporarily revealed by Clairvoyance; pair match can be one of these (AI will wait for hide before sending).
+func pickSecondCard(memory map[int]int, hidden []int, firstIdx int, useBestMove bool, hiddenHighlighted []int, elementMemory map[int]string, hiddenByElement map[string][]int, knownIndicesSet map[int]struct{}, clairvoyanceRevealed []int) (int, string) {
+	// Always complete a known pair when we can (first card's pairID known and the other tile in hidden or clairvoyance-revealed).
 	pairID, known := memory[firstIdx]
 	if known {
 		for _, idx := range hidden {
+			if idx == firstIdx {
+				continue
+			}
+			stored, learned := memory[idx]
+			if learned && stored == pairID {
+				return idx, flipReasonKnownPair
+			}
+		}
+		for _, idx := range clairvoyanceRevealed {
+			if idx == firstIdx {
+				continue
+			}
 			stored, learned := memory[idx]
 			if learned && stored == pairID {
 				return idx, flipReasonKnownPair

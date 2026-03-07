@@ -27,7 +27,8 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		return
 	}
 
-	// Validate card is hidden (not revealed, matched, or removed)
+	// Validate card is hidden (not revealed, matched, or removed). Cards temporarily revealed by
+	// Clairvoyance cannot be flipped until they are hidden again — same as human: pick only face-down tiles.
 	card := &g.Board.Cards[cardIndex]
 	if card.State != Hidden {
 		g.sendError(playerIdx, "That card is already revealed, matched, or removed.")

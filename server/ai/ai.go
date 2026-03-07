@@ -21,6 +21,24 @@ func clampPercent(v int) int {
 	return v
 }
 
+func indexInSlice(idx int, s []int) bool {
+	for _, x := range s {
+		if x == idx {
+			return true
+		}
+	}
+	return false
+}
+
+// waitUntilClairvoyanceEnd sleeps until the Clairvoyance reveal has ended so the chosen card is hidden again before we send the flip.
+func waitUntilClairvoyanceEnd(endsAtUnixMs int64) {
+	remaining := endsAtUnixMs - time.Now().UnixMilli()
+	if remaining <= 0 {
+		return
+	}
+	time.Sleep(time.Duration(remaining) * time.Millisecond)
+}
+
 // applyForgetByRecency removes entries from memoryData with recency-based chance:
 //   - age 0 (revealed this round): 0% — never forgotten
 //   - age 1 (revealed by opponent last turn): forgetChance/2 (e.g. 8% → 4%)
@@ -141,6 +159,7 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			}
 
 			hidden := hiddenIndices(state.Cards)
+			// Only flip face-down cards; like the human, AI cannot pick cards temporarily revealed by Clairvoyance until they hide again.
 			if len(hidden) == 0 {
 				continue
 			}
@@ -218,8 +237,16 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 			if state.Phase == "second_flip" && len(state.FlippedIndices) > 0 {
 				// We already flipped one card; choose the second (use same useBestMove as when we chose the first, so we complete known pairs)
 				firstIdx := state.FlippedIndices[0]
-				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useBestMoveForSecondFlip, hiddenHighlighted, elementMemory, hiddenByElement, knownIndicesSet)
+				clairvoyanceRevealed := state.ClairvoyanceRevealedIndices
+				if clairvoyanceRevealed == nil {
+					clairvoyanceRevealed = []int{}
+				}
+				secondIdx, flipReason := pickSecondCard(memory, hidden, firstIdx, useBestMoveForSecondFlip, hiddenHighlighted, elementMemory, hiddenByElement, knownIndicesSet, clairvoyanceRevealed)
 				if secondIdx >= 0 {
+					// If the chosen card is one of the 9 temporarily revealed by Clairvoyance, wait until they hide before sending.
+					if state.ClairvoyanceRevealEndsAtUnixMs > 0 && indexInSlice(secondIdx, clairvoyanceRevealed) {
+						waitUntilClairvoyanceEnd(state.ClairvoyanceRevealEndsAtUnixMs)
+					}
 					slog.Debug("flipping tile (second)", "tag", "ai", "name", params.Name, "tile", secondIdx, "reason", flipReason)
 					sendAction(g, playerIdx, secondIdx)
 				}
@@ -255,10 +282,18 @@ func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIPar
 				slog.Debug("decided not to use arcana", "tag", "ai", "name", params.Name, "reason", dec.reason, "hand", handStr)
 			}
 
-			// Phase is first_flip: choose first card
-			firstIdx, _, flipReason := pickPair(memory, hidden, useBestMove, hiddenHighlighted, hiddenByElement, knownIndicesSet)
+			// Phase is first_flip: choose first card (may be one of the 9 from Clairvoyance — we wait for hide before sending)
+			clairvoyanceRevealed := state.ClairvoyanceRevealedIndices
+			if clairvoyanceRevealed == nil {
+				clairvoyanceRevealed = []int{}
+			}
+			firstIdx, _, flipReason := pickPair(memory, hidden, useBestMove, hiddenHighlighted, hiddenByElement, knownIndicesSet, clairvoyanceRevealed)
 			if firstIdx < 0 {
 				continue
+			}
+			// If the chosen card is one of the 9 temporarily revealed by Clairvoyance, wait until they hide before sending.
+			if state.ClairvoyanceRevealEndsAtUnixMs > 0 && indexInSlice(firstIdx, clairvoyanceRevealed) {
+				waitUntilClairvoyanceEnd(state.ClairvoyanceRevealEndsAtUnixMs)
 			}
 			// Persist useBestMove for second flip so we complete known pairs (set only when we actually send the first flip)
 			useBestMoveForSecondFlip = useBestMove

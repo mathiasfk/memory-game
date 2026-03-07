@@ -111,6 +111,12 @@ type Game struct {
 	// KnownIndices are card indices that have been revealed at some point (by any player). Cleared when Chaos is used.
 	KnownIndices map[int]struct{}
 
+	// ClairvoyanceRevealedIndices are indices currently temporarily revealed by Clairvoyance.
+	ClairvoyanceRevealedIndices map[int]struct{}
+
+	// ClairvoyanceRevealEndsAt is when the current Clairvoyance reveal will hide (zero = none). Sent to AI so it can wait before flipping one of the 9.
+	ClairvoyanceRevealEndsAt time.Time
+
 	// Round increments each time the turn passes after a mismatch (used for Second Chance duration).
 	Round int
 
@@ -361,20 +367,33 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 		}
 	}
 
+	var clairvoyanceRevealed []int
+	var clairvoyanceRevealEndsAtUnixMs int64
+	if len(g.ClairvoyanceRevealedIndices) > 0 {
+		clairvoyanceRevealed = make([]int, 0, len(g.ClairvoyanceRevealedIndices))
+		for idx := range g.ClairvoyanceRevealedIndices {
+			clairvoyanceRevealed = append(clairvoyanceRevealed, idx)
+		}
+		if !g.ClairvoyanceRevealEndsAt.IsZero() {
+			clairvoyanceRevealEndsAtUnixMs = g.ClairvoyanceRevealEndsAt.UnixMilli()
+		}
+	}
 	state := GameStateMsg{
-		Type:                        "game_state",
-		Cards:                       BuildCardViews(g.Board),
-		You:                         BuildPlayerView(g.Players[playerIdx], g.Round),
-		Opponent:                    BuildPlayerView(g.Players[opponentIdx], g.Round),
-		YourTurn:                    playerIdx == g.CurrentTurn,
-		Hand:                        hand,
-		FlippedIndices:              flipped,
-		Phase:                       g.TurnPhase.String(),
-		KnownIndices:     knownIndices,
-		PairIDToPowerUp:  g.PairIDToPowerUp,
-		ArcanaPairs:      g.Board.ArcanaPairs,
-		HighlightIndices: g.Players[playerIdx].HighlightIndices,
-		Round:            g.Round,
+		Type:                            "game_state",
+		Cards:                           BuildCardViews(g.Board),
+		You:                             BuildPlayerView(g.Players[playerIdx], g.Round),
+		Opponent:                        BuildPlayerView(g.Players[opponentIdx], g.Round),
+		YourTurn:                        playerIdx == g.CurrentTurn,
+		Hand:                            hand,
+		FlippedIndices:                  flipped,
+		Phase:                           g.TurnPhase.String(),
+		KnownIndices:                    knownIndices,
+		PairIDToPowerUp:                 g.PairIDToPowerUp,
+		ArcanaPairs:                     g.Board.ArcanaPairs,
+		HighlightIndices:                g.Players[playerIdx].HighlightIndices,
+		ClairvoyanceRevealedIndices:     clairvoyanceRevealed,
+		ClairvoyanceRevealEndsAtUnixMs:  clairvoyanceRevealEndsAtUnixMs,
+		Round:                           g.Round,
 	}
 	if playerIdx == g.CurrentTurn && !g.turnEndsAt.IsZero() && g.Config.TurnLimitSec > 0 {
 		state.TurnEndsAtUnixMs = g.turnEndsAt.UnixMilli()

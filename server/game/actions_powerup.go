@@ -97,11 +97,15 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 	var clairvoyanceRevealIndices []int
 	if powerUpID == "clairvoyance" {
 		region := RadarRegionIndices(g.Board, cardIndex)
+		if g.ClairvoyanceRevealedIndices == nil {
+			g.ClairvoyanceRevealedIndices = make(map[int]struct{})
+		}
 		for _, idx := range region {
 			c := &g.Board.Cards[idx]
 			if c.State == Hidden {
 				c.State = Revealed
 				clairvoyanceRevealIndices = append(clairvoyanceRevealIndices, idx)
+				g.ClairvoyanceRevealedIndices[idx] = struct{}{}
 				if g.KnownIndices != nil {
 					g.KnownIndices[idx] = struct{}{}
 				}
@@ -272,6 +276,7 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 		if durationMS <= 0 {
 			durationMS = 1000
 		}
+		g.ClairvoyanceRevealEndsAt = time.Now().Add(time.Duration(durationMS) * time.Millisecond)
 		indices := make([]int, len(clairvoyanceRevealIndices))
 		copy(indices, clairvoyanceRevealIndices)
 		go func() {
@@ -286,19 +291,26 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 
 // handleHideClairvoyanceReveal hides cards that were temporarily revealed by Clairvoyance.
 // Only cards still Revealed and not in FlippedIndices are hidden.
+// Do not broadcast when phase is SecondFlip: the player (or AI) has already received "pick second card"
+// and may have sent their second flip; broadcasting again would duplicate that state and cause the AI
+// to send the same second-flip action twice (race between hide timer and the second flip being processed).
 func (g *Game) handleHideClairvoyanceReveal(indices []int) {
 	flippedSet := make(map[int]bool)
 	for _, idx := range g.FlippedIndices {
 		flippedSet[idx] = true
 	}
+	g.ClairvoyanceRevealEndsAt = time.Time{}
 	for _, idx := range indices {
 		if idx < 0 || idx >= len(g.Board.Cards) {
 			continue
 		}
+		delete(g.ClairvoyanceRevealedIndices, idx)
 		c := &g.Board.Cards[idx]
 		if c.State == Revealed && !flippedSet[idx] {
 			c.State = Hidden
 		}
 	}
-	g.broadcastState()
+	if g.TurnPhase != SecondFlip {
+		g.broadcastState()
+	}
 }

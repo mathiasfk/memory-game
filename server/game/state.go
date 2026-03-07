@@ -56,6 +56,10 @@ type GameStateMsg struct {
 	ArcanaPairs int `json:"arcanaPairs,omitempty"`
 	// HighlightIndices are card indices to highlight (Unveiling: never-revealed hidden; Elementals: tiles of chosen element). Current turn only.
 	HighlightIndices []int `json:"highlightIndices,omitempty"`
+	// ClairvoyanceRevealedIndices are card indices currently temporarily revealed by Clairvoyance.
+	ClairvoyanceRevealedIndices []int `json:"clairvoyanceRevealedIndices,omitempty"`
+	// ClairvoyanceRevealEndsAtUnixMs is when the reveal ends (Unix ms). AI waits until then before flipping one of the 9.
+	ClairvoyanceRevealEndsAtUnixMs int64 `json:"clairvoyanceRevealEndsAtUnixMs,omitempty"`
 	// Round is the number of completed turns (incremented when a turn ends). Used by AI for recency-based forget.
 	Round int `json:"round,omitempty"`
 }
