@@ -17,7 +17,7 @@ func (c *ClairvoyancePowerUp) Description() string {
 	return "Reveals a 3x3 area around the tile you choose for a few seconds, then hides it again."
 }
 func (c *ClairvoyancePowerUp) Cost() int   { return c.CostValue }
-func (c *ClairvoyancePowerUp) Rarity() int { return RarityCommon }
+func (c *ClairvoyancePowerUp) Rarity() int { return RarityUncommon }
 
 func (c *ClairvoyancePowerUp) Apply(board *game.Board, active *game.Player, opponent *game.Player, ctx *game.PowerUpContext) error {
 	// Effect is applied in game.handleUsePowerUp (reveal 3x3, schedule hide).
