@@ -81,12 +81,16 @@ type tileMemory struct {
 // Run receives game state messages from the given channel and sends actions to the game
 // when it is the AI's turn. It only uses information from the game_state payload (no
 // access to board internals). It runs until the channel is closed or a game_over is received.
-func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIParams) {
+// humanReady is closed when the human client sends board_ready (intro dismissed); the AI
+// blocks until then so the first move happens only after the player can see the board.
+func Run(aiSend <-chan []byte, g *game.Game, playerIdx int, params *config.AIParams, humanReady <-chan struct{}) {
 	memoryData := make(map[int]tileMemory)   // index -> pairID + lastSeenRound (for recency-based forget)
 	elementMemory := make(map[int]string)    // index -> element (tiles we know the element of, e.g. from elemental highlight)
 	var lastElementalUsed string             // element of the elemental we just used; next state's HighlightIndices will be that element
 	var clearElementMemoryNext bool          // true after we use Chaos (board shuffles, so element-by-index is stale)
 	var useBestMoveForSecondFlip bool        // when in second_flip, use same decision as first_flip so we complete known pairs
+
+	<-humanReady // wait until human has seen the board (client sent board_ready)
 
 	for data := range aiSend {
 		var typeEnvelope struct {

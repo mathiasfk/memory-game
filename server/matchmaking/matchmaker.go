@@ -176,10 +176,11 @@ type Matchmaker struct {
 	powerUps        game.PowerUpProvider
 	historyStore    storage.HistoryStore
 	queuedSink      *queuedTelemetrySink // async telemetry when historyStore != nil
-	activeGames     map[string]*game.Game
-	userIDToGame    map[string]string       // userID -> gameID for rejoin by user (cross-device)
-	gameIDToClients map[string][]*ws.Client // gameID -> clients to clear Game ref when game is removed
-	mu              sync.RWMutex
+	activeGames         map[string]*game.Game
+	userIDToGame        map[string]string       // userID -> gameID for rejoin by user (cross-device)
+	gameIDToClients     map[string][]*ws.Client // gameID -> clients to clear Game ref when game is removed
+	gameIDToHumanReady  map[string]chan struct{} // gameID -> channel closed when human sends board_ready (AI games only)
+	mu                  sync.RWMutex
 }
 
 // NewMatchmaker creates a new Matchmaker. historyStore may be nil to disable game history persistence.
@@ -197,9 +198,10 @@ func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider, historyStore s
 		powerUps:        pups,
 		historyStore:    historyStore,
 		queuedSink:      queuedSink,
-		activeGames:     make(map[string]*game.Game),
-		userIDToGame:    make(map[string]string),
-		gameIDToClients: make(map[string][]*ws.Client),
+		activeGames:        make(map[string]*game.Game),
+		userIDToGame:       make(map[string]string),
+		gameIDToClients:    make(map[string][]*ws.Client),
+		gameIDToHumanReady: make(map[string]chan struct{}),
 	}
 }
 
@@ -250,6 +252,20 @@ func (m *Matchmaker) LeaveQueue(c *ws.Client) {
 		return
 	}
 	m.pendingMu.Unlock()
+}
+
+// SignalHumanReady is called when the human client sends board_ready (intro dismissed).
+// For AI games, it closes the humanReady channel so the AI can start playing.
+func (m *Matchmaker) SignalHumanReady(gameID string) {
+	m.mu.Lock()
+	ch, ok := m.gameIDToHumanReady[gameID]
+	if ok {
+		delete(m.gameIDToHumanReady, gameID)
+		m.mu.Unlock()
+		close(ch)
+		return
+	}
+	m.mu.Unlock()
 }
 
 // Run is the matchmaker's main loop. It waits for a first player, then either
@@ -489,10 +505,13 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 		}
 	}
 
+	humanReady := make(chan struct{})
+
 	m.mu.Lock()
 	m.activeGames[matchID] = g
 	m.userIDToGame[client1.UserID] = matchID
 	m.gameIDToClients[matchID] = []*ws.Client{client1}
+	m.gameIDToHumanReady[matchID] = humanReady
 	m.mu.Unlock()
 
 	client1.Game = g
@@ -506,7 +525,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 		g.Run()
 		m.removeGame(matchID)
 	}()
-	go ai.Run(aiSend, g, 1, profile)
+	go ai.Run(aiSend, g, 1, profile, humanReady)
 }
 
 func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *game.Game, playerIdx int) {
@@ -559,6 +578,7 @@ func (m *Matchmaker) removeGame(gameID string) {
 	clients := m.gameIDToClients[gameID]
 	delete(m.activeGames, gameID)
 	delete(m.gameIDToClients, gameID)
+	delete(m.gameIDToHumanReady, gameID)
 	if g != nil {
 		for i := range 2 {
 			if g.PlayerUserIDs[i] != "" {

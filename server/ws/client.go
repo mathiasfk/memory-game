@@ -141,6 +141,8 @@ func (c *Client) handleMessage(data []byte) {
 		c.handleLeaveGame()
 	case "leave_queue":
 		c.handleLeaveQueue()
+	case "board_ready":
+		c.handleBoardReady()
 	default:
 		c.sendError("Unknown message type: " + envelope.Type)
 	}
@@ -408,6 +410,13 @@ func (c *Client) handleLeaveQueue() {
 		return
 	}
 	c.Hub.Matchmaker.LeaveQueue(c)
+}
+
+func (c *Client) handleBoardReady() {
+	if c.Game == nil {
+		return // no game; ignore (e.g. duplicate or late message)
+	}
+	c.Hub.Matchmaker.SignalHumanReady(c.Game.ID)
 }
 
 func (c *Client) handleLeaveGame() {

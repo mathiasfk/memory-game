@@ -44,6 +44,10 @@ export interface RejoinMyGameMsg {
   type: "rejoin_my_game";
 }
 
+export interface BoardReadyMsg {
+  type: "board_ready";
+}
+
 export type ClientMessage =
   | AuthMsg
   | SetNameMsg
@@ -53,7 +57,8 @@ export type ClientMessage =
   | UsePowerUpMsg
   | PlayAgainMsg
   | LeaveGameMsg
-  | LeaveQueueMsg;
+  | LeaveQueueMsg
+  | BoardReadyMsg;
 
 export interface ErrorMsg {
   type: "error";

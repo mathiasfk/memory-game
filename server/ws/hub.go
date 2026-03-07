@@ -24,6 +24,7 @@ type MatchmakerInterface interface {
 	LeaveQueue(c *Client)
 	Rejoin(gameID, rejoinToken, name string) (*game.Game, int, error)
 	RejoinByUser(userID string) (*game.Game, int, string, error)
+	SignalHumanReady(gameID string)
 }
 
 // Hub maintains the set of active clients and routes messages.

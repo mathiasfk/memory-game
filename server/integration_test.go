@@ -358,6 +358,9 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 		t.Errorf("expected opponentName Mnemosyne, got %v", mf["opponentName"])
 	}
 
+	// Signal board_ready so the AI is allowed to play (sync with client intro → board transition)
+	sendMsg(t, conn, map[string]string{"type": "board_ready"})
+
 	// Initial game_state
 	gs := readMsg(t, conn)
 	if gs["type"] != "game_state" {

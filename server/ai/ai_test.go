@@ -38,9 +38,12 @@ func TestRunExitsOnGameOver(t *testing.T) {
 
 	go g.Run()
 
+	humanReady := make(chan struct{})
+	close(humanReady)
+
 	done := make(chan struct{})
 	go func() {
-		Run(aiSend, g, 1, params)
+		Run(aiSend, g, 1, params, humanReady)
 		close(done)
 	}()
 
@@ -72,11 +75,14 @@ func TestRunExitsOnClosedChannel(t *testing.T) {
 
 	close(aiSend)
 
+	humanReady := make(chan struct{})
+	close(humanReady)
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		Run(aiSend, g, 1, params)
+		Run(aiSend, g, 1, params, humanReady)
 	}()
 
 	done := make(chan struct{})

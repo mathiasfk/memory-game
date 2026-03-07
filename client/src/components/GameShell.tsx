@@ -60,6 +60,8 @@ export function GameShell() {
   /** Match intro: show for MATCH_INTRO_DURATION_MS then go to board; skipped on rejoin. */
   const [introDismissed, setIntroDismissed] = useState(false);
   const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Ref to send so match_found handler (and intro timer) can send board_ready without circular deps. */
+  const sendRef = useRef<((msg: import("../types/messages").ClientMessage) => void) | null>(null);
   /** When set, GameOverScreen shows this title when result is null (e.g. "A partida acabou" after missed game_over). */
   const [gameOverTitleOverride, setGameOverTitleOverride] = useState<string | null>(null);
 
@@ -112,6 +114,7 @@ export function GameShell() {
           const isRejoin = session?.gameId === msg.gameId;
           if (isRejoin) {
             setIntroDismissed(true);
+            sendRef.current?.({ type: "board_ready" });
           } else {
             setIntroDismissed(false);
             if (introTimerRef.current) {
@@ -121,6 +124,7 @@ export function GameShell() {
             introTimerRef.current = setTimeout(() => {
               introTimerRef.current = null;
               setIntroDismissed(true);
+              sendRef.current?.({ type: "board_ready" });
             }, MATCH_INTRO_DURATION_MS);
           }
           if (msg.gameId && msg.rejoinToken) {
@@ -291,6 +295,7 @@ export function GameShell() {
   }, [gameState]);
 
   const { connected, send } = useGameSocket(WS_URL, { onMessage: handleMessage });
+  sendRef.current = send;
 
   // Load session user (display name and role for admin menu)
   useEffect(() => {
