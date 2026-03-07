@@ -31,8 +31,10 @@ func main() {
 	}
 
 	cfg := config.Load()
-	// Apply configured log level.
-	slog.SetDefault(slog.New(loghandler.NewCompactHandler(os.Stderr, cfg.SlogLevel())))
+	// Apply configured log level and set error_source=backend for all default logs.
+	baseLogger := slog.New(loghandler.NewCompactHandler(os.Stderr, cfg.SlogLevel()))
+	slog.SetDefault(baseLogger.With("error_source", "backend"))
+	frontendErrorLogger := baseLogger.With("error_source", "frontend")
 
 	if cfg.NeonAuthBaseURL == "" {
 		slog.Info("NEON_AUTH_BASE_URL is not set — WebSocket auth will reject clients with 'Server auth not configured.'", "tag", "auth")
@@ -78,10 +80,11 @@ func main() {
 	})
 
 	// REST API handlers
-	apiHandler := api.NewHandler(cfg, historyStore)
+	apiHandler := api.NewHandler(cfg, historyStore, frontendErrorLogger)
 	http.HandleFunc("/api/history", apiHandler.History)
 	http.HandleFunc("/api/leaderboard", apiHandler.Leaderboard)
 	http.HandleFunc("/api/telemetry/metrics", apiHandler.TelemetryMetrics)
+	http.HandleFunc("/api/log/frontend-error", apiHandler.FrontendError)
 
 	addr := fmt.Sprintf(":%d", cfg.WSPort)
 	srv := &http.Server{Addr: addr}

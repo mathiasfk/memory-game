@@ -16,15 +16,17 @@ const bearerPrefix = "Bearer "
 
 // Handler holds dependencies for API handlers.
 type Handler struct {
-	Config       *config.Config
-	HistoryStore storage.HistoryStore
+	Config               *config.Config
+	HistoryStore         storage.HistoryStore
+	FrontendErrorLogger  *slog.Logger
 }
 
 // NewHandler creates a new API handler with the given dependencies.
-func NewHandler(cfg *config.Config, historyStore storage.HistoryStore) *Handler {
+func NewHandler(cfg *config.Config, historyStore storage.HistoryStore, frontendErrorLogger *slog.Logger) *Handler {
 	return &Handler{
-		Config:       cfg,
-		HistoryStore: historyStore,
+		Config:              cfg,
+		HistoryStore:        historyStore,
+		FrontendErrorLogger: frontendErrorLogger,
 	}
 }
 
@@ -32,6 +34,26 @@ func NewHandler(cfg *config.Config, historyStore storage.HistoryStore) *Handler 
 func CORS(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return true
+	}
+	return false
+}
+
+// CORSWithPost sets CORS headers including POST. Use for endpoints that accept POST.
+// When the request has an Origin header, that origin is reflected and credentials are
+// allowed so that requests with credentials mode 'include' pass CORS.
+func CORSWithPost(w http.ResponseWriter, r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+	} else {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	}
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
@@ -232,4 +254,49 @@ func (h *Handler) TelemetryMetrics(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(metrics); err != nil {
 		slog.Error("Encode telemetry response", "tag", "api", "err", err)
 	}
+}
+
+// FrontendErrorPayload is the JSON body for POST /api/log/frontend-error.
+type FrontendErrorPayload struct {
+	Message        string `json:"message"`
+	Stack          string `json:"stack,omitempty"`
+	ComponentStack string `json:"componentStack,omitempty"`
+	URL            string `json:"url,omitempty"`
+	UserAgent      string `json:"userAgent,omitempty"`
+	Timestamp      string `json:"timestamp,omitempty"`
+	UserID         string `json:"userId,omitempty"`
+}
+
+// FrontendError accepts POST with a JSON body and logs it with the frontend logger (error_source=frontend).
+func (h *Handler) FrontendError(w http.ResponseWriter, r *http.Request) {
+	if CORSWithPost(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload FrontendErrorPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if payload.Message == "" {
+		http.Error(w, "message required", http.StatusBadRequest)
+		return
+	}
+
+	h.FrontendErrorLogger.Error("frontend error",
+		"tag", "api",
+		"message", payload.Message,
+		"stack", payload.Stack,
+		"component_stack", payload.ComponentStack,
+		"url", payload.URL,
+		"user_agent", payload.UserAgent,
+		"timestamp", payload.Timestamp,
+		"user_id", payload.UserID,
+	)
+
+	w.WriteHeader(http.StatusNoContent)
 }
