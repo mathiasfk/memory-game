@@ -163,7 +163,7 @@ func TestEV_Necromancy_WhenBehindAndHasRevivedPairs(t *testing.T) {
 		You:            game.PlayerView{Score: 0},
 		Opponent:       game.PlayerView{Score: 2},
 	}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		state.Cards[i] = game.CardView{Index: i, State: "matched", PairID: intPtr(1 + i/2)}
 	}
 	for i := 4; i < 12; i++ {
@@ -186,7 +186,7 @@ func TestEV_Necromancy_WhenTiedOrAhead_ReturnsNegative(t *testing.T) {
 		You:             game.PlayerView{Score: 2},
 		Opponent:       game.PlayerView{Score: 2},
 	}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		state.Cards[i] = game.CardView{Index: i, State: "matched", PairID: intPtr(1)}
 	}
 	for i := 4; i < 12; i++ {

@@ -603,7 +603,7 @@ func buildTurnHistogramLabels(cfg TelemetryBinConfig) []string {
 	}
 	step := cfg.TurnMax / (cfg.TurnNumBins - 1)
 	labels := make([]string, 0, cfg.TurnNumBins)
-	for i := 0; i < cfg.TurnNumBins-1; i++ {
+	for i := range cfg.TurnNumBins - 1 {
 		labels = append(labels, fmt.Sprintf("%d-%d", i*step, (i+1)*step))
 	}
 	labels = append(labels, fmt.Sprintf("%d+", cfg.TurnMax))
@@ -620,7 +620,7 @@ func buildPairsHistogramLabels(cfg TelemetryBinConfig) []string {
 		step = 1
 	}
 	labels := make([]string, 0, cfg.PairsNumBins)
-	for i := 0; i < cfg.PairsNumBins; i++ {
+	for i := range cfg.PairsNumBins {
 		lo, hi := i*step, (i+1)*step
 		if i == cfg.PairsNumBins-1 {
 			hi = cfg.PairsMax

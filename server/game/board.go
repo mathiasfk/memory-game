@@ -93,7 +93,7 @@ func NewBoard(rows, cols, arcanaPairs int) *Board {
 
 	// Create pairs: two cards for each pair ID
 	cards := make([]Card, totalCards)
-	for i := 0; i < numPairs; i++ {
+	for i := range numPairs {
 		cards[2*i] = Card{PairID: i, State: Hidden}
 		cards[2*i+1] = Card{PairID: i, State: Hidden}
 	}

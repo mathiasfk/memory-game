@@ -272,14 +272,14 @@ func (g *Game) sendError(playerIdx int, message string) {
 }
 
 func (g *Game) broadcastPowerUpUsed(playerName, powerUpLabel string, noEffect bool) {
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"type":         "powerup_used",
 		"playerName":  playerName,
 		"powerUpLabel": powerUpLabel,
 		"noEffect":     noEffect,
 	}
 	data, _ := json.Marshal(msg)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if g.Players[i] != nil && g.Players[i].Send != nil {
 			wsutil.SafeSend(g.Players[i].Send, data)
 		}
@@ -289,14 +289,14 @@ func (g *Game) broadcastPowerUpUsed(playerName, powerUpLabel string, noEffect bo
 // broadcastPowerUpEffectResolved notifies both players when a delayed powerup effect (e.g. Blood Pact) is resolved.
 // message is the full announcement text, e.g. "Mathias honored the Pact and gained 5 points".
 func (g *Game) broadcastPowerUpEffectResolved(playerName, powerUpLabel, message string) {
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"type":         "powerup_effect_resolved",
 		"playerName":  playerName,
 		"powerUpLabel": powerUpLabel,
 		"message":      message,
 	}
 	data, _ := json.Marshal(msg)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if g.Players[i] != nil && g.Players[i].Send != nil {
 			wsutil.SafeSend(g.Players[i].Send, data)
 		}
@@ -304,7 +304,7 @@ func (g *Game) broadcastPowerUpEffectResolved(playerName, powerUpLabel, message 
 }
 
 func (g *Game) broadcastState() {
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		state := g.BuildStateForPlayer(i)
 		data, err := json.Marshal(state)
 		if err != nil {
@@ -384,7 +384,7 @@ func (g *Game) BuildStateForPlayer(playerIdx int) GameStateMsg {
 
 func (g *Game) broadcastGameOver() {
 	sendGameOverToBoth := func(elo0Before, elo0After, elo1Before, elo1After *int) {
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			opponentIdx := 1 - i
 			var result string
 			if g.Players[i].Score > g.Players[opponentIdx].Score {
@@ -395,14 +395,14 @@ func (g *Game) broadcastGameOver() {
 				result = "draw"
 			}
 
-			msg := map[string]interface{}{
+			msg := map[string]any{
 				"type":   "game_over",
 				"result": result,
-				"you": map[string]interface{}{
+				"you": map[string]any{
 					"name":  g.Players[i].Name,
 					"score": g.Players[i].Score,
 				},
-				"opponent": map[string]interface{}{
+				"opponent": map[string]any{
 					"name":  g.Players[opponentIdx].Name,
 					"score": g.Players[opponentIdx].Score,
 				},

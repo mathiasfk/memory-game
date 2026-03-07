@@ -248,7 +248,7 @@ func TestPickPair_UsesHighlightWhenPresent(t *testing.T) {
 	hiddenHighlighted := []int{2, 4} // e.g. after fire elemental
 	memory := map[int]int{}
 	// With highlight, first card should be one of the highlighted (so we can use elemental result)
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		first, _, _ := pickPair(memory, hidden, true, hiddenHighlighted, nil, nil)
 		if first != 2 && first != 4 {
 			t.Errorf("pickPair with highlight should return one of %v, got %d", hiddenHighlighted, first)
@@ -262,11 +262,11 @@ func TestPickPair_UsesHighlightWhenPresent(t *testing.T) {
 }
 
 func TestPickSecondCard_UsesHighlightWhenPresent(t *testing.T) {
-	hidden := []int{0, 1, 2} // firstIdx was 3 (revealed), so not in hidden
+	hidden := []int{0, 1, 2}         // firstIdx was 3 (revealed), so not in hidden
 	hiddenHighlighted := []int{0, 1} // the two other tiles of that element still hidden
 	memory := map[int]int{}
 	// With highlight, second should be one of the highlighted
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		second, _ := pickSecondCard(memory, hidden, 3, true, hiddenHighlighted, nil, nil, nil)
 		if second != 0 && second != 1 {
 			t.Errorf("pickSecondCard with highlight should return one of %v, got %d", hiddenHighlighted, second)
@@ -284,7 +284,7 @@ func TestPickPair_PrefersElementMemoryWhenNoHighlight(t *testing.T) {
 	memory := map[int]int{}
 	// We know indices 1 and 3 are fire (e.g. from a previous turn's elemental)
 	hiddenByElement := map[string][]int{"fire": {1, 3}}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		first, _, _ := pickPair(memory, hidden, true, nil, hiddenByElement, nil)
 		if first != 1 && first != 3 {
 			t.Errorf("pickPair with element memory should prefer same-element tiles, got %d (expected 1 or 3)", first)
@@ -293,11 +293,11 @@ func TestPickPair_PrefersElementMemoryWhenNoHighlight(t *testing.T) {
 }
 
 func TestPickSecondCard_PrefersSameElementFromElementMemory(t *testing.T) {
-	hidden := []int{0, 1, 2}   // firstIdx was 3 (already flipped)
-	elementMemory := map[int]string{3: "fire"} // we know the flipped card is fire (e.g. from highlight)
+	hidden := []int{0, 1, 2}                            // firstIdx was 3 (already flipped)
+	elementMemory := map[int]string{3: "fire"}          // we know the flipped card is fire (e.g. from highlight)
 	hiddenByElement := map[string][]int{"fire": {0, 1}} // the other fire tiles still hidden
 	memory := map[int]int{}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		second, _ := pickSecondCard(memory, hidden, 3, true, nil, elementMemory, hiddenByElement, nil)
 		if second != 0 && second != 1 {
 			t.Errorf("pickSecondCard with element memory should return one of same element {0,1}, got %d", second)
@@ -310,7 +310,7 @@ func TestPickPair_PrefersUnseenTilesWhenBestMove(t *testing.T) {
 	hidden := []int{0, 1, 2, 3}
 	memory := map[int]int{}
 	knownIndicesSet := map[int]struct{}{0: {}, 1: {}}
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		first, _, reason := pickPair(memory, hidden, true, nil, nil, knownIndicesSet)
 		if first != 2 && first != 3 {
 			t.Errorf("pickPair with useBestMove should prefer unseen tiles (2 or 3), got %d", first)
@@ -326,7 +326,7 @@ func TestPickSecondCard_PrefersUnseenTilesWhenBestMove(t *testing.T) {
 	hidden := []int{1, 2, 3}
 	memory := map[int]int{}
 	knownIndicesSet := map[int]struct{}{0: {}, 1: {}}
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		second, reason := pickSecondCard(memory, hidden, 0, true, nil, nil, nil, knownIndicesSet)
 		if second != 2 && second != 3 {
 			t.Errorf("pickSecondCard with useBestMove should prefer unseen tiles (2 or 3), got %d", second)
@@ -344,7 +344,7 @@ func TestPickPair_ReturnsRandomWhenNotUseBestMove(t *testing.T) {
 	for _, idx := range hidden {
 		hiddenSet[idx] = struct{}{}
 	}
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		first, _, reason := pickPair(memory, hidden, false, nil, nil, nil)
 		if reason != "random" {
 			t.Errorf("pickPair with useBestMove=false should return reason 'random', got %q", reason)
@@ -360,7 +360,7 @@ func TestPickSecondCard_ReturnsRandomWhenNotUseBestMove(t *testing.T) {
 	hidden := []int{1, 2, 3}
 	memory := map[int]int{} // no pair known for firstIdx=0
 	candidatesSet := map[int]struct{}{1: {}, 2: {}, 3: {}}
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		second, reason := pickSecondCard(memory, hidden, 0, false, nil, nil, nil, nil)
 		if reason != "random" {
 			t.Errorf("pickSecondCard with useBestMove=false should return reason 'random', got %q", reason)

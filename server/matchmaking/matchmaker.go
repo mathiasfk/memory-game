@@ -25,24 +25,24 @@ import (
 
 // turnEvent and arcanaEvent hold telemetry data for async flush.
 type turnEvent struct {
-	matchID             string
-	round               int
-	playerIdx           int
-	playerScoreAfter    int
-	opponentScoreAfter  int
-	deltaPlayer         int
-	deltaOpponent       int
+	matchID            string
+	round              int
+	playerIdx          int
+	playerScoreAfter   int
+	opponentScoreAfter int
+	deltaPlayer        int
+	deltaOpponent      int
 }
 
 type arcanaEvent struct {
-	matchID              string
-	round                int
-	playerIdx            int
-	powerUpID            string
-	targetCardIndex      int
-	playerScoreBefore    int
-	opponentScoreBefore  int
-	pairsMatchedBefore   int
+	matchID             string
+	round               int
+	playerIdx           int
+	powerUpID           string
+	targetCardIndex     int
+	playerScoreBefore   int
+	opponentScoreBefore int
+	pairsMatchedBefore  int
 }
 
 // queuedTelemetrySink implements game.TelemetrySink by enqueueing events and
@@ -166,20 +166,20 @@ func (s *queuedTelemetrySink) FlushMatch(matchID string) {
 
 // Matchmaker manages the queue of players waiting for a match.
 type Matchmaker struct {
-	waiting       map[*ws.Client]chan struct{} // client -> cancel channel (closed when client leaves queue)
-	waitMu        sync.Mutex
-	notify        chan struct{}               // buffered; signaled when a client is enqueued
-	pendingClient *ws.Client                  // client currently waiting for pair (not in waiting map)
-	pendingCancel chan struct{}               // closed when pending client cancels
-	pendingMu     sync.Mutex
-	config        *config.Config
-	powerUps      game.PowerUpProvider
-	historyStore  storage.HistoryStore
-	queuedSink    *queuedTelemetrySink        // async telemetry when historyStore != nil
-	activeGames      map[string]*game.Game
-	userIDToGame     map[string]string   // userID -> gameID for rejoin by user (cross-device)
-	gameIDToClients  map[string][]*ws.Client // gameID -> clients to clear Game ref when game is removed
-	mu               sync.RWMutex
+	waiting         map[*ws.Client]chan struct{} // client -> cancel channel (closed when client leaves queue)
+	waitMu          sync.Mutex
+	notify          chan struct{} // buffered; signaled when a client is enqueued
+	pendingClient   *ws.Client    // client currently waiting for pair (not in waiting map)
+	pendingCancel   chan struct{} // closed when pending client cancels
+	pendingMu       sync.Mutex
+	config          *config.Config
+	powerUps        game.PowerUpProvider
+	historyStore    storage.HistoryStore
+	queuedSink      *queuedTelemetrySink // async telemetry when historyStore != nil
+	activeGames     map[string]*game.Game
+	userIDToGame    map[string]string       // userID -> gameID for rejoin by user (cross-device)
+	gameIDToClients map[string][]*ws.Client // gameID -> clients to clear Game ref when game is removed
+	mu              sync.RWMutex
 }
 
 // NewMatchmaker creates a new Matchmaker. historyStore may be nil to disable game history persistence.
@@ -191,12 +191,12 @@ func NewMatchmaker(cfg *config.Config, pups game.PowerUpProvider, historyStore s
 		queuedSink = newQueuedTelemetrySink(historyStore)
 	}
 	return &Matchmaker{
-		waiting:      make(map[*ws.Client]chan struct{}),
-		notify:       make(chan struct{}, 1),
-		config:       cfg,
-		powerUps:     pups,
-		historyStore: historyStore,
-		queuedSink:   queuedSink,
+		waiting:         make(map[*ws.Client]chan struct{}),
+		notify:          make(chan struct{}, 1),
+		config:          cfg,
+		powerUps:        pups,
+		historyStore:    historyStore,
+		queuedSink:      queuedSink,
 		activeGames:     make(map[string]*game.Game),
 		userIDToGame:    make(map[string]string),
 		gameIDToClients: make(map[string][]*ws.Client),
@@ -374,7 +374,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 					}
 				}
 				// Send rating to clients as soon as we have it; persistence below is independent.
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					var before, after *int
 					if i == 0 {
 						before, after = e0Before, e0After
@@ -382,11 +382,11 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 						before, after = e1Before, e1After
 					}
 					if before != nil && after != nil && g.Players[i] != nil && g.Players[i].Send != nil {
-						payload := map[string]interface{}{
-							"type":           "rating_update",
-							"you_elo_before": *before,
-							"you_elo_after":  *after,
-						}
+					payload := map[string]any{
+						"type":           "rating_update",
+						"you_elo_before": *before,
+						"you_elo_after":  *after,
+					}
 						data, _ := json.Marshal(payload)
 						wsutil.SafeSend(g.Players[i].Send, data)
 					}
@@ -395,7 +395,7 @@ func (m *Matchmaker) createGame(client1, client2 *ws.Client) {
 				_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
 				m.queuedSink.FlushMatch(matchID)
 				var powerUpIDs []string
-				for i := 0; i < 6; i++ {
+				for i := range 6 {
 					if id, ok := g.PairIDToPowerUp[i]; ok {
 						powerUpIDs = append(powerUpIDs, id)
 					}
@@ -467,7 +467,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 				}
 				// Send rating to client as soon as we have it; persistence below is independent.
 				if e0Before != nil && e0After != nil && g.Players[0] != nil && g.Players[0].Send != nil {
-					payload := map[string]interface{}{
+					payload := map[string]any{
 						"type":           "rating_update",
 						"you_elo_before": *e0Before,
 						"you_elo_after":  *e0After,
@@ -479,7 +479,7 @@ func (m *Matchmaker) createGameVsAI(client1 *ws.Client) {
 				_ = store.InsertGameResult(context.Background(), matchID, p0UID, p1UID, p0Name, p1Name, p0Score, p1Score, winnerIdx, endReason, e0Before, e0After, e1Before, e1After)
 				m.queuedSink.FlushMatch(matchID)
 				var powerUpIDs []string
-				for i := 0; i < 6; i++ {
+				for i := range 6 {
 					if id, ok := g.PairIDToPowerUp[i]; ok {
 						powerUpIDs = append(powerUpIDs, id)
 					}
@@ -544,9 +544,10 @@ func (m *Matchmaker) sendMatchFound(client *ws.Client, opponentName string, g *g
 // logMatchEnd logs match end with match_id, end_reason and winner (or "draw").
 func logMatchEnd(matchID, p0Name, p1Name, endReason string, winnerIdx int) {
 	winner := "draw"
-	if winnerIdx == 0 {
+	switch winnerIdx {
+	case 0:
 		winner = p0Name
-	} else if winnerIdx == 1 {
+	case 1:
 		winner = p1Name
 	}
 	slog.Info("Match ended", "tag", "matchmaking", "match_id", matchID, "end_reason", endReason, "winner", winner)
@@ -559,7 +560,7 @@ func (m *Matchmaker) removeGame(gameID string) {
 	delete(m.activeGames, gameID)
 	delete(m.gameIDToClients, gameID)
 	if g != nil {
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			if g.PlayerUserIDs[i] != "" {
 				delete(m.userIDToGame, g.PlayerUserIDs[i])
 			}
@@ -609,7 +610,7 @@ func (m *Matchmaker) Rejoin(gameID, rejoinToken, name string) (*game.Game, int, 
 		return nil, -1, matcherrors.ErrGameFinished
 	}
 	playerIdx := -1
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if g.RejoinTokens[i] == rejoinToken {
 			playerIdx = i
 			break
@@ -646,7 +647,7 @@ func (m *Matchmaker) RejoinByUser(userID string) (*game.Game, int, string, error
 		return nil, -1, "", matcherrors.ErrGameFinished
 	}
 	playerIdx := -1
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if g.PlayerUserIDs[i] == userID {
 			playerIdx = i
 			break
@@ -661,4 +662,3 @@ func (m *Matchmaker) RejoinByUser(userID string) (*game.Game, int, string, error
 	token := g.RejoinTokens[playerIdx]
 	return g, playerIdx, token, nil
 }
-

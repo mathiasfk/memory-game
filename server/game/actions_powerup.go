@@ -152,7 +152,7 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 	// Chaos: clear known indices and highlight for both players
 	if powerUpID == "chaos" {
 		g.KnownIndices = make(map[int]struct{})
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			if g.Players[i] != nil {
 				g.Players[i].HighlightIndices = nil
 			}
@@ -218,7 +218,7 @@ func (g *Game) handleUsePowerUp(playerIdx int, powerUpID string, cardIndex int) 
 	// Silence: pass turn immediately without revealing a pair
 	if powerUpID == "silence" {
 		// End of turn: clear highlight for both players and Leech
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			if g.Players[i] != nil {
 				g.Players[i].HighlightIndices = nil
 			}

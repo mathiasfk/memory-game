@@ -103,7 +103,7 @@ func (g *Game) handleFlipCard(playerIdx int, cardIndex int) {
 		g.TurnPhase = FirstFlip
 
 		// End of match: clear highlight for both players; Leech lasts whole turn (cleared on mismatch/timeout)
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			if g.Players[i] != nil {
 				g.Players[i].HighlightIndices = nil
 			}
@@ -156,7 +156,7 @@ func (g *Game) handleResolveMismatch(playerIdx int) {
 	}
 
 	// End of turn: clear highlight for both players and Leech (effects last only this turn)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if g.Players[i] != nil {
 			g.Players[i].HighlightIndices = nil
 		}
@@ -217,7 +217,7 @@ func (g *Game) handleTurnTimeout() {
 	player := g.Players[g.CurrentTurn]
 	if player != nil {
 		// End of turn: clear highlight for both players and Leech (effects last only this turn)
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			if g.Players[i] != nil {
 				g.Players[i].HighlightIndices = nil
 			}
@@ -258,7 +258,7 @@ func (g *Game) handleTurnTimeout() {
 func (g *Game) broadcastTurnTimeout() {
 	msg := map[string]string{"type": "turn_timeout"}
 	data, _ := json.Marshal(msg)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if g.Players[i] != nil && g.Players[i].Send != nil {
 			wsutil.SafeSend(g.Players[i].Send, data)
 		}

@@ -48,7 +48,7 @@ func (g *Game) handlePlayerDisconnected(playerIdx int) {
 	opponentIdx := 1 - playerIdx
 	opponent := g.Players[opponentIdx]
 	if opponent != nil && opponent.Send != nil {
-		msg := map[string]interface{}{
+		msg := map[string]any{
 			"type":                        "opponent_reconnecting",
 			"reconnectionDeadlineUnixMs": g.ReconnectionDeadline.UnixMilli(),
 		}

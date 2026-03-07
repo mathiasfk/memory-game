@@ -46,14 +46,14 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 	t.Helper()
 
 	cfg := &config.Config{
-		BoardRows:          2,
-		BoardCols:          2,
-		RevealDurationMS:   100,
-		MaxNameLength:      24,
-		WSPort:             0, // not used when using httptest
-		AIPairTimeoutSec:   10,
-		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
-		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseBestMoveChance: 85, ArcanaRandomness: 0}},
+		BoardRows:        2,
+		BoardCols:        2,
+		RevealDurationMS: 100,
+		MaxNameLength:    24,
+		WSPort:           0, // not used when using httptest
+		AIPairTimeoutSec: 10,
+		PowerUps:         config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
+		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseBestMoveChance: 85, ArcanaRandomness: 0}},
 	}
 	return setupTestServerWithConfig(t, cfg)
 }
@@ -70,20 +70,20 @@ func connectWS(t *testing.T, server *httptest.Server) *websocket.Conn {
 }
 
 // readMsg reads a JSON message from the WebSocket and returns it as a map.
-func readMsg(t *testing.T, conn *websocket.Conn) map[string]interface{} {
+func readMsg(t *testing.T, conn *websocket.Conn) map[string]any {
 	t.Helper()
 	return readMsgWithTimeout(t, conn, 3*time.Second)
 }
 
 // readMsgWithTimeout reads a JSON message with a custom deadline (e.g. for slower operations).
-func readMsgWithTimeout(t *testing.T, conn *websocket.Conn, d time.Duration) map[string]interface{} {
+func readMsgWithTimeout(t *testing.T, conn *websocket.Conn, d time.Duration) map[string]any {
 	t.Helper()
 	conn.SetReadDeadline(time.Now().Add(d))
 	_, data, err := conn.ReadMessage()
 	if err != nil {
 		t.Fatalf("failed to read message: %v", err)
 	}
-	var msg map[string]interface{}
+	var msg map[string]any
 	if err := json.Unmarshal(data, &msg); err != nil {
 		t.Fatalf("failed to unmarshal: %v\ndata: %s", err, string(data))
 	}
@@ -91,7 +91,7 @@ func readMsgWithTimeout(t *testing.T, conn *websocket.Conn, d time.Duration) map
 }
 
 // sendMsg sends a JSON message over the WebSocket.
-func sendMsg(t *testing.T, conn *websocket.Conn, msg interface{}) {
+func sendMsg(t *testing.T, conn *websocket.Conn, msg any) {
 	t.Helper()
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -155,7 +155,7 @@ func TestIntegration_FullGame(t *testing.T) {
 	}
 
 	// Verify board has 4 cards (2x2)
-	cards1 := gs1["cards"].([]interface{})
+	cards1 := gs1["cards"].([]any)
 	if len(cards1) != 4 {
 		t.Errorf("expected 4 cards, got %d", len(cards1))
 	}
@@ -209,7 +209,7 @@ func TestIntegration_FlipCardNotInGame(t *testing.T) {
 	defer conn.Close()
 
 	// Try to flip card without being in a game
-	sendMsg(t, conn, map[string]interface{}{"type": "flip_card", "index": 0})
+	sendMsg(t, conn, map[string]any{"type": "flip_card", "index": 0})
 	msg := readMsg(t, conn)
 	if msg["type"] != "error" {
 		t.Fatalf("expected error for flip_card without game, got %v", msg["type"])
@@ -218,15 +218,15 @@ func TestIntegration_FlipCardNotInGame(t *testing.T) {
 
 func TestIntegration_OpponentDisconnect(t *testing.T) {
 	cfg := &config.Config{
-		BoardRows:            2,
-		BoardCols:            2,
-		RevealDurationMS:     100,
-		MaxNameLength:        24,
-		WSPort:               0,
-		AIPairTimeoutSec:     10,
-		ReconnectTimeoutSec:  1, // 1 second so the test finishes quickly
-		PowerUps:             config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
-		AIProfiles:           []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseBestMoveChance: 85, ArcanaRandomness: 0}},
+		BoardRows:           2,
+		BoardCols:           2,
+		RevealDurationMS:    100,
+		MaxNameLength:       24,
+		WSPort:              0,
+		AIPairTimeoutSec:    10,
+		ReconnectTimeoutSec: 1, // 1 second so the test finishes quickly
+		PowerUps:            config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
+		AIProfiles:          []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 50, DelayMaxMS: 100, UseBestMoveChance: 85, ArcanaRandomness: 0}},
 	}
 	server, cleanup := setupTestServerWithConfig(t, cfg)
 	defer cleanup()
@@ -253,7 +253,7 @@ func TestIntegration_OpponentDisconnect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read reconnecting notification: %v", err)
 	}
-	var msg map[string]interface{}
+	var msg map[string]any
 	json.Unmarshal(data, &msg)
 	if msg["type"] != "opponent_reconnecting" {
 		t.Errorf("expected opponent_reconnecting first, got %v", msg["type"])
@@ -312,10 +312,10 @@ func TestIntegration_PlayAgain(t *testing.T) {
 
 	// Flip two cards and verify the active player receives game_state updates.
 	// We only assert on the active connection to avoid flakiness from broadcast ordering.
-	sendMsg(t, activeConn, map[string]interface{}{"type": "flip_card", "index": 0})
+	sendMsg(t, activeConn, map[string]any{"type": "flip_card", "index": 0})
 	readMsg(t, activeConn) // game_state after first flip
 
-	sendMsg(t, activeConn, map[string]interface{}{"type": "flip_card", "index": 1})
+	sendMsg(t, activeConn, map[string]any{"type": "flip_card", "index": 1})
 	st1 := readMsg(t, activeConn) // game_state after second flip (match or resolve)
 
 	if st1["type"] != "game_state" {
@@ -328,14 +328,14 @@ func TestIntegration_PlayAgain(t *testing.T) {
 
 func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 	cfg := &config.Config{
-		BoardRows:          2,
-		BoardCols:          2,
-		RevealDurationMS:   100,
-		MaxNameLength:      24,
-		WSPort:             0,
-		AIPairTimeoutSec:   1,
-		PowerUps:           config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
-		AIProfiles:         []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 20, DelayMaxMS: 80, UseBestMoveChance: 85, ArcanaRandomness: 0}},
+		BoardRows:        2,
+		BoardCols:        2,
+		RevealDurationMS: 100,
+		MaxNameLength:    24,
+		WSPort:           0,
+		AIPairTimeoutSec: 1,
+		PowerUps:         config.PowerUpsConfig{Chaos: config.ChaosPowerUpConfig{Cost: 3}, Clairvoyance: config.ClairvoyancePowerUpConfig{}},
+		AIProfiles:       []config.AIParams{{Name: "Mnemosyne", DelayMinMS: 20, DelayMaxMS: 80, UseBestMoveChance: 85, ArcanaRandomness: 0}},
 	}
 	server, cleanup := setupTestServerWithConfig(t, cfg)
 	defer cleanup()
@@ -363,7 +363,7 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 	if gs["type"] != "game_state" {
 		t.Fatalf("expected game_state, got %v", gs["type"])
 	}
-	cards := gs["cards"].([]interface{})
+	cards := gs["cards"].([]any)
 	if len(cards) != 4 {
 		t.Errorf("expected 4 cards, got %d", len(cards))
 	}
@@ -379,19 +379,19 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 		if msgType == "game_state" && state["yourTurn"] == true {
 			phase, _ := state["phase"].(string)
 			if phase == "first_flip" || phase == "second_flip" {
-				cardsList, _ := state["cards"].([]interface{})
+				cardsList, _ := state["cards"].([]any)
 				var hidden []int
 				for _, c := range cardsList {
-					card := c.(map[string]interface{})
+					card := c.(map[string]any)
 					if card["state"] == "hidden" {
 						idx, _ := card["index"].(float64)
 						hidden = append(hidden, int(idx))
 					}
 				}
 				if len(hidden) > 0 {
-					flipped, _ := state["flippedIndices"].([]interface{})
+					flipped, _ := state["flippedIndices"].([]any)
 					if len(flipped) == 0 {
-						sendMsg(t, conn, map[string]interface{}{"type": "flip_card", "index": hidden[0]})
+						sendMsg(t, conn, map[string]any{"type": "flip_card", "index": hidden[0]})
 					} else {
 						first, _ := flipped[0].(float64)
 						firstIdx := int(first)
@@ -402,7 +402,7 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 								break
 							}
 						}
-						sendMsg(t, conn, map[string]interface{}{"type": "flip_card", "index": second})
+						sendMsg(t, conn, map[string]any{"type": "flip_card", "index": second})
 					}
 				}
 			}
@@ -412,7 +412,7 @@ func TestIntegration_SinglePlayerVsAI(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read message: %v", err)
 		}
-		var nextMsg map[string]interface{}
+		var nextMsg map[string]any
 		if err := json.Unmarshal(data, &nextMsg); err != nil {
 			t.Fatalf("unmarshal: %v", err)
 		}

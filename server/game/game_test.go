@@ -145,7 +145,7 @@ func findNonPair(board *Board) (int, int) {
 			hidden = append(hidden, card)
 		}
 	}
-	for i := 0; i < len(hidden); i++ {
+	for i := range hidden {
 		for j := i + 1; j < len(hidden); j++ {
 			if hidden[i].PairID != hidden[j].PairID {
 				return hidden[i].Index, hidden[j].Index
@@ -407,7 +407,7 @@ func TestFixedScoring(t *testing.T) {
 	}
 
 	// Match 3 pairs consecutively
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: pairs[i][0]}
 		time.Sleep(30 * time.Millisecond)
 		g.Actions <- Action{Type: ActionFlipCard, PlayerIdx: currentPlayer, Index: pairs[i][1]}
@@ -1079,7 +1079,7 @@ func TestFullGame(t *testing.T) {
 	allMsgs := append(msgs0, msgs1...)
 	foundGameOver := false
 	for _, msg := range allMsgs {
-		var m map[string]interface{}
+		var m map[string]any
 		json.Unmarshal(msg, &m)
 		if m["type"] == "game_over" {
 			foundGameOver = true

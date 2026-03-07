@@ -64,7 +64,7 @@ func TestCardViewJSON_HiddenOmitsPairID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var m map[string]interface{}
+	var m map[string]any
 	json.Unmarshal(data, &m)
 
 	if _, ok := m["pairId"]; ok {
@@ -80,7 +80,7 @@ func TestCardViewJSON_RevealedIncludesPairID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var m map[string]interface{}
+	var m map[string]any
 	json.Unmarshal(data, &m)
 
 	if _, ok := m["pairId"]; !ok {

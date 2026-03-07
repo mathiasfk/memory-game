@@ -243,7 +243,7 @@ func TestElementalHighlightIndices_NeverArcana(t *testing.T) {
 	// Arcana pairs are 0..5; normal earth pairs are 15,16,17. Ensure no arcana index appears.
 	indices := elementalHighlightIndices(board, ElementEarth)
 	arcanaPairIDs := make(map[int]bool)
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		arcanaPairIDs[i] = true
 	}
 	for _, idx := range indices {
